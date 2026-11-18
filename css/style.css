@@ -299,8 +299,12 @@ body {
 }
 .try__head { min-width: 0; }
 .comfy { position: relative; width: 100%; height: 100%; min-height: 0; }
-.comfy__img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: left top; }
-.comfy__face { position: absolute; display: block; object-fit: cover; visibility: hidden; } /* Position per JS (Slot im Bild) */
+/* ComfyUI-Node-Ansicht (context/nodeview.js) füllt den Slot; eigenes CSS kommt gescoped mit. */
+#comfy-slot { width: 100%; height: 100%; min-height: 0; }
+#comfy-slot .nv-root { height: 100%; }
+#comfy-slot .nv-editor { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+#comfy-slot .nv-canvas { flex: 1 1 auto; min-height: 0; }
+.comfy__face { position: absolute; display: block; object-fit: cover; visibility: hidden; z-index: 2; } /* Position per JS (Slot in der Ansicht) */
 .try__image { position: relative; width: 100%; height: 100%; min-height: 0; }
 .face-fly {
   position: fixed;
@@ -347,3 +351,121 @@ body {
 /* ---------- Abschnitt 6: Vollbild ---------- */
 .fullscreen { position: relative; z-index: 8; height: 100vh; height: 100svh; background: #fdfdfd; }
 .fullscreen img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* ==========================================================================
+   Abschnitt 4 (neu): Video-Mosaik
+   Nach Abschnitt 3. Die Videos erscheinen beim Scrollen nacheinander und
+   laufen dann (stumm, geloopt) weiter; Bilder streuen dazwischen.
+   ========================================================================== */
+.mosaic {
+  position: relative;
+  z-index: 7;
+  height: auto;
+  background: #000;
+  color: #fff;
+  padding: 14vh 5vw 16vh;
+}
+
+.mosaic__head { margin: 0 0 7vh; }
+
+/* Kopfzeile blendet wie die Zellen beim Scrollen ein */
+.mosaic__head [data-mosaic-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .8s cubic-bezier(.22, .61, .36, 1),
+              transform .8s cubic-bezier(.22, .61, .36, 1);
+}
+.mosaic__head [data-mosaic-reveal].is-in { opacity: 1; transform: none; }
+.mosaic__head [data-mosaic-reveal]:nth-child(2) { transition-delay: .1s; }
+
+.mosaic__title {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: .01em;
+}
+.mosaic__text {
+  margin: 0;
+  max-width: 52ch;
+  font-weight: 400;
+  font-size: clamp(.95rem, 1.1vw, 1.1rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, .72);
+}
+
+/* Datengetriebenes Mosaik. Die Zellen bringen ihre Position als Inline-Style
+   mit (grid-column / grid-row); so gibt es keine Luecken durch Auto-Placement,
+   und die Reihenfolge im DOM bleibt die Scroll- und Tab-Reihenfolge. */
+.mosaic__grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-auto-rows: var(--mosaic-row, 9vh);
+  gap: clamp(.6rem, 1.1vw, 1.35rem);
+}
+
+.mosaic__cell {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  background: #111;
+  border-radius: 3px;
+  /* Startzustand fuer die Scroll-Einblendung */
+  opacity: 0;
+  transform: translateY(28px) scale(.97);
+  transition: opacity .85s cubic-bezier(.22, .61, .36, 1),
+              transform .85s cubic-bezier(.22, .61, .36, 1);
+}
+.mosaic__cell.is-in { opacity: 1; transform: none; }
+
+.mosaic__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Bilder: leichte Vergroesserung im Ruhezustand, Zoom beim Hover */
+.mosaic__cell--image .mosaic__media {
+  transform: scale(1.04);
+  transition: transform .9s cubic-bezier(.22, .61, .36, 1);
+}
+.mosaic__cell--image:hover .mosaic__media { transform: scale(1.09); }
+
+/* Die ersten Zellen eines Blocks fallen leicht gestaffelt ein */
+.mosaic__cell:nth-child(3n + 2) { transition-delay: .07s; }
+.mosaic__cell:nth-child(3n + 3) { transition-delay: .14s; }
+
+/* Auf schmalen Viewports wird das 6-Spalten-Muster auf 2 Spalten reduziert.
+   Die Inline-Positionen der Zellen werden dafuer ueberschrieben: alles laeuft
+   einspaltig in DOM-Reihenfolge, jede Zelle behaelt ihr Seitenverhaeltnis. */
+@media (max-width: 900px) {
+  .mosaic { padding: 10vh 6vw 12vh; }
+  .mosaic__grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: auto;
+  }
+  .mosaic__cell {
+    grid-column: auto / span 2 !important;
+    grid-row: auto / span 1 !important;
+    aspect-ratio: 4 / 3;
+  }
+  .mosaic__cell video.mosaic__media { aspect-ratio: 9 / 16; }
+}
+
+@media (max-width: 560px) {
+  .mosaic__grid {
+    grid-template-columns: 1fr;
+  }
+  .mosaic__cell { grid-column: auto / span 1 !important; }
+}
+
+/* Reduced Motion: keine Bewegung, Inhalte sofort sichtbar.
+   Videos bleiben hier bewusst stehen (nur Poster/erstes Bild). */
+@media (prefers-reduced-motion: reduce) {
+  .mosaic__cell,
+  .mosaic__cell--image .mosaic__media,
+  .mosaic__head [data-mosaic-reveal] { opacity: 1; transform: none; transition: none; }
+}

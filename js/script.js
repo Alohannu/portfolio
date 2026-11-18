@@ -322,24 +322,26 @@
   window.addEventListener("resize", requestAvatarUpdate);
   updateAvatar();
 
-  /* ---------- Gesichtsbild fliegt beim Morph 4 → 5 in den Bildslot von comfyui.png ---------- */
+  /* ---------- Gesichtsbild fliegt beim Morph 4 → 5 in die ComfyUI-Ansicht ---------- */
   var faceOrig = document.querySelector("#konsistenz .face");
   var faceFly = document.getElementById("faceFly");
   var comfy = document.getElementById("comfy");
   var faceFinal = comfy && comfy.querySelector(".comfy__face");
   var stage4 = document.querySelector("#konsistenz .morph-reveal__stage");
   var stage5 = document.querySelector("#tryon .morph-reveal__stage");
-  // leerer Bildslot im PNG (720 × 570) als Anteil der angezeigten Bildfläche
+  // Ziel-Slot innerhalb der ComfyUI-Ansicht, als Anteil der Fläche von #comfy.
+  // (Früher: leerer Bildslot im PNG comfyui.png, 720 × 570.)
   var SLOT = { x: 0.0208, y: 0.256, w: 0.289, h: 0.456 };
 
   function slotRect() {
-    // Anzeigefläche des Bildes (object-fit: contain, oben links ausgerichtet) relativ zum Wrapper
+    if (!comfy) return { x: 0, y: 0, w: 0, h: 0 };
     var w = comfy.clientWidth, h = comfy.clientHeight, ratio = 720 / 570;
     var dw = Math.min(w, h * ratio), dh = dw / ratio;
     return { x: dw * SLOT.x, y: dh * SLOT.y, w: dw * SLOT.w, h: dh * SLOT.h };
   }
 
   function faceFlight(raw) {
+    if (!comfy || !faceFinal || !faceOrig) return;
     var sl = slotRect();
     faceFinal.style.left = sl.x + "px"; faceFinal.style.top = sl.y + "px";
     faceFinal.style.width = sl.w + "px"; faceFinal.style.height = sl.h + "px";
@@ -374,16 +376,14 @@
   });
 
   /* ---------- Abschnitt 5: Ergebnisbild (comfyui_save.png) ---------- */
-  // Unterkante auf die Unterkante von comfyui.png legen (nur Desktop-Layout)
+  // Unterkante auf die Unterkante der ComfyUI-Ansicht legen (nur Desktop-Layout)
   var saveImg = document.querySelector("#tryon .try__save");
   function layoutSave() {
-    if (!saveImg) return;
+    if (!saveImg || !comfy) return;
     saveImg.style.marginBottom = "";
     if (window.innerWidth < 900) return;
-    var ratio = 720 / 570, w = comfy.clientWidth, h = comfy.clientHeight;
-    var dh = Math.min(w, h * ratio) / ratio;
     var wrap = saveImg.parentNode;
-    var comfyBottom = comfy.offsetTop + dh;
+    var comfyBottom = comfy.offsetTop + comfy.offsetHeight;
     var wrapBottom = wrap.offsetTop + wrap.offsetHeight;
     saveImg.style.marginBottom = Math.max(0, wrapBottom - comfyBottom).toFixed(1) + "px";
   }

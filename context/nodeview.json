@@ -1,0 +1,198 @@
+{
+  "meta": {
+    "name": "qwen_image_edit_2511_virtual_tryon",
+    "title": "virtual try-on",
+    "subtitle": "ComfyUI Node Explorer",
+    "description": "Für die effiziente Erstellung von E-Commerce-Assets nutze ich einen maßgeschneiderten Qwen Image Edit 2511 Workflow in ComfyUI, der bis zu drei unabhängige Referenzbilder (z.B. Model, Produkt und Pose/Hintergrund) nativ verschmilzt. Zwei integrierte Edit Model Reference-Nodes injizieren die Texturen und Strukturen der Kleidung direkt in den Generierungsprozess. Dies garantiert die physikalische Konsistenz von Faltenwurf, Schatten und Lichtverhältnissen im latenten Raum. So entsteht eine reproduzierbare Pipeline für fotorealistische E-Commerce-Assets, die durch den Einsatz des lizenzfreien Qwen-Open-Weights-Modells volle kommerzielle Nutzungsfreiheit und maximale Datensicherheit auf eigenen Servern garantiert.",
+    "source": "https://yytrieu.github.io/ai-portfolio/#comfyui",
+    "sourceRepo": "https://github.com/yytrieu/ai-portfolio",
+    "note": "Eigene Abstraktion der Ansicht. Im Original stehen die Daten als JS-Arrays (Component.NODES / Component.LINKS) in index.html; hier sind sie normalisiert und mit echten Anschluss-Kanten."
+  },
+  "canvas": {
+    "width": 1800,
+    "height": 1330,
+    "initialZoom": 0.62,
+    "minZoom": 0.3,
+    "maxZoom": 1.4,
+    "zoomStep": 0.12
+  },
+  "palette": {
+    "model": "#b57bff",
+    "clip": "#f0d868",
+    "vae": "#ff6b6b",
+    "image": "#6fb7ff",
+    "cond": "#ff9f45",
+    "latent": "#ff7bd5",
+    "out": "#8fe3c0",
+    "none": "rgba(255,255,255,.22)"
+  },
+  "theme": {
+    "editorBg": "#0A0A0F",
+    "barBg": "linear-gradient(180deg,#14141c,#0e0e15)",
+    "barBorder": "#23232f",
+    "dotGridColor": "rgba(120,120,180,.20)",
+    "dotGridSize": 20,
+    "nodeBg": "rgba(22,22,30,.82)",
+    "nodeBorder": "rgba(255,255,255,.10)",
+    "nodeBlur": "blur(8px)",
+    "nodeRadius": 9,
+    "headBg": "rgba(255,255,255,.05)",
+    "widgetBg": "rgba(255,255,255,.05)",
+    "titleColor": "#eaeaf5",
+    "widgetKeyColor": "#8b8ba6",
+    "widgetValueColor": "#e4e4f2",
+    "groupBorder": "rgba(110,140,255,.22)",
+    "groupBg": "rgba(80,110,220,.06)",
+    "groupLabelBg": "#111827",
+    "groupLabelColor": "#9fb4ff"
+  },
+  "wireStyle": {
+    "baseWidth": 2,
+    "baseOpacity": 0.5,
+    "pulseWidth": 3.4,
+    "pulseDasharray": "4 46",
+    "pulseAnimation": "2.2s linear infinite",
+    "pulseKeyframes": "@keyframes noodle { to { stroke-dashoffset: -100; } }"
+  },
+  "groups": [
+    { "label": "Models",     "x": 20,  "y": 62,  "w": 346, "h": 548 },
+    { "label": "Load Image", "x": 20,  "y": 800, "w": 576, "h": 496 },
+    { "label": "Prompt",     "x": 410, "y": 62,  "w": 390, "h": 700 }
+  ],
+  "nodes": [
+    {
+      "id": "unet", "type": "LoadDiffusionModel", "title": "Load Diffusion Model", "accent": "#b57bff", "x": 36, "y": 92, "w": 314,
+      "inputs": [],
+      "outputs": [{ "name": "MODEL", "type": "MODEL" }],
+      "widgets": [{ "k": "unet_name", "v": "qwen_image_edit_2511_bf16" }, { "k": "weight_dtype", "v": "default" }]
+    },
+    {
+      "id": "lora", "type": "LoadLoRA", "title": "Load LoRA", "accent": "#b57bff", "x": 36, "y": 216, "w": 314,
+      "inputs": [{ "name": "model", "type": "MODEL" }],
+      "outputs": [{ "name": "MODEL", "type": "MODEL" }],
+      "widgets": [{ "k": "lora_name", "v": "Qwen-…-Lightning-4steps-v1.0" }, { "k": "strength_model", "v": "1.00" }]
+    },
+    {
+      "id": "clip", "type": "LoadCLIP", "title": "Load CLIP", "accent": "#f0d868", "x": 36, "y": 340, "w": 314,
+      "inputs": [],
+      "outputs": [{ "name": "CLIP", "type": "CLIP" }],
+      "widgets": [{ "k": "clip_name", "v": "qwen_2.5_vl_7b_fp8_scaled" }, { "k": "type", "v": "qwen_image" }, { "k": "device", "v": "default" }]
+    },
+    {
+      "id": "vae", "type": "LoadVAE", "title": "Load VAE", "accent": "#ff6b6b", "x": 36, "y": 500, "w": 314,
+      "inputs": [],
+      "outputs": [{ "name": "VAE", "type": "VAE" }],
+      "widgets": [{ "k": "vae_name", "v": "qwen_image_vae.safetensors" }]
+    },
+    {
+      "id": "pos", "type": "TextEncodeQwenImageEditPlus", "title": "TextEncodeQwenImageEditPlus", "accent": "#8fe3c0", "x": 426, "y": 92, "w": 356,
+      "inputs": [{ "name": "clip", "type": "CLIP" }, { "name": "vae", "type": "VAE" },
+                 { "name": "image1", "type": "IMAGE" }, { "name": "image2", "type": "IMAGE" }, { "name": "image3", "type": "IMAGE" }],
+      "outputs": [{ "name": "CONDITIONING", "type": "CONDITIONING" }],
+      "widgets": [],
+      "text": "Positive Prompt (Model + Outfit + Pose/Hintergrund)",
+      "textRole": "placeholder·BITTE ERSETZEN",
+      "image": "assets/comfy-model.avif"
+    },
+    {
+      "id": "neg", "type": "TextEncodeQwenImageEditPlus", "title": "TextEncodeQwenImageEditPlus", "accent": "#ff6b6b", "x": 426, "y": 440, "w": 356,
+      "inputs": [{ "name": "clip", "type": "CLIP" }, { "name": "vae", "type": "VAE" },
+                 { "name": "image1", "type": "IMAGE" }, { "name": "image2", "type": "IMAGE" }, { "name": "image3", "type": "IMAGE" }],
+      "outputs": [{ "name": "CONDITIONING", "type": "CONDITIONING" }],
+      "widgets": [],
+      "text": "Negative Prompt (bad anatomy, extra limbs …)",
+      "textRole": "placeholder·BITTE ERSETZEN",
+      "image": "assets/comfy-result.avif"
+    },
+    {
+      "id": "img1", "type": "LoadImage", "title": "Load Image (model)", "accent": "#6fb7ff", "x": 36, "y": 830, "w": 300,
+      "inputs": [],
+      "outputs": [{ "name": "IMAGE", "type": "IMAGE" }, { "name": "MASK", "type": "MASK" }],
+      "widgets": [{ "k": "image", "v": "model.avif" }],
+      "image": "assets/comfy-model.avif"
+    },
+    {
+      "id": "img2", "type": "LoadImage", "title": "Load Image (outfit)", "accent": "#6fb7ff", "x": 350, "y": 830, "w": 300,
+      "inputs": [],
+      "outputs": [{ "name": "IMAGE", "type": "IMAGE" }, { "name": "MASK", "type": "MASK" }],
+      "widgets": [{ "k": "image", "v": "outfit-01.avif" }],
+      "image": "assets/comfy-outfit.avif"
+    },
+    {
+      "id": "img3", "type": "LoadImage", "title": "Load Image (pose)", "accent": "#6fb7ff", "x": 664, "y": 830, "w": 300,
+      "inputs": [],
+      "outputs": [{ "name": "IMAGE", "type": "IMAGE" }, { "name": "MASK", "type": "MASK" }],
+      "widgets": [{ "k": "image", "v": "standing_02.avif" }],
+      "image": "assets/comfy-standing.avif"
+    },
+    {
+      "id": "aura", "type": "ModelSamplingAuraFlow", "title": "ModelSamplingAuraFlow", "accent": "#b57bff", "x": 830, "y": 92, "w": 252,
+      "inputs": [{ "name": "model", "type": "MODEL" }],
+      "outputs": [{ "name": "MODEL", "type": "MODEL" }],
+      "widgets": [{ "k": "shift", "v": "3.10" }]
+    },
+    {
+      "id": "cfg", "type": "CFGNorm", "title": "CFGNorm", "accent": "#b57bff", "x": 830, "y": 196, "w": 252,
+      "inputs": [{ "name": "model", "type": "MODEL" }],
+      "outputs": [{ "name": "patched_model", "type": "MODEL" }],
+      "widgets": [{ "k": "strength", "v": "1.00" }, { "k": "pre_cfg", "v": "false" }]
+    },
+    {
+      "id": "edit1", "type": "EditModelReferenceMethod", "title": "Edit Model Reference Method 01", "accent": "#ff9f45", "x": 830, "y": 320, "w": 252,
+      "inputs": [{ "name": "conditioning", "type": "CONDITIONING" }],
+      "outputs": [{ "name": "CONDITIONING", "type": "CONDITIONING" }],
+      "widgets": [{ "k": "reference_latent", "v": "index_timestep_zero" }]
+    },
+    {
+      "id": "edit2", "type": "EditModelReferenceMethod", "title": "Edit Model Reference Method 02", "accent": "#ff9f45", "x": 830, "y": 424, "w": 252,
+      "inputs": [{ "name": "conditioning", "type": "CONDITIONING" }],
+      "outputs": [{ "name": "CONDITIONING", "type": "CONDITIONING" }],
+      "widgets": [{ "k": "reference_latent", "v": "index_timestep_zero" }]
+    },
+    {
+      "id": "ks", "type": "KSampler", "title": "KSampler", "accent": "#8fe3c0", "x": 1130, "y": 92, "w": 252,
+      "inputs": [{ "name": "model", "type": "MODEL" }, { "name": "positive", "type": "CONDITIONING" },
+                 { "name": "negative", "type": "CONDITIONING" }, { "name": "latent_image", "type": "LATENT" }],
+      "outputs": [{ "name": "LATENT", "type": "LATENT" }],
+      "widgets": [{ "k": "seed", "v": "562638270362419" }, { "k": "steps", "v": "4" }, { "k": "cfg", "v": "1.0" },
+                  { "k": "sampler_name", "v": "euler" }, { "k": "scheduler", "v": "simple" }, { "k": "denoise", "v": "1.00" }]
+    },
+    {
+      "id": "dec", "type": "VAEDecode", "title": "VAE Decode", "accent": "#8fe3c0", "x": 1420, "y": 92, "w": 200,
+      "inputs": [{ "name": "samples", "type": "LATENT" }, { "name": "vae", "type": "VAE" }],
+      "outputs": [{ "name": "IMAGE", "type": "IMAGE" }],
+      "widgets": []
+    },
+    {
+      "id": "prev", "type": "SaveImage", "title": "Save Image / Preview", "accent": "#8fe3c0", "x": 1420, "y": 232, "w": 300,
+      "inputs": [{ "name": "images", "type": "IMAGE" }],
+      "outputs": [],
+      "widgets": [{ "k": "filename_prefix", "v": "ComfyUI" }],
+      "image": "assets/comfy-result.avif",
+      "caption": "ComfyUI_00002_.png"
+    }
+  ],
+  "links": [
+    { "from": "unet",  "fromPort": "out:MODEL",         "to": "lora",  "toPort": "in:model",        "type": "MODEL" },
+    { "from": "lora",  "fromPort": "out:MODEL",         "to": "aura",  "toPort": "in:model",        "type": "MODEL" },
+    { "from": "aura",  "fromPort": "out:MODEL",         "to": "cfg",   "toPort": "in:model",        "type": "MODEL" },
+    { "from": "cfg",   "fromPort": "out:patched_model", "to": "ks",    "toPort": "in:model",        "type": "MODEL" },
+    { "from": "clip",  "fromPort": "out:CLIP",          "to": "pos",   "toPort": "in:clip",         "type": "CLIP" },
+    { "from": "clip",  "fromPort": "out:CLIP",          "to": "neg",   "toPort": "in:clip",         "type": "CLIP" },
+    { "from": "vae",   "fromPort": "out:VAE",           "to": "pos",   "toPort": "in:vae",          "type": "VAE" },
+    { "from": "vae",   "fromPort": "out:VAE",           "to": "neg",   "toPort": "in:vae",          "type": "VAE" },
+    { "from": "vae",   "fromPort": "out:VAE",           "to": "dec",   "toPort": "in:vae",          "type": "VAE" },
+    { "from": "img1",  "fromPort": "out:IMAGE",         "to": "pos",   "toPort": "in:image1",       "type": "IMAGE" },
+    { "from": "img2",  "fromPort": "out:IMAGE",         "to": "pos",   "toPort": "in:image2",       "type": "IMAGE" },
+    { "from": "img3",  "fromPort": "out:IMAGE",         "to": "pos",   "toPort": "in:image3",       "type": "IMAGE" },
+    { "from": "img1",  "fromPort": "out:IMAGE",         "to": "neg",   "toPort": "in:image1",       "type": "IMAGE" },
+    { "from": "img2",  "fromPort": "out:IMAGE",         "to": "neg",   "toPort": "in:image2",       "type": "IMAGE" },
+    { "from": "img3",  "fromPort": "out:IMAGE",         "to": "neg",   "toPort": "in:image3",       "type": "IMAGE" },
+    { "from": "pos",   "fromPort": "out:CONDITIONING",  "to": "edit1", "toPort": "in:conditioning", "type": "CONDITIONING" },
+    { "from": "neg",   "fromPort": "out:CONDITIONING",  "to": "edit2", "toPort": "in:conditioning", "type": "CONDITIONING" },
+    { "from": "edit1", "fromPort": "out:CONDITIONING",  "to": "ks",    "toPort": "in:positive",     "type": "CONDITIONING" },
+    { "from": "edit2", "fromPort": "out:CONDITIONING",  "to": "ks",    "toPort": "in:negative",     "type": "CONDITIONING" },
+    { "from": "ks",    "fromPort": "out:LATENT",        "to": "dec",   "toPort": "in:samples",      "type": "LATENT" },
+    { "from": "dec",   "fromPort": "out:IMAGE",         "to": "prev",  "toPort": "in:images",       "type": "IMAGE" }
+  ]
+}
