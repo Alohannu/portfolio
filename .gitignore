@@ -1,0 +1,6 @@
+# Lose Original-Dateien im Projektroot (die Seite nutzt media/ und fonts/)
+/*.png
+/*.webp
+/*.mp4
+/*.ttf
+/.claude/

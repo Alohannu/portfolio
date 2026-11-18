@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sylvia Trieu – Portfolio</title>
+  <meta name="description" content="Online-Portfolio von Sylvia Trieu – creative vision.">
+  <link rel="preload" href="fonts/Jost-Medium.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Zum Inhalt springen</a>
+
+  <main id="main">
+    <!-- Abschnitt 1 + 2: ein gemeinsamer, gepinnter Stage -->
+    <div class="hero-wrapper" id="hero-wrapper">
+      <div class="hero-stage" id="hero-stage">
+        <video class="stage__video stage__video--1" id="video-1" src="media/hero/intro.mp4#t=0.001"
+               muted playsinline preload="auto" aria-hidden="true" tabindex="-1"></video>
+        <video class="stage__video stage__video--2" id="video-2" src="media/hero/intro-video.mp4"
+               muted playsinline preload="auto" aria-label="Showreel-Video von Sylvia Trieu"></video>
+
+        <div class="stage__overlay" id="stageOverlay">
+          <div class="stage__text">
+            <h1 class="stage__title">creative vision</h1>
+            <p class="stage__subtitle">SYLVIA TRIEU PORTFOLIO</p>
+          </div>
+        </div>
+
+        <button class="sound-toggle" id="soundToggle" type="button"
+                aria-label="Stummschalten" aria-pressed="true">
+          <svg class="icon icon--muted" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+            <path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/>
+            <path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <svg class="icon icon--sound" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+            <path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/>
+            <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Abschnitt 3: Projekt mit Scroll-Bildwechsel (sticky) -->
+    <section class="project morph-reveal" id="projekte" data-morph aria-label="Projekt AI Brand nandenmoii">
+      <div class="project__stage morph-reveal__stage" id="projectStage">
+        <div class="project__col project__col--text">
+          <h2 class="project__title reveal"><span class="reveal__inner">AI Brand „nandenmoii“</span></h2>
+          <p class="project__text fade-in">Konzeption und visuelle Entwicklung einer KI-basierten Fashion-Brand-Identität sowie multimedialer Kampagnen-Assets</p>
+        </div>
+        <div class="project__col project__col--avatar avatar-stack">
+          <img class="avatar is-active" src="media/projects/projekt-1/avatar-jason-1.webp" alt="Avatar Jason in Streetwear mit Farbmuster, Ansicht 1 von 5" width="360" height="897">
+          <img class="avatar" src="media/projects/projekt-1/avatar-jason-2.webp" alt="Avatar Jason, Ansicht 2 von 5" width="360" height="897">
+          <img class="avatar" src="media/projects/projekt-1/avatar-jason-3.webp" alt="Avatar Jason, Ansicht 3 von 5" width="360" height="897">
+          <img class="avatar" src="media/projects/projekt-1/avatar-jason-4.webp" alt="Avatar Jason, Ansicht 4 von 5" width="360" height="897">
+          <img class="avatar" src="media/projects/projekt-1/avatar-jason-5.webp" alt="Avatar Jason, Ansicht 5 von 5" width="360" height="897">
+        </div>
+        <div class="project__col project__col--image avatar-stack">
+          <img class="avatar is-active" src="media/projects/projekt-1/avatar-mia-1.webp" alt="Avatar Mia in Jacke mit Farbmuster, Ansicht 1 von 5" width="360" height="897">
+          <img class="avatar" src="media/projects/projekt-1/avatar-mia-2.webp" alt="Avatar Mia, Ansicht 2 von 5" width="360" height="897">
+          <img class="avatar" src="media/projects/projekt-1/avatar-mia-3.webp" alt="Avatar Mia, Ansicht 3 von 5" width="360" height="897">
+          <img class="avatar" src="media/projects/projekt-1/avatar-mia-4.webp" alt="Avatar Mia, Ansicht 4 von 5" width="360" height="897">
+          <img class="avatar" src="media/projects/projekt-1/avatar-mia-5.webp" alt="Avatar Mia, Ansicht 5 von 5" width="360" height="897">
+        </div>
+      </div>
+    </section>
+
+    <!-- Abschnitt 4: Avatar-Konsistenz (sticky, Morph-Übergang aus Abschnitt 3) -->
+    <section class="project project--consistency morph-reveal" id="konsistenz" data-morph aria-label="Avatar Consistency">
+      <div class="project__stage morph-reveal__stage">
+        <div class="project__col project__col--text">
+          <h2 class="project__title reveal"><span class="reveal__inner">avatar consistency</span></h2>
+          <ul class="project__specs fade-in">
+            <li>Model: Jason</li>
+            <li>Größe: 184cm</li>
+            <li>Brust: 91cm</li>
+            <li>Taille: 73cm</li>
+            <li>Hüfte: 91cm</li>
+          </ul>
+        </div>
+        <div class="project__col project__col--face">
+          <img class="face" src="media/projects/projekt-1/avatar-jason-face.webp" alt="Porträt von Avatar Jason im schwarzen Rippshirt" width="581" height="727">
+        </div>
+        <div class="project__col project__col--body">
+          <img class="body-shot" src="media/projects/projekt-1/avatar-jason.webp" alt="Avatar Jason als Ganzkörperansicht in schwarzem Outfit" width="276" height="897">
+        </div>
+      </div>
+    </section>
+
+    <!-- Abschnitt 5: ComfyUI virtual try on (Morph aus Abschnitt 4; das Gesichtsbild wandert in den leeren Bildslot) -->
+    <section class="project project--try morph-reveal" id="tryon" data-morph aria-label="ComfyUI virtual try on">
+      <div class="project__stage morph-reveal__stage">
+        <div class="try__head">
+          <h2 class="project__title reveal"><span class="reveal__inner">ComfyUI virtual try on</span></h2>
+          <p class="project__text fade-in">Textplatzhalter: Hier folgt die Beschreibung des ComfyUI-Workflows für die virtuelle Anprobe.</p>
+        </div>
+        <div class="comfy" id="comfy">
+          <img class="comfy__img" src="media/projects/projekt-1/comfyui.png" alt="ComfyUI-Workflow für die virtuelle Anprobe mit Load-Image-Nodes für Model, Outfit und Pose" width="720" height="570">
+          <img class="comfy__face" src="media/projects/projekt-1/avatar-jason-face.webp" alt="" aria-hidden="true">
+        </div>
+        <div class="try__image">
+          <img class="try__save" src="media/projects/projekt-1/comfyui_save.png" alt="Ergebnis: Ausgabe des ComfyUI-Workflows (Save-Image-Node)" width="487" height="691">
+        </div>
+      </div>
+    </section>
+
+    <!-- Abschnitt 6: Vollbild -->
+    <section class="fullscreen" id="abschnitt6" aria-label="Abschnitt 6">
+      <img src="media/projects/projekt-1/abschnitt6.png" alt="Abschnitt 6: Übersicht der Ergebnisse" width="1920" height="1080">
+    </section>
+
+    <!-- Abschnitt 7: leer -->
+    <section class="placeholder" id="weiter" aria-label="Abschnitt 7"></section>
+  </main>
+
+  <!-- Fliegendes Gesichtsbild: liegt während des Morphs 4 → 5 über beiden Abschnitten -->
+  <img class="face-fly" id="faceFly" src="media/projects/projekt-1/avatar-jason-face.webp" alt="" aria-hidden="true">
+
+  <script src="js/script.js"></script>
+</body>
+</html>

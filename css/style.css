@@ -1,0 +1,349 @@
+@font-face {
+  font-family: "Jost";
+  src: url("../fonts/Jost-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Jost";
+  src: url("../fonts/Jost-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font: "Jost", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bg-light: #f7f7f8;
+  --text-on-video: #fff;
+  --overlay: rgba(0, 0, 0, 0.3);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: #000;
+  font-family: var(--font);
+  font-weight: 500;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 100;
+  padding: .6rem 1rem;
+  background: #fff;
+  color: #000;
+  border-radius: 4px;
+  transition: top .15s;
+}
+.skip-link:focus { top: 1rem; }
+
+/* ---------- Abschnitt 1 + 2: gemeinsamer Stage ---------- */
+/* 300vh Scrollstrecke (200vh Scrubbing + 100vh Pin) + 100vh Stage-Höhe */
+.hero-wrapper {
+  position: relative;
+  height: 500vh;
+}
+
+.hero-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background: #000;
+}
+
+.stage__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.stage__video--1 { z-index: 1; }
+.stage__video--2 { z-index: 2; opacity: 0; transition: opacity .3s linear; }
+
+.stage__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--overlay);
+  color: var(--text-on-video);
+  text-align: center;
+  opacity: 1; /* per JS aus dem Scrollfortschritt von Video 1 */
+  will-change: opacity;
+  pointer-events: none;
+}
+
+.stage__title {
+  margin: 0;
+  font-weight: 500;
+  font-size: clamp(2.5rem, 11vw, 7rem);
+  line-height: 1.05;
+  letter-spacing: .01em;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, .35);
+}
+
+.stage__subtitle {
+  margin: 1rem 0 0;
+  font-weight: 500;
+  font-size: clamp(.8rem, 2.6vw, 1.25rem);
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, .4);
+}
+
+.sound-toggle {
+  position: absolute;
+  z-index: 4;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, .85);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .6);
+  color: #fff;
+  cursor: pointer;
+  transition: background .2s, transform .2s;
+}
+.sound-toggle:hover { background: rgba(0, 0, 0, .8); transform: scale(1.06); }
+.sound-toggle:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px #000;
+}
+.sound-toggle .icon { grid-area: 1 / 1; }
+.sound-toggle[aria-pressed="true"] .icon--sound,
+.sound-toggle[aria-pressed="false"] .icon--muted { display: none; }
+
+/* ---------- Abschnitt 3: Platzhalter ---------- */
+.placeholder {
+  height: 100vh;
+  height: 100svh;
+  background: var(--bg-light);
+}
+
+@media (min-width: 768px) {
+  .sound-toggle { width: 3.5rem; height: 3.5rem; right: 2rem; bottom: 2rem; }
+}
+
+/* ---------- Reduced Motion: kein Scrubbing; nur Pin-Strecke für Video 2 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .hero-wrapper { height: 300vh; }
+  .stage__video--2, .sound-toggle { transition: none; }
+}
+
+/* ---------- Abschnitt 3: Projekt (sticky, Bildwechsel per Scroll) ---------- */
+/* 100vh Stage + 5 Schritte à 40vh Scrollstrecke (letztes Bild wird ebenfalls gehalten) */
+/* Wrapper überlappt die letzten 200vh des Hero-Wrappers (Morph beginnt, während Video 2 noch gepinnt ist):
+   100vh Morph + 200vh Bildwechsel + 100vh Stage */
+.project {
+  position: relative;
+  height: 500vh; /* 100vh Morph + 200vh Bildwechsel + 100vh Halten (Morph zu Abschnitt 4) + 100vh Stage */
+  margin-top: -200vh;
+  z-index: 5;
+}
+/* Abschnitt 4: 100vh Morph + 100vh Halten + 100vh Stage; überlappt die letzten 200vh von Abschnitt 3 */
+.project.project--consistency { height: 400vh; z-index: 6; } /* + 100vh Halten für den Morph zu Abschnitt 5 */
+.project.project--try { height: 300vh; z-index: 7; }
+
+/* ---------- Morph-Reveal (wiederverwendbar) ---------- */
+.morph-reveal { --morph-bg: transparent; }
+.morph-reveal__stage {
+  /* No-JS-Fallback: keine Maske */
+  clip-path: none;
+  will-change: clip-path;
+}
+
+.project__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+  padding: 4.5rem 1.5rem 1.5rem;
+  background: linear-gradient(to bottom, #c3b9b6 0%, #fdfdfd 100%);
+  color: #111;
+}
+
+.project__col { min-height: 0; }
+
+.project__col--text {
+  grid-column: 1 / -1;
+}
+
+.project__title {
+  margin: 0 0 .75rem;
+  font-weight: 500;
+  font-size: clamp(1.6rem, 6vw, 3rem);
+  line-height: 1.1;
+}
+
+.project__text {
+  margin: 0;
+  max-width: 32rem;
+  font-weight: 400;
+  font-size: clamp(.9rem, 3.4vw, 1.1rem);
+  line-height: 1.5;
+  letter-spacing: .06em;
+}
+
+.project__col--avatar { position: relative; }
+
+.avatar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 0;
+  transition: opacity .35s ease;
+}
+.avatar.is-active { opacity: 1; }
+
+.project__col--image { position: relative; }
+
+.image-placeholder {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .45);
+  border: 2px dashed rgba(17, 17, 17, .25);
+}
+
+@media (min-width: 900px) {
+  .project__stage {
+    grid-template-columns: 1.1fr 1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 2rem;
+    padding: 3rem 5vw 3rem 8vw;
+  }
+  .project__col--text {
+    grid-column: auto;
+    align-self: center;
+  }
+  .project__title { font-size: clamp(2rem, 3vw, 3rem); }
+  .project__text { font-size: 1.05rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar { transition: none; }
+}
+
+/* ---------- Reveal / Fade-in im Textbereich ---------- */
+.reveal { overflow: hidden; padding-bottom: .1em; }
+.reveal__inner {
+  display: block;
+  transform: translateY(110%);
+  transition: transform .8s cubic-bezier(.2, .7, .2, 1);
+}
+.reveal.is-visible .reveal__inner { transform: none; }
+
+.fade-in {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity .8s ease, transform .8s ease;
+}
+.fade-in.is-visible { opacity: 1; transform: none; }
+
+.project__col--image .avatar { object-position: center bottom; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal__inner, .fade-in { transition: none; }
+}
+
+/* ---------- Abschnitt 4: Avatar Consistency ---------- */
+.project__specs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-weight: 400;
+  font-size: clamp(.9rem, 3.4vw, 1.1rem);
+  line-height: 1.6;
+  letter-spacing: .12em;
+}
+.project__col--face, .project__col--body { position: relative; display: flex; min-height: 0; }
+.face, .body-shot { display: block; max-width: 100%; max-height: 100%; margin: auto; object-fit: contain; }
+.project__col--body .body-shot { margin-bottom: 0; }
+@media (min-width: 900px) {
+  .project--consistency .project__stage { grid-template-columns: 1.1fr 1fr 1fr; padding-bottom: 3rem; }
+  .face { max-height: 68%; }
+  .project__specs { font-size: 1.15rem; }
+}
+
+/* ---------- Abschnitt 5: ComfyUI virtual try on ---------- */
+.project--try .project__stage {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr .7fr;
+  align-items: start;
+}
+.try__head { min-width: 0; }
+.comfy { position: relative; width: 100%; height: 100%; min-height: 0; }
+.comfy__img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: left top; }
+.comfy__face { position: absolute; display: block; object-fit: cover; visibility: hidden; } /* Position per JS (Slot im Bild) */
+.try__image { position: relative; width: 100%; height: 100%; min-height: 0; }
+.face-fly {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  object-fit: cover;
+  transform-origin: 0 0;
+  pointer-events: none;
+  visibility: hidden;
+  will-change: transform;
+}
+.project__col--face .face.is-away { visibility: hidden; }
+@media (min-width: 900px) {
+  .project--try .project__stage {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    column-gap: 4rem;
+    padding: 4rem 5vw 3rem 8vw;
+  }
+  .project--try .try__head { grid-column: 1; grid-row: 1; }
+  .project--try .comfy { grid-column: 1; grid-row: 2; margin-top: 1.5rem; }
+  .project--try .try__image { grid-column: 2; grid-row: 1 / -1; align-self: stretch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .comfy__face { visibility: visible; }
+}
+
+/* ---------- Abschnitt 5: Ergebnisbild (comfyui_save.png) ---------- */
+.try__image { display: flex; align-items: flex-end; justify-content: center; }
+.try__save {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+@media (min-width: 900px) {
+  /* 487 × 691 bei 1920 × 1080; Unterkante per JS an die Unterkante von comfyui.png gelegt */
+  .try__save { height: min(64vh, 100%); margin-right: 3.6vw; }
+}
+
+/* ---------- Abschnitt 6: Vollbild ---------- */
+.fullscreen { position: relative; z-index: 8; height: 100vh; height: 100svh; background: #fdfdfd; }
+.fullscreen img { display: block; width: 100%; height: 100%; object-fit: cover; }
