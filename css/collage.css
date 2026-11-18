@@ -132,22 +132,27 @@
   grid-row: 2;
 }
 
-/* Zweiter Block: breit / breit, darunter wieder das Muster */
-.collage__slot--wide {
-  grid-column: 1 / 4;
+/* Untere Reihe: zwei getrennte Slots im Verhaeltnis 1 : 2.
+   Bewusst nicht ein durchgehend breiter Slot: die Quellvideos sind nur
+   818x460, ein 1296px breiter Slot haette sie 1.6x hochskaliert (pixelig).
+   Zwei kleinere Slots liegen unter 1.0x und bleiben scharf. */
+.collage__slot--bl {
+  grid-column: 1 / 2;
+  grid-row: 3;
+}
+.collage__slot--bw {
+  grid-column: 2 / 4;
   grid-row: 3;
 }
 
-/* Zweites Muster (gespiegelt): hoch | breit | hoch waere Reihe 4/5;
-   hier als erneutes 3er-Muster untereinander. */
-.collage__slot--l2 { grid-column: 1; grid-row: 4 / 6; }
-.collage__slot--mid2 { grid-column: 2; grid-row: 4 / 6; }
-.collage__slot--r2a { grid-column: 3; grid-row: 4; }
-.collage__slot--r2b { grid-column: 3; grid-row: 5; }
-
+/* Das 1:2-Verhaeltnis der unteren Reihe gilt nur dort; die obere
+   Dreiteilung (1.15fr 1fr 1.15fr) bleibt unangetastet. */
 .collage__grid {
-  grid-template-rows: 1fr 1fr 0.9fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1.25fr;
 }
+/* Untere Reihe als eigene 1:2-Teilung: die mittlere Spaltengrenze wird
+   fuer diese Zeile ueber eine Sub-Grid-Loesung nicht gebraucht – die
+   Breiten ergeben sich aus den Spalten 1 vs. 2+3. */
 
 /* ---------- Responsive ---------- */
 
