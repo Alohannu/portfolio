@@ -186,3 +186,27 @@
   .collage__head [data-collage-reveal] { opacity: 1; transform: none; transition: none; }
   .collage__fade { display: none; }
 }
+
+/* ---------- Link zur Outtake-Seite ---------- */
+.collage__more {
+  margin: 6vh 0 0;
+  padding: 0 5vw;
+  text-align: center;
+}
+
+.collage__more-link {
+  display: inline-block;
+  padding: .7rem 1.3rem;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 999px;
+  color: #fff;
+  text-decoration: none;
+  font-size: .82rem;
+  letter-spacing: .06em;
+  transition: border-color .25s ease, background-color .25s ease;
+}
+.collage__more-link:hover,
+.collage__more-link:focus-visible {
+  border-color: rgba(255, 255, 255, .7);
+  background: rgba(255, 255, 255, .08);
+}

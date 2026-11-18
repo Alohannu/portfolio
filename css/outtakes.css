@@ -1,0 +1,217 @@
+/* ==========================================================================
+   Outtake-Seite
+   Nutzt dieselbe Collage-Mechanik wie die Startseite (js/collage.js und
+   css/collage.css). Hier nur, was diese Seite zusaetzlich braucht:
+   Kopfbereich, Textkaesten und Fusszeile.
+   ========================================================================== */
+
+.page-outtakes {
+  background: #000;
+  color: #fff;
+  /* Gleicher Eckenradius wie die Video-Kacheln – an einer Stelle
+     definiert, damit Kacheln und Textkaesten exakt gleich gerundet sind. */
+  --radius: clamp(8px, 1vw, 18px);
+}
+
+/* ---------- Kopf ---------- */
+.ot-head {
+  padding: 16vh 5vw 4vh;
+  max-width: min(1100px, 92vw);
+  margin: 0 auto;
+}
+
+.ot-kicker {
+  margin: 0 0 1rem;
+  font-size: .72rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .45);
+}
+
+.ot-title {
+  margin: 0 0 1.4rem;
+  font-size: clamp(2.2rem, 6vw, 5rem);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -.02em;
+}
+
+.ot-lead {
+  margin: 0;
+  max-width: 62ch;
+  font-size: clamp(.95rem, 1.1vw, 1.1rem);
+  line-height: 1.65;
+  color: rgba(255, 255, 255, .72);
+}
+
+/* ---------- Buehne fuer die drei Outtakes ---------- */
+.collage--outtakes {
+  padding: 2vh 0 0;
+}
+
+/* Drei Videos nebeneinander. Nur eines spielt, die anderen sind weiss –
+   genau wie auf der Startseite. */
+.collage--outtakes .collage__grid {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr;
+  height: 52vh;
+}
+.collage--outtakes .collage__grid > .collage__slot:nth-child(1) { grid-column: 1; grid-row: 1; }
+.collage--outtakes .collage__grid > .collage__slot:nth-child(2) { grid-column: 2; grid-row: 1; }
+.collage--outtakes .collage__grid > .collage__slot:nth-child(3) { grid-column: 3; grid-row: 1; }
+
+/* ---------- Textkaesten ---------- */
+.ot-notes {
+  padding: 12vh 5vw 6vh;
+  max-width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.ot-notes__title {
+  margin: 0 0 3rem;
+  font-size: clamp(1.1rem, 1.6vw, 1.5rem);
+  font-weight: 500;
+  letter-spacing: .01em;
+  color: rgba(255, 255, 255, .55);
+}
+
+/* Der Kasten hat denselben Radius wie eine Video-Kachel. */
+.ot-box {
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: var(--radius, 14px);
+  background: rgba(255, 255, 255, .03);
+  padding: clamp(1.4rem, 2.6vw, 2.6rem);
+  margin: 0 0 clamp(1.6rem, 3vw, 2.6rem);
+}
+
+.ot-box__head {
+  margin: 0 0 1.8rem;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+
+.ot-box__kicker {
+  margin: 0 0 .5rem;
+  font-size: .68rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .42);
+}
+
+.ot-box__title {
+  margin: 0 0 .5rem;
+  font-size: clamp(1.3rem, 2.4vw, 2rem);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.ot-box__tools {
+  margin: 0;
+  font-size: .8rem;
+  letter-spacing: .04em;
+  color: rgba(255, 255, 255, .45);
+}
+
+/* Challenges / Solutions: zweispaltig, auf schmal einspaltig. */
+.ot-box__body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: clamp(1.4rem, 3vw, 2.6rem);
+}
+
+.ot-block__label {
+  margin: 0 0 .9rem;
+  font-size: .7rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .5);
+}
+
+.ot-block p {
+  margin: 0 0 .9rem;
+  font-size: clamp(.9rem, 1vw, 1rem);
+  line-height: 1.65;
+  color: rgba(255, 255, 255, .78);
+}
+
+.ot-block ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ot-block li {
+  position: relative;
+  margin: 0 0 .7rem;
+  padding-left: 1.1rem;
+  font-size: clamp(.9rem, 1vw, 1rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, .68);
+}
+
+.ot-block li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .35);
+}
+
+.ot-block strong {
+  font-weight: 600;
+  color: rgba(255, 255, 255, .9);
+}
+
+/* ---------- Fusszeile ---------- */
+.ot-foot {
+  padding: 4vh 5vw 12vh;
+  max-width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.ot-back {
+  display: inline-block;
+  padding: .7rem 1.3rem;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 999px;
+  color: #fff;
+  text-decoration: none;
+  font-size: .82rem;
+  letter-spacing: .06em;
+  transition: border-color .25s ease, background-color .25s ease;
+}
+.ot-back:hover,
+.ot-back:focus-visible {
+  border-color: rgba(255, 255, 255, .7);
+  background: rgba(255, 255, 255, .08);
+}
+
+/* ---------- Schmal ---------- */
+@media (max-width: 900px) {
+  .ot-head { padding: 12vh 5vw 3vh; }
+  .ot-notes { padding: 8vh 5vw 4vh; }
+  /* Kein Pinning auf schmalen Viewports: die Kacheln stehen untereinander,
+     genau wie auf der Startseite. */
+  .collage--outtakes .collage__grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    height: auto;
+  }
+  .collage--outtakes .collage__grid > .collage__slot {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+}
+
+/* ---------- Reduced Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .ot-box,
+  [data-collage-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

@@ -4,10 +4,10 @@
     "title": "virtual try-on",
     "subtitle": "ComfyUI Node Explorer",
     "source": "native ComfyUI export",
-    "note": "Aus context/comfyui_workflow.json konvertiert. Koordinaten bewusst NICHT normalisiert: der Graph ist 1543 x 4803 px und erzaehlt den Datenfluss vertikal."
+    "note": "Aus context/comfyui_workflow.json konvertiert. Koordinaten bewusst NICHT normalisiert: der Graph ist 1114 x 4803 px und erzaehlt den Datenfluss vertikal."
   },
   "canvas": {
-    "width": 1543,
+    "width": 1114,
     "height": 4803,
     "initialZoom": 1.0,
     "minZoom": 0.15,
@@ -29,28 +29,28 @@
       "label": "Models",
       "x": 24.0,
       "y": 1015.6,
-      "w": 424.8,
+      "w": 427.0,
       "h": 670.1
     },
     {
       "label": "Prompt",
-      "x": 395.0,
+      "x": 256.8,
       "y": 2258.0,
-      "w": 460.3,
+      "w": 810.8,
       "h": 664.0
     },
     {
       "label": "Load Image",
-      "x": 463.0,
+      "x": 312.9,
       "y": 24.0,
-      "w": 960.6,
+      "w": 723.7,
       "h": 754.2
     },
     {
       "label": "",
-      "x": 1191.3,
+      "x": 758.8,
       "y": 2713.7,
-      "w": 328.4,
+      "w": 332.1,
       "h": 630.7
     }
   ],
@@ -60,7 +60,7 @@
       "type": "CLIPLoader",
       "title": "Load CLIP",
       "accent": "#f0d868",
-      "x": 38.0,
+      "x": 40.0,
       "y": 1394.6,
       "w": 395,
       "inputs": [],
@@ -90,7 +90,7 @@
       "type": "VAELoader",
       "title": "Load VAE",
       "accent": "#ff6b6b",
-      "x": 38.0,
+      "x": 40.0,
       "y": 1572.6,
       "w": 395,
       "inputs": [],
@@ -112,7 +112,7 @@
       "type": "TextEncodeQwenImageEditPlus",
       "title": "Text Encode Qwen Image Edit Plus",
       "accent": "#ff9f45",
-      "x": 409.0,
+      "x": 272.8,
       "y": 2653.9,
       "w": 419,
       "inputs": [
@@ -156,7 +156,7 @@
       "type": "LoraLoaderModelOnly",
       "title": "Load LoRA",
       "accent": "#b57bff",
-      "x": 38.0,
+      "x": 40.0,
       "y": 1240.6,
       "w": 395,
       "inputs": [
@@ -187,7 +187,7 @@
       "type": "TextEncodeQwenImageEditPlus",
       "title": "TextEncodeQwenImageEditPlus (Positive)",
       "accent": "#ff9f45",
-      "x": 409.0,
+      "x": 272.8,
       "y": 2332.9,
       "w": 420,
       "inputs": [
@@ -231,7 +231,7 @@
       "type": "UNETLoader",
       "title": "Load Diffusion Model",
       "accent": "#b57bff",
-      "x": 38.0,
+      "x": 40.0,
       "y": 1086.6,
       "w": 395,
       "inputs": [],
@@ -257,7 +257,7 @@
       "type": "FluxKontextMultiReferenceLatentMethod",
       "title": "Reference Latent Method",
       "accent": "#ff9f45",
-      "x": 1209.2,
+      "x": 774.8,
       "y": 3089.1,
       "w": 299,
       "inputs": [
@@ -284,7 +284,7 @@
       "type": "CFGNorm",
       "title": "CFGNorm",
       "accent": "#b57bff",
-      "x": 1221.7,
+      "x": 782.6,
       "y": 2940.1,
       "w": 269,
       "inputs": [
@@ -315,7 +315,7 @@
       "type": "ModelSamplingAuraFlow",
       "title": "Model Sampling Aura Flow",
       "accent": "#b57bff",
-      "x": 1217.0,
+      "x": 779.7,
       "y": 2795.3,
       "w": 269,
       "inputs": [
@@ -342,7 +342,7 @@
       "type": "KSampler",
       "title": "KSampler",
       "accent": "#ff7bd5",
-      "x": 930.6,
+      "x": 600.0,
       "y": 3957.3,
       "w": 279,
       "inputs": [
@@ -405,7 +405,7 @@
       "type": "SaveImage",
       "title": "Save Image",
       "accent": "#6fb7ff",
-      "x": 618.4,
+      "x": 404.1,
       "y": 4683.2,
       "w": 420,
       "inputs": [
@@ -427,7 +427,7 @@
       "type": "VAEDecode",
       "title": "VAEDecode",
       "accent": "#6fb7ff",
-      "x": 388.6,
+      "x": 260.0,
       "y": 4338.7,
       "w": 240,
       "inputs": [
@@ -453,7 +453,7 @@
       "type": "FluxKontextMultiReferenceLatentMethod",
       "title": "Reference Latent Method",
       "accent": "#ff9f45",
-      "x": 1211.0,
+      "x": 775.9,
       "y": 3231.3,
       "w": 299,
       "inputs": [
@@ -480,7 +480,7 @@
       "type": "VAEEncode",
       "title": "VAEEncode",
       "accent": "#ff7bd5",
-      "x": 1218.5,
+      "x": 780.6,
       "y": 514.7,
       "w": 240,
       "inputs": [
@@ -506,7 +506,7 @@
       "type": "ImageScaleToTotalPixels",
       "title": "Scale To Total Pixels",
       "accent": "#6fb7ff",
-      "x": 822.4,
+      "x": 532.1,
       "y": 597.3,
       "w": 269,
       "inputs": [
@@ -541,7 +541,7 @@
       "type": "LoadImage",
       "title": "model",
       "accent": "#6fb7ff",
-      "x": 498.5,
+      "x": 328.9,
       "y": 114.7,
       "w": 273,
       "inputs": [],
@@ -571,7 +571,7 @@
       "type": "LoadImage",
       "title": "item 2",
       "accent": "#6fb7ff",
-      "x": 1118.5,
+      "x": 717.9,
       "y": 114.7,
       "w": 273,
       "inputs": [],
@@ -601,7 +601,7 @@
       "type": "LoadImage",
       "title": "item 1",
       "accent": "#6fb7ff",
-      "x": 827.0,
+      "x": 535.0,
       "y": 111.2,
       "w": 240,
       "inputs": [],

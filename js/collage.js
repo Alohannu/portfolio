@@ -345,14 +345,16 @@
     try { data = JSON.parse(dataEl.textContent); }
     catch (e) { console.error("[collage] Daten konnten nicht gelesen werden", e); return; }
 
-    /* Rastergroessen fuer die 8 Videos: Hochkant bevorzugt hoch,
-       Quer bevorzugt breit. */
-    var order = ["e-commerce", "ucg-outfit1", "ucg-outfit2", "fashion",
-                 "hero-video", "outtake1", "outtake2", "outtake3"];
+    /* Die Startseite spielt nur diese Videos; fehlt "only" im JSON,
+       gilt diese Liste. Die Outtakes haben eine eigene Seite
+       (outtakes.html) und laufen hier nicht mehr mit. */
+    var defaultOnly = ["e-commerce", "ucg-outfit1", "ucg-outfit2", "fashion",
+                       "hero-video", "eggo-aleph-seedance"];
+
     mount(root, {
       slots: data.slots,
-      only: order,
-      shuffle: true,
+      only: data.only !== undefined ? data.only : defaultOnly,
+      shuffle: data.shuffle !== false,   // Standard: mischen
       fadeMs: data.fadeMs
     });
   }

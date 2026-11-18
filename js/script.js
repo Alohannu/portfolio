@@ -378,26 +378,38 @@
   /* ---------- Abschnitt 5: im Graphen bis zum Ende scrollen ----------
      Die Section ist gepinnt (position: sticky). Solange der Graph noch nicht
      am unteren Ende ist, wird das Mausrad auf den Graphen umgelenkt. Am Ende
-     greift eine kurze Pause, danach läuft die Seite normal weiter – so gibt es
-     keinen harten Bruch in der Bewegung. */
+     greift eine kurze Pause, danach läuft die Seite weiter – so gibt es
+     keinen harten Bruch in der Bewegung.
+
+     Wichtig: Der Canvas hat overflow:auto und liegt unter dem Cursor. Ohne
+     Eingriff frisst er das Rad-Event nativ, die Seite bleibt stehen und der
+     Übergang zur Section geht verloren. Deshalb schalten wir das native
+     Scrollen des Canvas ab und bewegen ihn ausschließlich selbst. */
   var tryonSection = document.getElementById("tryon");
   var tryonStage = tryonSection && tryonSection.querySelector(".morph-reveal__stage");
   var canvasEl = null;
-  var END_PAUSE_MS = 480;   // kurze Pause am Graph-Ende
+  var END_PAUSE_MS = 420;   // kurze Pause am Graph-Ende
   var endReachedAt = 0;     // Zeitpunkt, an dem das Ende erreicht wurde
+  var pausedAt = 0;         // Zeitpunkt, an dem die Pause begann
 
   function findCanvas() {
     if (canvasEl && canvasEl.isConnected) return canvasEl;
     canvasEl = document.querySelector("#comfy-slot .nv-canvas");
+    if (canvasEl) {
+      // Der Canvas wird nur von uns bewegt, nie nativ gescrollt.
+      canvasEl.style.overflow = "hidden";
+      canvasEl.style.cursor = "grab";
+    }
     return canvasEl;
   }
 
-  // Ist die Section gerade gepinnt und vollständig aufgedeckt?
+  // Die Section ist "aktiv", sobald ihre Stage im Viewport steht – nicht erst
+  // wenn sie exakt oben klebt. Sonst bleibt die Seite am Canvas hängen,
+  // bevor der Graph-Handler übernimmt.
   function tryonIsActive() {
     if (!tryonSection || !tryonStage) return false;
     var r = tryonStage.getBoundingClientRect();
-    // Stage klebt oben, sobald ihr oberer Rand ~0 ist
-    return Math.abs(r.top) < 4 && r.bottom > window.innerHeight * 0.5;
+    return r.top <= 2 && r.bottom >= window.innerHeight * 0.6;
   }
 
   function atGraphEnd(c) {
@@ -409,47 +421,41 @@
   }
 
   if (tryonSection) {
-    // Rad-Events abfangen, solange im Graphen gescrollt werden kann.
+    findCanvas();
+
     window.addEventListener("wheel", function (e) {
-      if (reduceMotion) return;
       var c = findCanvas();
-      if (!c || !tryonIsActive()) return;
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // horizontales Scrollen nicht anfassen
+      if (!c) return;
+      if (reduceMotion) return;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // horizontal nicht anfassen
+      if (!tryonIsActive()) return;
 
       var down = e.deltaY > 0;
       var atEnd = atGraphEnd(c), atStart = atGraphStart(c);
 
-      // Am Graph-Ende: kurze Pause, dann Seite aktiv weiterbewegen.
+      // --- Graph-Ende: kurze Pause, dann Seite weiter -------------------
       if (down && atEnd) {
         var now = Date.now();
-        if (!endReachedAt) {
-          // Ende gerade erreicht -> Pause starten, dieses Event schlucken.
-          endReachedAt = now;
-          e.preventDefault();
-          return;
-        }
-        if (now - endReachedAt < END_PAUSE_MS) {
-          // Noch in der Pause: schlucken, damit die Seite nicht springt.
-          e.preventDefault();
-          return;
-        }
-        // Pause vorbei: Seite selbst weiterscrollen. Nicht auf das
-        // Default-Verhalten verlassen – das Event ist hier schon verbraucht.
+        if (!pausedAt) { pausedAt = now; e.preventDefault(); return; }
+        if (now - pausedAt < END_PAUSE_MS) { e.preventDefault(); return; }
+        // Pause vorbei: Seite selbst weiterbewegen (das Event ist verbraucht).
         e.preventDefault();
         window.scrollBy(0, e.deltaY);
         return;
       }
-      if (!down && atStart) { endReachedAt = 0; return; } // oben -> Seite zurück
+      if (down && !atEnd) pausedAt = 0;
 
-      // Sonst: Rad auf den Graphen umlenken, Seite steht still.
+      // --- Graph-Anfang: nach oben zurück an die Seite -------------------
+      if (!down && atStart) { pausedAt = 0; return; }
+
+      // --- Sonst: Rad auf den Graphen umlenken, Seite steht still --------
       e.preventDefault();
-      endReachedAt = 0;
+      pausedAt = 0;
       c.scrollTop += e.deltaY;
     }, { passive: false });
 
-    // Beim Verlassen der Section den Pausen-Zustand zurücksetzen.
     window.addEventListener("scroll", function () {
-      if (!tryonIsActive()) endReachedAt = 0;
+      if (!tryonIsActive()) { pausedAt = 0; endReachedAt = 0; }
     }, { passive: true });
   }
 
