@@ -24,6 +24,13 @@
     "out": "#8fe3c0",
     "none": "rgba(255,255,255,.22)"
   },
+  "wireStyle": {
+    "baseWidth": 2,
+    "baseOpacity": 0.5,
+    "pulseWidth": 3.6,
+    "pulseDasharray": "5 40",
+    "pulseAnimation": "1.15s linear infinite"
+  },
   "groups": [
     {
       "label": "Models",
@@ -633,175 +640,175 @@
       "fromPort": "out:IMAGE",
       "to": "9",
       "toPort": "in:images",
-      "type": "IMAGE"
+      "type": "image"
     },
     {
       "from": "10",
       "fromPort": "out:VAE",
       "to": "8",
       "toPort": "in:vae",
-      "type": "VAE"
+      "type": "vae"
     },
     {
       "from": "64",
       "fromPort": "out:patched_model",
       "to": "65",
       "toPort": "in:model",
-      "type": "MODEL"
+      "type": "model"
     },
     {
       "from": "65",
       "fromPort": "out:LATENT",
       "to": "8",
       "toPort": "in:samples",
-      "type": "LATENT"
+      "type": "latent"
     },
     {
       "from": "67",
       "fromPort": "out:MODEL",
       "to": "64",
       "toPort": "in:model",
-      "type": "MODEL"
+      "type": "model"
     },
     {
       "from": "61",
       "fromPort": "out:CLIP",
       "to": "68",
       "toPort": "in:clip",
-      "type": "CLIP"
+      "type": "clip"
     },
     {
       "from": "61",
       "fromPort": "out:CLIP",
       "to": "69",
       "toPort": "in:clip",
-      "type": "CLIP"
+      "type": "clip"
     },
     {
       "from": "10",
       "fromPort": "out:VAE",
       "to": "68",
       "toPort": "in:vae",
-      "type": "VAE"
+      "type": "vae"
     },
     {
       "from": "10",
       "fromPort": "out:VAE",
       "to": "69",
       "toPort": "in:vae",
-      "type": "VAE"
+      "type": "vae"
     },
     {
       "from": "68",
       "fromPort": "out:CONDITIONING",
       "to": "70",
       "toPort": "in:conditioning",
-      "type": "CONDITIONING"
+      "type": "cond"
     },
     {
       "from": "70",
       "fromPort": "out:CONDITIONING",
       "to": "65",
       "toPort": "in:positive",
-      "type": "CONDITIONING"
+      "type": "cond"
     },
     {
       "from": "69",
       "fromPort": "out:CONDITIONING",
       "to": "71",
       "toPort": "in:conditioning",
-      "type": "CONDITIONING"
+      "type": "cond"
     },
     {
       "from": "71",
       "fromPort": "out:CONDITIONING",
       "to": "65",
       "toPort": "in:negative",
-      "type": "CONDITIONING"
+      "type": "cond"
     },
     {
       "from": "74",
       "fromPort": "out:MODEL",
       "to": "67",
       "toPort": "in:model",
-      "type": "MODEL"
+      "type": "model"
     },
     {
       "from": "10",
       "fromPort": "out:VAE",
       "to": "75",
       "toPort": "in:vae",
-      "type": "VAE"
+      "type": "vae"
     },
     {
       "from": "75",
       "fromPort": "out:LATENT",
       "to": "65",
       "toPort": "in:latent_image",
-      "type": "LATENT"
+      "type": "latent"
     },
     {
       "from": "79",
       "fromPort": "out:IMAGE",
       "to": "68",
       "toPort": "in:image1",
-      "type": "IMAGE"
+      "type": "image"
     },
     {
       "from": "79",
       "fromPort": "out:IMAGE",
       "to": "69",
       "toPort": "in:image1",
-      "type": "IMAGE"
+      "type": "image"
     },
     {
       "from": "79",
       "fromPort": "out:IMAGE",
       "to": "75",
       "toPort": "in:pixels",
-      "type": "IMAGE"
+      "type": "image"
     },
     {
       "from": "41",
       "fromPort": "out:IMAGE",
       "to": "79",
       "toPort": "in:image",
-      "type": "IMAGE"
+      "type": "image"
     },
     {
       "from": "83",
       "fromPort": "out:IMAGE",
       "to": "68",
       "toPort": "in:image2",
-      "type": "IMAGE"
+      "type": "image"
     },
     {
       "from": "83",
       "fromPort": "out:IMAGE",
       "to": "69",
       "toPort": "in:image2",
-      "type": "IMAGE"
+      "type": "image"
     },
     {
       "from": "87",
       "fromPort": "out:IMAGE",
       "to": "68",
       "toPort": "in:image3",
-      "type": "IMAGE"
+      "type": "image"
     },
     {
       "from": "87",
       "fromPort": "out:IMAGE",
       "to": "69",
       "toPort": "in:image3",
-      "type": "IMAGE"
+      "type": "image"
     },
     {
       "from": "12",
       "fromPort": "out:MODEL",
       "to": "74",
       "toPort": "in:model",
-      "type": "MODEL"
+      "type": "model"
     }
   ]
 }

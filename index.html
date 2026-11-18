@@ -121,21 +121,29 @@
       <div data-collage></div>
     </section>
 
-    <!-- Abschnitt 9: Outtakes – erscheint beim Weiterscrollen, gleicher Effekt -->
-    <section class="ot-head" aria-label="Outtakes">
-      <p class="ot-kicker" data-collage-reveal>Outtakes</p>
-      <h2 class="ot-title" data-collage-reveal>drei outtakes</h2>
-      <p class="ot-lead" data-collage-reveal>
-        Ausschuss, Aussetzer und Verworfens – die drei Takes, die es nicht in den Film
-        geschafft haben. Wie oben folgt alles dem Scrollen: ein Clip nach dem anderen,
-        dazwischen eine Schwarzblende.
-      </p>
+    <!-- Abschnitt 9: Outtakes – Überschrift wie "selected works" -->
+    <section class="collage collage--intro" aria-label="Outtakes">
+      <div class="collage__head">
+        <h2 class="collage__title" data-collage-reveal>outtakes</h2>
+        <p class="collage__text" data-collage-reveal>Takes, die es nicht in den Film geschafft haben – Ausschuss, Aussetzer, Verworfens. Die drei Videos laufen von selbst, die Notizen dazu erscheinen beim Weiterscrollen.</p>
+      </div>
     </section>
 
-    <section class="collage collage--outtakes" id="outtakes"
-             aria-label="Outtakes: drei Videos, per Scrollen gesteuert">
-      <!-- Slots werden von js/collage.js aus dem zweiten JSON unten gerendert -->
-      <div data-collage="outtakes"></div>
+    <!-- Die drei Outtakes: quadratisch, untereinander, je bildschirmhoch,
+         laufen frei und geloopt. Kein Scrubbing. -->
+    <section class="ot-stack" id="outtakes" aria-label="Die drei Outtakes">
+      <figure class="ot-tile">
+        <video src="media/videos/outtake1.mp4" muted playsinline loop preload="metadata"
+               aria-label="Outtake 1 – Video-Generierung"></video>
+      </figure>
+      <figure class="ot-tile">
+        <video src="media/videos/outtake2.mp4" muted playsinline loop preload="metadata"
+               aria-label="Outtake 2 – Video-Generierung"></video>
+      </figure>
+      <figure class="ot-tile">
+        <video src="media/videos/outtake3.mp4" muted playsinline loop preload="metadata"
+               aria-label="Outtake 3 – Video-Generierung"></video>
+      </figure>
     </section>
 
     <!-- Abschnitt 10: die Projekttexte in Kästen mit demselben Eckenradius -->
@@ -271,23 +279,6 @@
 }
   </script>
 
-  <!-- Outtake-Daten: eigener Scrub-Bereich weiter unten. shuffle false,
-       damit die drei Takes in ihrer Reihenfolge 1-2-3 laufen. -->
-  <script type="application/json" id="collage-data-outtakes">
-{
-  "fadeMs": 450,
-  "shuffle": false,
-  "only": ["outtake1", "outtake2", "outtake3"],
-  "slots": [
-    { "pos": "o1", "shape": "wide", "label": "Outtake 1",
-      "clips": [ { "src": "media/videos/outtake1.mp4", "title": "Outtake 1", "alt": "Outtake 1 – Video-Generierung", "duration": 3.53 } ] },
-    { "pos": "o2", "shape": "wide", "label": "Outtake 2",
-      "clips": [ { "src": "media/videos/outtake2.mp4", "title": "Outtake 2", "alt": "Outtake 2 – Video-Generierung", "duration": 3.53 } ] },
-    { "pos": "o3", "shape": "wide", "label": "Outtake 3",
-      "clips": [ { "src": "media/videos/outtake3.mp4", "title": "Outtake 3", "alt": "Outtake 3 – Video-Generierung", "duration": 3.53 } ] }
-  ]
-}
-  </script>
 
   <!-- Fliegendes Gesichtsbild: liegt während des Morphs 4 → 5 über beiden Abschnitten -->
   <img class="face-fly" id="faceFly" src="media/projects/projekt-1/avatar-jason-face.webp" alt="" aria-hidden="true">
@@ -295,6 +286,7 @@
   <script src="context/nodeview.js"></script>
   <script src="js/script.js"></script>
   <script src="js/collage.js"></script>
+  <script src="js/outtakes.js"></script>
   <script>
     // ComfyUI-Node-Ansicht (virtual try-on) aus dem normalisierten JSON rendern.
     // Ersetzt das frühere statische comfyui.png in Abschnitt 5.

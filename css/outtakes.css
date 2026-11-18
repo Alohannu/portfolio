@@ -1,75 +1,63 @@
 /* ==========================================================================
-   Outtake-Seite
-   Nutzt dieselbe Collage-Mechanik wie die Startseite (js/collage.js und
-   css/collage.css). Hier nur, was diese Seite zusaetzlich braucht:
-   Kopfbereich, Textkaesten und Fusszeile.
+   Outtakes – Abschnitt auf der Startseite
+   Die drei Videos laufen frei und geloopt, quadratisch, untereinander,
+   je eine Bildschirmhoehe hoch. Kein Scrubbing.
+   Darunter die Projekttexte, zeilenweise eingeblendet beim Scrollen.
    ========================================================================== */
 
-/* Die Outtake-Abschnitte liegen auf derselben Seite wie die Collage.
-   Der Radius ist derselbe wie bei den Video-Kacheln, damit Kacheln und
-   Textkaesten exakt gleich gerundet sind. */
-.ot-head,
-.collage--outtakes,
-.ot-notes {
-  --radius: clamp(8px, 1vw, 18px);
+/* ---------- Die drei Kacheln ---------- */
+.ot-stack {
   background: #000;
-  color: #fff;
+  padding: 0 clamp(10px, 2.2vw, 40px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.6vw, 26px);
+  /* Bleibt unter der Collage, damit nichts darueber liegt */
+  position: relative;
+  z-index: 6;
 }
 
-/* ---------- Kopf ---------- */
-.ot-head {
-  padding: 16vh 5vw 4vh;
-  max-width: min(1100px, 92vw);
+/* Quadratisch und bildschirmhoch. Da die Kachel hoeher als breit sein
+   muesste, gilt: Hoehe = 100vh, Breite = gleiche Kantenlaenge -> quadratisch.
+   Auf breiten Viewports bleibt so links/rechts Platz. */
+.ot-tile {
+  margin: 0;
+  width: min(100vh, 100%);
+  height: 100vh;
+  height: 100svh;
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+  overflow: hidden;
+  background: #000;
+  border-radius: var(--radius, clamp(8px, 1vw, 18px));
+  position: relative;
+  /* Startzustand fuer das Einblenden */
+  opacity: 0;
+  transform: translateY(30px) scale(.98);
+  transition: opacity .9s cubic-bezier(.22, .61, .36, 1),
+              transform .9s cubic-bezier(.22, .61, .36, 1);
+}
+.ot-tile.is-in { opacity: 1; transform: none; }
+
+.ot-tile video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+
+/* ---------- Textbereich ---------- */
+.ot-notes {
+  background: #000;
+  color: #fff;
+  padding: 16vh 5vw 14vh;
+  max-width: min(1100px, 100%);
   margin: 0 auto;
   position: relative;
   z-index: 7;
-}
-
-.ot-kicker {
-  margin: 0 0 1rem;
-  font-size: .72rem;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, .45);
-}
-
-.ot-title {
-  margin: 0 0 1.4rem;
-  font-size: clamp(2.2rem, 6vw, 5rem);
-  font-weight: 500;
-  line-height: 1.02;
-  letter-spacing: -.02em;
-}
-
-.ot-lead {
-  margin: 0;
-  max-width: 62ch;
-  font-size: clamp(.95rem, 1.1vw, 1.1rem);
-  line-height: 1.65;
-  color: rgba(255, 255, 255, .72);
-}
-
-/* ---------- Buehne fuer die drei Outtakes ---------- */
-.collage--outtakes {
-  padding: 2vh 0 0;
-}
-
-/* Drei Videos nebeneinander. Nur eines spielt, die anderen sind weiss –
-   genau wie auf der Startseite. */
-.collage--outtakes .collage__grid {
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: 1fr;
-  height: 52vh;
-}
-.collage--outtakes .collage__grid > .collage__slot:nth-child(1) { grid-column: 1; grid-row: 1; }
-.collage--outtakes .collage__grid > .collage__slot:nth-child(2) { grid-column: 2; grid-row: 1; }
-.collage--outtakes .collage__grid > .collage__slot:nth-child(3) { grid-column: 3; grid-row: 1; }
-
-/* ---------- Textkaesten ---------- */
-.ot-notes {
-  padding: 12vh 5vw 6vh;
-  max-width: min(1100px, 100%);
-  margin: 0 auto;
 }
 
 .ot-notes__title {
@@ -83,7 +71,7 @@
 /* Der Kasten hat denselben Radius wie eine Video-Kachel. */
 .ot-box {
   border: 1px solid rgba(255, 255, 255, .14);
-  border-radius: var(--radius, 14px);
+  border-radius: var(--radius, clamp(8px, 1vw, 18px));
   background: rgba(255, 255, 255, .03);
   padding: clamp(1.4rem, 2.6vw, 2.6rem);
   margin: 0 0 clamp(1.6rem, 3vw, 2.6rem);
@@ -170,50 +158,39 @@
   color: rgba(255, 255, 255, .9);
 }
 
-/* ---------- Fusszeile ---------- */
-.ot-foot {
-  padding: 4vh 5vw 12vh;
-  max-width: min(1100px, 100%);
-  margin: 0 auto;
+/* ---------- Zeilenweises Einblenden ----------
+   js/outtakes.js haengt an jedes Element die Klasse .ot-line und setzt
+   --i (Index) fuer den Versatz. Ohne JS bleibt alles sichtbar.
+   100ms Versatz: bei ~16 Zeilen ist der Kasten nach gut 1,5s komplett da.
+   Mit 220ms zog sich das auf ueber 3s. */
+.ot-notes .ot-line {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .6s cubic-bezier(.22, .61, .36, 1),
+              transform .6s cubic-bezier(.22, .61, .36, 1);
+  transition-delay: calc(var(--i, 0) * 100ms);
 }
-
-.ot-back {
-  display: inline-block;
-  padding: .7rem 1.3rem;
-  border: 1px solid rgba(255, 255, 255, .25);
-  border-radius: 999px;
-  color: #fff;
-  text-decoration: none;
-  font-size: .82rem;
-  letter-spacing: .06em;
-  transition: border-color .25s ease, background-color .25s ease;
-}
-.ot-back:hover,
-.ot-back:focus-visible {
-  border-color: rgba(255, 255, 255, .7);
-  background: rgba(255, 255, 255, .08);
+.ot-notes .ot-line.is-in {
+  opacity: 1;
+  transform: none;
 }
 
 /* ---------- Schmal ---------- */
 @media (max-width: 900px) {
-  .ot-head { padding: 12vh 5vw 3vh; }
-  .ot-notes { padding: 8vh 5vw 4vh; }
-  /* Kein Pinning auf schmalen Viewports: die Kacheln stehen untereinander,
-     genau wie auf der Startseite. */
-  .collage--outtakes .collage__grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: none;
+  .ot-stack { padding: 0 12px; gap: 12px; }
+  .ot-tile {
+    width: 100%;
     height: auto;
+    aspect-ratio: 4 / 5;
+    border-radius: 14px;
   }
-  .collage--outtakes .collage__grid > .collage__slot {
-    grid-column: 1 !important;
-    grid-row: auto !important;
-  }
+  .ot-notes { padding: 12vh 5vw 10vh; }
 }
 
 /* ---------- Reduced Motion ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .ot-box,
+  .ot-tile,
+  .ot-notes .ot-line,
   [data-collage-reveal] {
     opacity: 1 !important;
     transform: none !important;
