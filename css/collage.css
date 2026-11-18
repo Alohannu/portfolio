@@ -1,0 +1,168 @@
+/* ==========================================================================
+   Video-Collage (Abschnitt 8)
+
+   Aufbau nach Vorlage: feste Slots auf schwarzem Grund, sichtbare
+   Zwischenraeume. Fuer Widescreen um 90 Grad gedreht:
+
+     [ breit  ][ hoch  ][ breit ]      Reihe 1: breit + hoch + breit
+     [ breit  ][ halb  ][ breit ]      Reihe 2: der hohe Slot laeuft weiter,
+     [ breit  ][ halb  ][ breit ]      rechts zwei gestapelte Slots
+
+   In jedem Slot laufen die Videos nacheinander durch: ist eins zu Ende,
+   folgt eine Schwarzbende und danach das naechste Video im selben Slot.
+   Alles ist an das Scrollen gekoppelt – ohne Sichtbarkeit laeuft nichts.
+   ========================================================================== */
+.collage {
+  position: relative;
+  z-index: 7;
+  background: #000;
+  color: #fff;
+  padding: 14vh 5vw 16vh;
+}
+
+.collage__head { margin: 0 0 7vh; }
+
+.collage__head [data-collage-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .8s cubic-bezier(.22, .61, .36, 1),
+              transform .8s cubic-bezier(.22, .61, .36, 1);
+}
+.collage__head [data-collage-reveal].is-in { opacity: 1; transform: none; }
+.collage__head [data-collage-reveal]:nth-child(2) { transition-delay: .1s; }
+
+.collage__title {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: .01em;
+}
+.collage__text {
+  margin: 0;
+  max-width: 52ch;
+  font-weight: 400;
+  font-size: clamp(.95rem, 1.1vw, 1.1rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, .72);
+}
+
+/* ---------- Raster ---------- */
+.collage__grid {
+  display: grid;
+  /* breit | hoch | breit  – der breite Aussenrahmen bleibt schmal,
+     damit die Hochkant-Slots echte Hoehe bekommen. */
+  grid-template-columns: 1.15fr 1fr 1.15fr;
+  gap: clamp(8px, 1.1vw, 20px);
+  background: #000;
+  aspect-ratio: 16 / 9;
+  max-height: 88vh;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Jeder Slot ist eine Buehne: das aktive Video liegt darin, die
+   Schwarzbende liegt als eigene Ebene darueber. */
+.collage__slot {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  border-radius: 4px;
+  min-width: 0;
+  min-height: 0;
+  /* Startzustand fuer die Scroll-Einblendung */
+  opacity: 0;
+  transform: translateY(30px) scale(.98);
+  transition: opacity .9s cubic-bezier(.22, .61, .36, 1),
+              transform .9s cubic-bezier(.22, .61, .36, 1);
+}
+.collage__slot.is-in { opacity: 1; transform: none; }
+
+.collage__slot video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Schwarzbende: liegt ueber dem Video und wird per JS ein-/ausgeblendet */
+.collage__fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--fade, .45s) linear;
+  z-index: 2;
+}
+.collage__fade.is-on { opacity: 1; }
+
+/* --- Slot-Platzierung --- */
+
+/* Links: ein hoher Slot ueber die volle Hoehe */
+.collage__slot--left {
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+
+/* Mitte: ein hoher Slot links, rechts zwei gestapelte */
+.collage__slot--tall {
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+.collage__slot--tr {
+  grid-column: 3;
+  grid-row: 1;
+}
+.collage__slot--br {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+/* Zweiter Block: breit / breit, darunter wieder das Muster */
+.collage__slot--wide {
+  grid-column: 1 / 4;
+  grid-row: 3;
+}
+
+/* Zweites Muster (gespiegelt): hoch | breit | hoch waere Reihe 4/5;
+   hier als erneutes 3er-Muster untereinander. */
+.collage__slot--l2 { grid-column: 1; grid-row: 4 / 6; }
+.collage__slot--mid2 { grid-column: 2; grid-row: 4 / 6; }
+.collage__slot--r2a { grid-column: 3; grid-row: 4; }
+.collage__slot--r2b { grid-column: 3; grid-row: 5; }
+
+.collage__grid {
+  grid-template-rows: 1fr 1fr 0.9fr 1fr 1fr;
+}
+
+/* ---------- Responsive ---------- */
+
+/* Schmal: alles untereinander, natuerliche Hoehen */
+@media (max-width: 900px) {
+  .collage { padding: 10vh 5vw 12vh; }
+  .collage__grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+    aspect-ratio: auto;
+    max-height: none;
+    gap: clamp(8px, 2vw, 14px);
+  }
+  .collage__slot {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    aspect-ratio: 4 / 3;
+  }
+  /* Hochkant-Videos behalten ihr Format */
+  .collage__slot[data-shape="portrait"] { aspect-ratio: 3 / 4; }
+  .collage__slot[data-shape="wide"] { aspect-ratio: 16 / 9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collage__slot,
+  .collage__head [data-collage-reveal] { opacity: 1; transform: none; transition: none; }
+  .collage__fade { display: none; }
+}

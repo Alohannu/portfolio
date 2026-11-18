@@ -7,6 +7,7 @@
   <meta name="description" content="Online-Portfolio von Sylvia Trieu – creative vision.">
   <link rel="preload" href="fonts/Jost-Medium.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/collage.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
@@ -113,85 +114,76 @@
     <!-- Abschnitt 7: leer -->
     <section class="placeholder" id="weiter" aria-label="Abschnitt 7"></section>
 
-    <!-- Abschnitt 8 (neu): Video-Mosaik – Videos erscheinen beim Scrollen nacheinander -->
-    <section class="mosaic" id="mosaik" aria-label="Video-Mosaik: Arbeiten aus allen Projekten">
-      <div class="mosaic__head">
-        <h2 class="mosaic__title" data-mosaic-reveal>selected works</h2>
-        <p class="mosaic__text" data-mosaic-reveal>Videos und Stills aus allen Projekten – generiert mit Midjourney, RunwayML, Seedance, Suno und ComfyUI. Beim Scrollen baut sich das Mosaik Bild für Bild auf; die Videos laufen stumm und in Schleife.</p>
+    <!-- Abschnitt 8: Video-Collage – Slots spielen ihre Videos nacheinander -->
+    <section class="collage" id="collage" aria-label="Video-Collage: Arbeiten aus allen Projekten">
+      <div class="collage__head">
+        <h2 class="collage__title" data-collage-reveal>selected works</h2>
+        <p class="collage__text" data-collage-reveal>Videos aus allen Projekten – generiert mit Midjourney, RunwayML, Seedance, Suno und ComfyUI. Ist ein Clip zu Ende, blendet der Slot auf Schwarz und startet den nächsten. Alles folgt dem Scrollen.</p>
       </div>
-      <!-- Zellen werden von js/mosaic.js aus dem JSON unten gerendert -->
-      <div data-mosaic></div>
+      <!-- Slots werden von js/collage.js aus dem JSON unten gerendert -->
+      <div data-collage></div>
     </section>
   </main>
 
-  <!-- Mosaik-Daten: 14 Videos + 49 Stills. Reihenfolge = Scroll-Reihenfolge. -->
-  <script type="application/json" id="mosaic-data">
+  <!-- Collage-Daten: 5 Slots mit ihren Videoketten. Reihenfolge = Abspielreihenfolge. -->
+  <script type="application/json" id="collage-data">
 {
-  "rowHeight": "9vh",
-  "items": [
-    { "type": "video", "src": "media/videos/hero-video.mp4", "gridColumn": "1 / 7", "gridRow": "1 / 6", "alt": "Hero-Showreel – creative vision", "title": "Hero-Showreel – creative vision" },
-    { "type": "image", "src": "assets/nandemoii-heroimage.avif", "gridColumn": "1 / 4", "gridRow": "2 / 5", "alt": "nandemoii – Keyvisual der Kampagne" },
-    { "type": "image", "src": "assets/nandemoii-1.avif", "gridColumn": "4 / 7", "gridRow": "2 / 5", "alt": "nandemoii Look 1" },
-    { "type": "video", "src": "media/videos/Fashion-Video-Swim-Upstream.mp4", "gridColumn": "1 / 3", "gridRow": "3 / 6", "alt": "Fashion Film „Swim Upstream“", "title": "Fashion Film „Swim Upstream“" },
-    { "type": "image", "src": "assets/nandemoii-2.avif", "gridColumn": "3 / 5", "gridRow": "3 / 6", "alt": "nandemoii Look 2" },
-    { "type": "image", "src": "assets/nandemoii-3.avif", "gridColumn": "5 / 7", "gridRow": "3 / 6", "alt": "nandemoii Look 3" },
-    { "type": "image", "src": "assets/nandemoii-4.avif", "gridColumn": "1 / 5", "gridRow": "4 / 8", "alt": "nandemoii Look 4" },
-    { "type": "image", "src": "assets/nandemoii-outfit1-1.avif", "gridColumn": "5 / 7", "gridRow": "4 / 8", "alt": "Outfit 1 – Ansicht links" },
-    { "type": "image", "src": "assets/nandemoii-outfit1-2.avif", "gridColumn": "1 / 3", "gridRow": "5 / 9", "alt": "Outfit 1 – Ansicht Mitte" },
-    { "type": "image", "src": "assets/nandemoii-outfit1-3.avif", "gridColumn": "3 / 7", "gridRow": "5 / 9", "alt": "Outfit 1 – Ansicht rechts" },
-    { "type": "video", "src": "media/videos/e-commerce-video.mp4", "gridColumn": "1 / 4", "gridRow": "6 / 9", "alt": "E-Commerce-Video – nandemoii", "title": "E-Commerce-Video" },
-    { "type": "image", "src": "assets/nandemoii-outfit2-1.avif", "gridColumn": "4 / 7", "gridRow": "6 / 9", "alt": "Outfit 2 – Ansicht links" },
-    { "type": "image", "src": "assets/nandemoii-outfit2-2.avif", "gridColumn": "1 / 3", "gridRow": "7 / 10", "alt": "Outfit 2 – Ansicht Mitte" },
-    { "type": "image", "src": "assets/nandemoii-outfit2-3.avif", "gridColumn": "3 / 5", "gridRow": "7 / 10", "alt": "Outfit 2 – Ansicht rechts" },
-    { "type": "image", "src": "assets/outfit-collage.avif", "gridColumn": "5 / 7", "gridRow": "7 / 10", "alt": "Outfit-Moodboard (Photoshop)" },
-    { "type": "video", "src": "media/videos/ucg-outfit1.mp4", "gridColumn": "1 / 7", "gridRow": "8 / 13", "alt": "UCG 9:16 – Outfit 1", "title": "UCG 9:16 – Outfit 1" },
-    { "type": "video", "src": "media/videos/ucg-outfit2.mp4", "gridColumn": "1 / 4", "gridRow": "9 / 12", "alt": "UCG 9:16 – Outfit 2", "title": "UCG 9:16 – Outfit 2" },
-    { "type": "image", "src": "assets/nadenmoii-scene-1.avif", "gridColumn": "4 / 7", "gridRow": "9 / 12", "alt": "nandemoii – Szene 1" },
-    { "type": "video", "src": "media/videos/outtake1.mp4", "gridColumn": "1 / 3", "gridRow": "10 / 13", "alt": "Outtake 1 – Video-Generierung", "title": "Outtake 1" },
-    { "type": "video", "src": "media/videos/outtake2.mp4", "gridColumn": "3 / 5", "gridRow": "10 / 13", "alt": "Outtake 2 – Video-Generierung", "title": "Outtake 2" },
-    { "type": "video", "src": "media/videos/outtake3.mp4", "gridColumn": "5 / 7", "gridRow": "10 / 13", "alt": "Outtake 3 – Video-Generierung", "title": "Outtake 3" },
-    { "type": "image", "src": "assets/nadenmoii-scene-2.avif", "gridColumn": "1 / 5", "gridRow": "11 / 15", "alt": "nandemoii – Szene 2" },
-    { "type": "image", "src": "assets/product-to-model.avif", "gridColumn": "5 / 7", "gridRow": "11 / 15", "alt": "Workflow – Product to Model" },
-    { "type": "image", "src": "assets/workflow-background.avif", "gridColumn": "1 / 3", "gridRow": "12 / 16", "alt": "Workflow – Hintergrund" },
-    { "type": "image", "src": "assets/edit.avif", "gridColumn": "3 / 7", "gridRow": "12 / 16", "alt": "Workflow – Edit" },
-    { "type": "image", "src": "assets/change-angle.avif", "gridColumn": "1 / 4", "gridRow": "13 / 16", "alt": "Workflow – Change Angle" },
-    { "type": "image", "src": "assets/model-angle-front.avif", "gridColumn": "4 / 7", "gridRow": "13 / 16", "alt": "Modell – Frontalansicht" },
-    { "type": "image", "src": "assets/model-angle-left.avif", "gridColumn": "1 / 3", "gridRow": "14 / 17", "alt": "Modell – Ansicht links" },
-    { "type": "image", "src": "assets/model-angle-right.avif", "gridColumn": "3 / 5", "gridRow": "14 / 17", "alt": "Modell – Ansicht rechts" },
-    { "type": "image", "src": "assets/workflow-chatgpt1.avif", "gridColumn": "5 / 7", "gridRow": "14 / 17", "alt": "Workflow – ChatGPT Schritt 1" },
-    { "type": "image", "src": "assets/workflow-chatgpt2.avif", "gridColumn": "1 / 7", "gridRow": "15 / 20", "alt": "Workflow – ChatGPT Schritt 2" },
-    { "type": "image", "src": "assets/workflow-midjourney1.avif", "gridColumn": "1 / 4", "gridRow": "16 / 19", "alt": "Workflow – Midjourney 1" },
-    { "type": "image", "src": "assets/workflow-midjourney2.avif", "gridColumn": "4 / 7", "gridRow": "16 / 19", "alt": "Workflow – Midjourney 2" },
-    { "type": "image", "src": "assets/workflow-midjourney3.avif", "gridColumn": "1 / 3", "gridRow": "17 / 20", "alt": "Workflow – Midjourney 3" },
-    { "type": "image", "src": "assets/workflow-midjourney4.avif", "gridColumn": "3 / 5", "gridRow": "17 / 20", "alt": "Workflow – Midjourney 4" },
-    { "type": "image", "src": "assets/workflow-midjourney5.avif", "gridColumn": "5 / 7", "gridRow": "17 / 20", "alt": "Workflow – Midjourney 5" },
-    { "type": "image", "src": "assets/eggo-1.avif", "gridColumn": "1 / 5", "gridRow": "18 / 22", "alt": "EGGO – Kampagnenmotiv 1" },
-    { "type": "image", "src": "assets/eggo-2.avif", "gridColumn": "5 / 7", "gridRow": "18 / 22", "alt": "EGGO – Kampagnenmotiv 2" },
-    { "type": "image", "src": "assets/eggo-3.avif", "gridColumn": "1 / 3", "gridRow": "19 / 23", "alt": "EGGO – Kampagnenmotiv 3" },
-    { "type": "image", "src": "assets/eggo-4.avif", "gridColumn": "3 / 7", "gridRow": "19 / 23", "alt": "EGGO – Kampagnenmotiv 4" },
-    { "type": "image", "src": "assets/eggo-5.avif", "gridColumn": "1 / 4", "gridRow": "20 / 23", "alt": "EGGO – Kampagnenmotiv 5" },
-    { "type": "video", "src": "media/videos/eggo-story.mp4", "gridColumn": "4 / 7", "gridRow": "20 / 23", "alt": "EGGO – Story 9:16", "title": "EGGO – Story" },
-    { "type": "video", "src": "media/videos/eggo-campaign-1.mp4", "gridColumn": "1 / 3", "gridRow": "21 / 24", "alt": "EGGO – Kampagnenfilm 1", "title": "EGGO – Kampagnenfilm 1" },
-    { "type": "video", "src": "media/videos/eggo-campaign-2.mp4", "gridColumn": "3 / 5", "gridRow": "21 / 24", "alt": "EGGO – Kampagnenfilm 2", "title": "EGGO – Kampagnenfilm 2" },
-    { "type": "video", "src": "media/videos/eggo-aleph-seedance.mp4", "gridColumn": "5 / 7", "gridRow": "21 / 24", "alt": "EGGO – RunwayML Aleph 2.0 / Seedance", "title": "EGGO – Aleph 2.0 / Seedance" },
-    { "type": "image", "src": "assets/sunglass-hd-1.avif", "gridColumn": "1 / 7", "gridRow": "22 / 27", "alt": "Sonnenbrille – Kampagnenmotiv 1" },
-    { "type": "image", "src": "assets/sunglass-hd-2.avif", "gridColumn": "1 / 4", "gridRow": "23 / 26", "alt": "Sonnenbrille – Kampagnenmotiv 2" },
-    { "type": "image", "src": "assets/sunglass-hd-3.avif", "gridColumn": "4 / 7", "gridRow": "23 / 26", "alt": "Sonnenbrille – Kampagnenmotiv 3" },
-    { "type": "image", "src": "assets/sunglass-midjourney.avif", "gridColumn": "1 / 3", "gridRow": "24 / 27", "alt": "Sonnenbrille – Midjourney-Ergebnis" },
-    { "type": "video", "src": "media/videos/Pantomime-Intro.mp4", "gridColumn": "3 / 5", "gridRow": "24 / 27", "alt": "Concept Pantomime – Intro", "title": "Concept Pantomime – Intro" },
-    { "type": "image", "src": "assets/pantomime-background.avif", "gridColumn": "5 / 7", "gridRow": "24 / 27", "alt": "Pantomime – Szenenhintergrund" },
-    { "type": "image", "src": "assets/ai-serum-skin.avif", "gridColumn": "1 / 5", "gridRow": "25 / 29", "alt": "AI Face Serum – Skin" },
-    { "type": "image", "src": "assets/ai-serum.avif", "gridColumn": "5 / 7", "gridRow": "25 / 29", "alt": "AI Face Serum – Produkt" },
-    { "type": "image", "src": "assets/ai-aloevera.avif", "gridColumn": "1 / 3", "gridRow": "26 / 30", "alt": "AI Face Serum – Aloe Vera" },
-    { "type": "image", "src": "assets/ai-serum-1.avif", "gridColumn": "3 / 7", "gridRow": "26 / 30", "alt": "AI Serum 1" },
-    { "type": "image", "src": "assets/ai-serum-2.avif", "gridColumn": "1 / 4", "gridRow": "27 / 30", "alt": "AI Serum 2" },
-    { "type": "image", "src": "assets/ai-serum-3.avif", "gridColumn": "4 / 7", "gridRow": "27 / 30", "alt": "AI Serum 3" },
-    { "type": "image", "src": "assets/ai-serum-4.avif", "gridColumn": "1 / 3", "gridRow": "28 / 31", "alt": "AI Serum – Full Bleed" },
-    { "type": "video", "src": "media/videos/serum-campaign.mp4", "gridColumn": "3 / 5", "gridRow": "28 / 31", "alt": "Serum-Kampagne – Video", "title": "Serum-Kampagne" },
-    { "type": "image", "src": "assets/comfy-model.avif", "gridColumn": "5 / 7", "gridRow": "28 / 31", "alt": "ComfyUI – Modell-Referenz" },
-    { "type": "image", "src": "assets/comfy-outfit.avif", "gridColumn": "1 / 7", "gridRow": "29 / 34", "alt": "ComfyUI – Outfit-Referenz" },
-    { "type": "image", "src": "assets/comfy-standing.avif", "gridColumn": "1 / 4", "gridRow": "30 / 33", "alt": "ComfyUI – Pose-Referenz" },
-    { "type": "image", "src": "assets/comfy-result.avif", "gridColumn": "4 / 7", "gridRow": "30 / 33", "alt": "ComfyUI – Ergebnis des Workflows" }
+  "fadeMs": 450,
+  "slots": [
+    {
+      "pos": "left",
+      "shape": "wide",
+      "label": "Showreel und Fashion-Film",
+      "clips": [
+        { "src": "media/videos/hero-video.mp4", "title": "Hero-Showreel", "alt": "Hero-Showreel – creative vision", "duration": 5.93 },
+        { "src": "media/videos/Fashion-Video-Swim-Upstream.mp4", "title": "Fashion Film", "alt": "Fashion Film „Swim Upstream“", "duration": 22.09 },
+        { "src": "media/videos/outtake1.mp4", "title": "Outtake 1", "alt": "Outtake 1 – Video-Generierung", "duration": 3.53 }
+      ]
+    },
+
+    {
+      "pos": "tall",
+      "shape": "portrait",
+      "label": "nandemoii Kampagne",
+      "clips": [
+        { "src": "media/videos/e-commerce-video.mp4", "title": "E-Commerce", "alt": "E-Commerce-Video – nandemoii", "duration": 15.21 },
+        { "src": "media/videos/ucg-outfit1.mp4", "title": "UCG Outfit 1", "alt": "UCG 9:16 – Outfit 1", "duration": 5.06 },
+        { "src": "media/videos/ucg-outfit2.mp4", "title": "UCG Outfit 2", "alt": "UCG 9:16 – Outfit 2", "duration": 8.06 }
+      ]
+    },
+
+    {
+      "pos": "tr",
+      "shape": "portrait",
+      "label": "EGGO Kampagne",
+      "clips": [
+        { "src": "media/videos/eggo-story.mp4", "title": "EGGO Story", "alt": "EGGO – Story 9:16", "duration": 5.09 },
+        { "src": "media/videos/eggo-campaign-1.mp4", "title": "EGGO Kampagne 1", "alt": "EGGO – Kampagnenfilm 1", "duration": 9.45 },
+        { "src": "media/videos/eggo-campaign-2.mp4", "title": "EGGO Kampagne 2", "alt": "EGGO – Kampagnenfilm 2", "duration": 12.66 }
+      ]
+    },
+
+    {
+      "pos": "br",
+      "shape": "portrait",
+      "label": "Serum und Pantomime",
+      "clips": [
+        { "src": "media/videos/serum-campaign.mp4", "title": "Serum", "alt": "Serum-Kampagne", "duration": 9.52 },
+        { "src": "media/videos/Pantomime-Intro.mp4", "title": "Pantomime", "alt": "Concept Pantomime – Intro", "duration": 13.07 }
+      ]
+    },
+
+    {
+      "pos": "wide",
+      "shape": "wide",
+      "label": "Aleph 2.0 / Seedance",
+      "clips": [
+        { "src": "media/videos/eggo-aleph-seedance.mp4", "title": "EGGO Aleph 2.0", "alt": "EGGO – RunwayML Aleph 2.0 / Seedance", "duration": 7.23 },
+        { "src": "media/videos/outtake2.mp4", "title": "Outtake 2", "alt": "Outtake 2 – Video-Generierung", "duration": 3.53 },
+        { "src": "media/videos/outtake3.mp4", "title": "Outtake 3", "alt": "Outtake 3 – Video-Generierung", "duration": 3.53 }
+      ]
+    }
+
   ]
 }
   </script>
@@ -201,7 +193,7 @@
 
   <script src="context/nodeview.js"></script>
   <script src="js/script.js"></script>
-  <script src="js/mosaic.js"></script>
+  <script src="js/collage.js"></script>
   <script>
     // ComfyUI-Node-Ansicht (virtual try-on) aus dem normalisierten JSON rendern.
     // Ersetzt das frühere statische comfyui.png in Abschnitt 5.
