@@ -322,45 +322,22 @@
   window.addEventListener("resize", requestAvatarUpdate);
   updateAvatar();
 
-  /* ---------- Gesichtsbild fliegt beim Morph 4 → 5 in die ComfyUI-Ansicht ---------- */
+  /* ---------- Gesichtsbild: nicht mehr nötig ----------
+     Die frühere Animation schob das Gesicht in einen leeren Bildslot im
+     statischen comfyui.png. Abschnitt 5 zeigt jetzt den Vollbild-Graphen
+     ohne Bildslots; die Animation entfällt. Die Aufräumlogik in
+     faceFlight() bleibt als No-Op erhalten, damit der Morph-Aufruf nicht
+     bricht, falls die Elemente fehlen. */
   var faceOrig = document.querySelector("#konsistenz .face");
   var faceFly = document.getElementById("faceFly");
   var comfy = document.getElementById("comfy");
   var faceFinal = comfy && comfy.querySelector(".comfy__face");
   var stage4 = document.querySelector("#konsistenz .morph-reveal__stage");
   var stage5 = document.querySelector("#tryon .morph-reveal__stage");
-  // Ziel-Slot innerhalb der ComfyUI-Ansicht, als Anteil der Fläche von #comfy.
-  // (Früher: leerer Bildslot im PNG comfyui.png, 720 × 570.)
-  var SLOT = { x: 0.0208, y: 0.256, w: 0.289, h: 0.456 };
-
-  function slotRect() {
-    if (!comfy) return { x: 0, y: 0, w: 0, h: 0 };
-    var w = comfy.clientWidth, h = comfy.clientHeight, ratio = 720 / 570;
-    var dw = Math.min(w, h * ratio), dh = dw / ratio;
-    return { x: dw * SLOT.x, y: dh * SLOT.y, w: dw * SLOT.w, h: dh * SLOT.h };
-  }
 
   function faceFlight(raw) {
-    if (!comfy || !faceFinal || !faceOrig) return;
-    var sl = slotRect();
-    faceFinal.style.left = sl.x + "px"; faceFinal.style.top = sl.y + "px";
-    faceFinal.style.width = sl.w + "px"; faceFinal.style.height = sl.h + "px";
-    if (reduceMotion) return; // CSS zeigt das Gesicht direkt im Slot
-    var flying = raw > 0 && raw < 1;
-    faceOrig.classList.toggle("is-away", raw > 0);
-    faceFinal.style.visibility = raw >= 1 ? "visible" : "hidden";
-    faceFly.style.visibility = flying ? "visible" : "hidden";
-    if (!flying) return;
-    // Start/Ziel relativ zur jeweiligen Stage (beide sind während des Morphs gepinnt, Ursprung = Viewport)
-    var o = faceOrig.getBoundingClientRect(), s4 = stage4.getBoundingClientRect();
-    var c = comfy.getBoundingClientRect(), s5 = stage5.getBoundingClientRect();
-    var sx = o.left - s4.left, sy = o.top - s4.top;
-    var tx = c.left - s5.left + sl.x, ty = c.top - s5.top + sl.y;
-    var t = easeOutCubic(raw), k = 1 + (sl.w / o.width - 1) * t;
-    faceFly.style.width = o.width + "px";
-    faceFly.style.height = o.height + "px";
-    faceFly.style.transform = "translate(" + (sx + (tx - sx) * t).toFixed(1) + "px," +
-      (sy + (ty - sy) * t).toFixed(1) + "px) scale(" + k.toFixed(4) + ")";
+    // Ohne comfy__face gibt es nichts zu animieren (Vollbild-Graph).
+    if (!comfy || !faceFinal || !faceOrig || !faceFly) return;
   }
 
   // Morph-Reveal für alle [data-morph]-Wrapper; Headline-Reveal, sobald die Maske (fast) offen ist

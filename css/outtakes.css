@@ -5,12 +5,15 @@
    Kopfbereich, Textkaesten und Fusszeile.
    ========================================================================== */
 
-.page-outtakes {
+/* Die Outtake-Abschnitte liegen auf derselben Seite wie die Collage.
+   Der Radius ist derselbe wie bei den Video-Kacheln, damit Kacheln und
+   Textkaesten exakt gleich gerundet sind. */
+.ot-head,
+.collage--outtakes,
+.ot-notes {
+  --radius: clamp(8px, 1vw, 18px);
   background: #000;
   color: #fff;
-  /* Gleicher Eckenradius wie die Video-Kacheln – an einer Stelle
-     definiert, damit Kacheln und Textkaesten exakt gleich gerundet sind. */
-  --radius: clamp(8px, 1vw, 18px);
 }
 
 /* ---------- Kopf ---------- */
@@ -18,6 +21,8 @@
   padding: 16vh 5vw 4vh;
   max-width: min(1100px, 92vw);
   margin: 0 auto;
+  position: relative;
+  z-index: 7;
 }
 
 .ot-kicker {

@@ -30,8 +30,7 @@
      rund 4000px – lang genug zum Scrubben, kurz genug zum Durchscrollen. */
   var SCRUB_VH_PER_SEC = 6;
 
-  var state = null;
-  var ticking = false;
+  var instances = [];
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
   function makeEl(tag, cls) {
@@ -49,7 +48,6 @@
 
   function mount(root, opts) {
     if (!root) return null;
-    destroy();
     opts = opts || {};
 
     /* Alle Clips einsammeln (flach) und zufaellig mischen. */
@@ -210,6 +208,13 @@
       return clamp(-top / dist, 0, 1);
     }
 
+    /* ticking MUSS pro Collage gefuehrt werden. Waere es modulweit, wuerde
+       die erste Collage es beim Scrollen auf true setzen und die zweite
+       ihr Update komplett ueberspringen - sie bliebe auf dem ersten Bild
+       stehen und wuerde nie weiterschalten. */
+    var ticking = false;
+    var lastProgress = 0;
+
     function update() {
       ticking = false;
       var p = progress();
@@ -217,7 +222,6 @@
       if (reduceMotion) { if (currentIdx !== 0) apply(0.0001); return; }
       apply(p);
     }
-    var lastProgress = 0;
 
     function requestUpdate() {
       if (!ticking) { ticking = true; requestAnimationFrame(update); }
@@ -317,45 +321,64 @@
       });
     });
 
-    state = { root: root, wrap: wrap, stage: stage, grid: grid, slots: slots, requestUpdate: requestUpdate, io: io };
+    var inst = { root: root, wrap: wrap, stage: stage, grid: grid, slots: slots,
+                 requestUpdate: requestUpdate, io: io, destroy: destroyInstance };
+    instances.push(inst);
     useClip(0, function () { requestUpdate(); });
     requestUpdate();
-    return state;
+    return inst;
   }
 
-  function destroy() {
-    if (!state) return;
-    window.removeEventListener("scroll", state.requestUpdate);
-    window.removeEventListener("resize", state.requestUpdate);
-    if (state.io) state.io.disconnect();
-    state.slots.forEach(function (s) {
+  /* Eine einzelne Collage wieder abbauen. */
+  function destroyInstance(inst) {
+    if (!inst) return;
+    window.removeEventListener("scroll", inst.requestUpdate);
+    window.removeEventListener("resize", inst.requestUpdate);
+    if (inst.io) inst.io.disconnect();
+    inst.slots.forEach(function (s) {
       try { s.video.pause(); } catch (e) {}
       s.video.removeAttribute("src");
     });
-    if (state.wrap.parentNode) state.wrap.parentNode.removeChild(state.wrap);
-    state = null;
+    if (inst.wrap.parentNode) inst.wrap.parentNode.removeChild(inst.wrap);
+    var at = instances.indexOf(inst);
+    if (at !== -1) instances.splice(at, 1);
+  }
+
+  /* Alle Collagen der Seite abbauen. */
+  function destroy() {
+    instances.slice().forEach(destroyInstance);
   }
 
   function boot() {
-    var root = document.querySelector("[data-collage]");
-    if (!root) return;
-    var dataEl = document.getElementById("collage-data");
-    if (!dataEl) return;
-    var data;
-    try { data = JSON.parse(dataEl.textContent); }
-    catch (e) { console.error("[collage] Daten konnten nicht gelesen werden", e); return; }
+    var roots = document.querySelectorAll("[data-collage]");
+    if (!roots.length) return;
 
     /* Die Startseite spielt nur diese Videos; fehlt "only" im JSON,
-       gilt diese Liste. Die Outtakes haben eine eigene Seite
-       (outtakes.html) und laufen hier nicht mehr mit. */
+       gilt diese Liste. Die Outtakes stehen weiter unten auf derselben
+       Seite und bringen ihre eigene Liste im JSON mit. */
     var defaultOnly = ["e-commerce", "ucg-outfit1", "ucg-outfit2", "fashion",
                        "hero-video", "eggo-aleph-seedance"];
 
-    mount(root, {
-      slots: data.slots,
-      only: data.only !== undefined ? data.only : defaultOnly,
-      shuffle: data.shuffle !== false,   // Standard: mischen
-      fadeMs: data.fadeMs
+    Array.prototype.forEach.call(roots, function (root) {
+      /* Welcher Datenblock gehoert zu dieser Collage?
+         data-collage="outtakes" -> #collage-data-outtakes
+         data-collage (leer)     -> #collage-data            */
+      var key = root.getAttribute("data-collage");
+      var dataEl = document.getElementById(key ? "collage-data-" + key : "collage-data");
+      if (!dataEl) {
+        console.warn("[collage] Kein Datenblock fuer", key || "(Standard)");
+        return;
+      }
+      var data;
+      try { data = JSON.parse(dataEl.textContent); }
+      catch (e) { console.error("[collage] Daten konnten nicht gelesen werden", e); return; }
+
+      mount(root, {
+        slots: data.slots,
+        only: data.only !== undefined ? data.only : defaultOnly,
+        shuffle: data.shuffle !== false,   // Standard: mischen
+        fadeMs: data.fadeMs
+      });
     });
   }
 

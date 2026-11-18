@@ -4,10 +4,10 @@
     "title": "virtual try-on",
     "subtitle": "ComfyUI Node Explorer",
     "source": "native ComfyUI export",
-    "note": "Aus context/comfyui_workflow.json konvertiert. Koordinaten bewusst NICHT normalisiert: der Graph ist 1114 x 4803 px und erzaehlt den Datenfluss vertikal."
+    "note": "Aus context/comfyui_workflow.json konvertiert. Koordinaten bewusst NICHT normalisiert: der Graph ist 1242 x 4803 px und erzaehlt den Datenfluss vertikal."
   },
   "canvas": {
-    "width": 1114,
+    "width": 1242,
     "height": 4803,
     "initialZoom": 1.0,
     "minZoom": 0.15,
@@ -43,7 +43,7 @@
       "label": "Load Image",
       "x": 312.9,
       "y": 24.0,
-      "w": 723.7,
+      "w": 906.0,
       "h": 754.2
     },
     {
@@ -480,7 +480,7 @@
       "type": "VAEEncode",
       "title": "VAEEncode",
       "accent": "#ff7bd5",
-      "x": 780.6,
+      "x": 845.1,
       "y": 514.7,
       "w": 240,
       "inputs": [
@@ -571,7 +571,7 @@
       "type": "LoadImage",
       "title": "item 2",
       "accent": "#6fb7ff",
-      "x": 717.9,
+      "x": 929.9,
       "y": 114.7,
       "w": 273,
       "inputs": [],
@@ -601,7 +601,7 @@
       "type": "LoadImage",
       "title": "item 1",
       "accent": "#6fb7ff",
-      "x": 535.0,
+      "x": 645.9,
       "y": 111.2,
       "w": 240,
       "inputs": [],

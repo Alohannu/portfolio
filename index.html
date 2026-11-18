@@ -8,6 +8,7 @@
   <link rel="preload" href="fonts/Jost-Medium.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/collage.css">
+  <link rel="stylesheet" href="css/outtakes.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
@@ -98,7 +99,6 @@
         <!-- ComfyUI-Node-Ansicht: aus context/nodeview.json gerendert -->
         <div class="comfy" id="comfy">
           <div id="comfy-slot"></div>
-          <img class="comfy__face" src="media/projects/projekt-1/avatar-jason-face.webp" alt="" aria-hidden="true">
         </div>
       </div>
     </section>
@@ -119,9 +119,84 @@
       </div>
       <!-- Slots werden von js/collage.js aus dem JSON unten gerendert -->
       <div data-collage></div>
-      <p class="collage__more">
-        <a class="collage__more-link" href="outtakes.html">die drei outtakes ansehen →</a>
+    </section>
+
+    <!-- Abschnitt 9: Outtakes – erscheint beim Weiterscrollen, gleicher Effekt -->
+    <section class="ot-head" aria-label="Outtakes">
+      <p class="ot-kicker" data-collage-reveal>Outtakes</p>
+      <h2 class="ot-title" data-collage-reveal>drei outtakes</h2>
+      <p class="ot-lead" data-collage-reveal>
+        Ausschuss, Aussetzer und Verworfens – die drei Takes, die es nicht in den Film
+        geschafft haben. Wie oben folgt alles dem Scrollen: ein Clip nach dem anderen,
+        dazwischen eine Schwarzblende.
       </p>
+    </section>
+
+    <section class="collage collage--outtakes" id="outtakes"
+             aria-label="Outtakes: drei Videos, per Scrollen gesteuert">
+      <!-- Slots werden von js/collage.js aus dem zweiten JSON unten gerendert -->
+      <div data-collage="outtakes"></div>
+    </section>
+
+    <!-- Abschnitt 10: die Projekttexte in Kästen mit demselben Eckenradius -->
+    <section class="ot-notes" aria-label="Notizen zu den Produktionen">
+      <h2 class="ot-notes__title" data-collage-reveal>was dahinter steckte</h2>
+
+      <article class="ot-box" data-collage-reveal>
+        <header class="ot-box__head">
+          <p class="ot-box__kicker">Fashion Film</p>
+          <h3 class="ot-box__title">Stadt → Unterwasser</h3>
+          <p class="ot-box__tools">Midjourney · RunwayML · CapCut</p>
+        </header>
+        <div class="ot-box__body">
+          <section class="ot-block">
+            <h4 class="ot-block__label">Challenges</h4>
+            <p>Die größte Hürde bei der Produktion des Fashion Films lag in einer komplexen visuellen Transition: Der Protagonist sollte sich nahtlos von einer urbanen Stadtszene in eine surreale („Impossible Reality“) Unterwasserwelt bewegen.</p>
+            <p>Dabei traten zwei wesentliche Probleme auf:</p>
+            <ul>
+              <li><strong>Mangelnde Kamera-Kontrolle:</strong> Trotz intensiver Prompt-Versuche ließ sich die für den Übergang notwendige Kameradrehung in Midjourney und RunwayML nicht präzise genug steuern.</li>
+              <li><strong>Stilbrüche:</strong> Versuche, die Wasserwelt in der Stadt auftauchen zu lassen, wirkten unnatürlich und zerstörten den minimalistischen Look des Modevideos.</li>
+            </ul>
+          </section>
+
+          <section class="ot-block">
+            <h4 class="ot-block__label">Solutions</h4>
+            <p>Um die wertvollen Generierungs-Credits effizient zu nutzen, habe ich mich gegen unkontrollierbares Prompt-Iterieren und für eine neue Schnittlösung entschieden:</p>
+            <ul>
+              <li>Ich ließ den Protagonisten kontrolliert nach hinten fallen.</li>
+              <li><strong>Der „Hard Cut“:</strong> Unmittelbar vor dem Aufprall auf den Boden erfolgt ein harter Schnitt, der die Spannung hält.</li>
+              <li><strong>Szenenwechsel &amp; Morphing:</strong> Der Schnitt führt direkt in eine neue, sauber generierte Sequenz, in der der Protagonist schwerelos unter Wasser schwebt. Ein anschließender, feiner Morph-Effekt leitet elegant in die finale Dialogszene über.</li>
+            </ul>
+          </section>
+        </div>
+      </article>
+
+      <article class="ot-box" data-collage-reveal>
+        <header class="ot-box__head">
+          <p class="ot-box__kicker">Kampagne</p>
+          <h3 class="ot-box__title">Kunststoffblock &amp; Sonnenbrille</h3>
+          <p class="ot-box__tools">Midjourney · RunwayML Aleph 2.0</p>
+        </header>
+        <div class="ot-box__body">
+          <section class="ot-block">
+            <h4 class="ot-block__label">Challenges</h4>
+            <p>Das visuelle Leitmotiv dieser Kampagne ist ein stilisierter menschlicher Kopf mit einer Sonnenbrille, der vollständig in einem transparenten, hochglänzenden Kunststoffblock eingeschlossen ist.</p>
+            <p>Die primäre Herausforderung bestand darin, konsistente Design-Variationen dieser Idee zu entwickeln (andere Gesichtsformen, neue Brillenmodelle), ohne dass die komplexe physikalische Ästhetik bricht.</p>
+            <ul>
+              <li><strong>Die physikalische Hürde:</strong> Die Brille und das Gesicht müssen optisch korrekt innerhalb des Blocks liegen, inklusive realistischer Lichtbrechung (Refraktion) und Spiegelungen auf der Kunststoffoberfläche.</li>
+              <li>Selbst unter Verwendung von Bild-zu-Bild-Referenzen (Style/Omni Reference) oder Inpainting-Editierfunktionen lieferte Midjourney keine brauchbaren Ergebnisse. Es zerstörte entweder die geometrische Struktur des Blocks oder veränderte das Brillendesign unkontrollierbar.</li>
+            </ul>
+          </section>
+
+          <section class="ot-block">
+            <h4 class="ot-block__label">Solutions</h4>
+            <p>Anstatt Zeit in ineffizientes Prompt-Engineering in Midjourney zu investieren, habe ich einen gezielten Wechsel in der Tool-Pipeline vollzogen und auf die Stärken von RunwayML Aleph 2.0 gesetzt:</p>
+            <ul>
+              <li><strong>Gezielter Element-Austausch:</strong> Da Aleph 2.0 die komplexe Geometrie und die Lichtphysik exakt beibehielt, konnte ich die inneren Elemente präzise variieren und austauschen.</li>
+            </ul>
+          </section>
+        </div>
+      </article>
     </section>
   </main>
 
@@ -192,6 +267,24 @@
       ]
     }
 
+  ]
+}
+  </script>
+
+  <!-- Outtake-Daten: eigener Scrub-Bereich weiter unten. shuffle false,
+       damit die drei Takes in ihrer Reihenfolge 1-2-3 laufen. -->
+  <script type="application/json" id="collage-data-outtakes">
+{
+  "fadeMs": 450,
+  "shuffle": false,
+  "only": ["outtake1", "outtake2", "outtake3"],
+  "slots": [
+    { "pos": "o1", "shape": "wide", "label": "Outtake 1",
+      "clips": [ { "src": "media/videos/outtake1.mp4", "title": "Outtake 1", "alt": "Outtake 1 – Video-Generierung", "duration": 3.53 } ] },
+    { "pos": "o2", "shape": "wide", "label": "Outtake 2",
+      "clips": [ { "src": "media/videos/outtake2.mp4", "title": "Outtake 2", "alt": "Outtake 2 – Video-Generierung", "duration": 3.53 } ] },
+    { "pos": "o3", "shape": "wide", "label": "Outtake 3",
+      "clips": [ { "src": "media/videos/outtake3.mp4", "title": "Outtake 3", "alt": "Outtake 3 – Video-Generierung", "duration": 3.53 } ] }
   ]
 }
   </script>
