@@ -59,6 +59,9 @@
   max-height: 88vh;
   margin: 0 auto;
   width: 100%;
+  /* Eckenrundung der Slots; per JS/JSON ueberschreibbar.
+     Bei sehr kleinen Viewports automatisch kleiner. */
+  --radius: clamp(8px, 1vw, 18px);
 }
 
 /* Jeder Slot ist eine Buehne: das aktive Video liegt darin, die
@@ -67,7 +70,11 @@
   position: relative;
   overflow: hidden;
   background: #000;
-  border-radius: 4px;
+  /* Radius deutlich sichtbar. Der Radius liegt zusaetzlich direkt auf dem
+     Video (s.u.), weil die Einblende-Transform des Slots in Chrome das
+     Clipping von overflow:hidden aufheben kann. */
+  border-radius: var(--radius, 14px);
+  isolation: isolate;          /* eigener Stacking-Kontext, sauberes Clipping */
   min-width: 0;
   min-height: 0;
   /* Startzustand fuer die Scroll-Einblendung */
@@ -85,13 +92,17 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  /* Radius auch am Video selbst – unabhaengig vom Slot-Clip. */
+  border-radius: inherit;
 }
 
-/* Schwarzbende: liegt ueber dem Video und wird per JS ein-/ausgeblendet */
+/* Schwarzbende: liegt ueber dem Video und wird per JS ein-/ausgeblendet.
+   Radius uebernehmen, sonst deckt die Blende die runden Ecken eckig ab. */
 .collage__fade {
   position: absolute;
   inset: 0;
   background: #000;
+  border-radius: inherit;
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--fade, .45s) linear;
