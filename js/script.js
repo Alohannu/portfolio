@@ -375,8 +375,85 @@
     });
   });
 
-  /* ---------- Abschnitt 5: Ergebnisbild (comfyui_save.png) ---------- */
-  // Unterkante auf die Unterkante der ComfyUI-Ansicht legen (nur Desktop-Layout)
+  /* ---------- Abschnitt 5: im Graphen bis zum Ende scrollen ----------
+     Die Section ist gepinnt (position: sticky). Solange der Graph noch nicht
+     am unteren Ende ist, wird das Mausrad auf den Graphen umgelenkt. Am Ende
+     greift eine kurze Pause, danach läuft die Seite normal weiter – so gibt es
+     keinen harten Bruch in der Bewegung. */
+  var tryonSection = document.getElementById("tryon");
+  var tryonStage = tryonSection && tryonSection.querySelector(".morph-reveal__stage");
+  var canvasEl = null;
+  var END_PAUSE_MS = 480;   // kurze Pause am Graph-Ende
+  var endReachedAt = 0;     // Zeitpunkt, an dem das Ende erreicht wurde
+
+  function findCanvas() {
+    if (canvasEl && canvasEl.isConnected) return canvasEl;
+    canvasEl = document.querySelector("#comfy-slot .nv-canvas");
+    return canvasEl;
+  }
+
+  // Ist die Section gerade gepinnt und vollständig aufgedeckt?
+  function tryonIsActive() {
+    if (!tryonSection || !tryonStage) return false;
+    var r = tryonStage.getBoundingClientRect();
+    // Stage klebt oben, sobald ihr oberer Rand ~0 ist
+    return Math.abs(r.top) < 4 && r.bottom > window.innerHeight * 0.5;
+  }
+
+  function atGraphEnd(c) {
+    return c.scrollTop + c.clientHeight >= c.scrollHeight - 2;
+  }
+
+  function atGraphStart(c) {
+    return c.scrollTop <= 1;
+  }
+
+  if (tryonSection) {
+    // Rad-Events abfangen, solange im Graphen gescrollt werden kann.
+    window.addEventListener("wheel", function (e) {
+      if (reduceMotion) return;
+      var c = findCanvas();
+      if (!c || !tryonIsActive()) return;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // horizontales Scrollen nicht anfassen
+
+      var down = e.deltaY > 0;
+      var atEnd = atGraphEnd(c), atStart = atGraphStart(c);
+
+      // Am Graph-Ende: kurze Pause, dann Seite aktiv weiterbewegen.
+      if (down && atEnd) {
+        var now = Date.now();
+        if (!endReachedAt) {
+          // Ende gerade erreicht -> Pause starten, dieses Event schlucken.
+          endReachedAt = now;
+          e.preventDefault();
+          return;
+        }
+        if (now - endReachedAt < END_PAUSE_MS) {
+          // Noch in der Pause: schlucken, damit die Seite nicht springt.
+          e.preventDefault();
+          return;
+        }
+        // Pause vorbei: Seite selbst weiterscrollen. Nicht auf das
+        // Default-Verhalten verlassen – das Event ist hier schon verbraucht.
+        e.preventDefault();
+        window.scrollBy(0, e.deltaY);
+        return;
+      }
+      if (!down && atStart) { endReachedAt = 0; return; } // oben -> Seite zurück
+
+      // Sonst: Rad auf den Graphen umlenken, Seite steht still.
+      e.preventDefault();
+      endReachedAt = 0;
+      c.scrollTop += e.deltaY;
+    }, { passive: false });
+
+    // Beim Verlassen der Section den Pausen-Zustand zurücksetzen.
+    window.addEventListener("scroll", function () {
+      if (!tryonIsActive()) endReachedAt = 0;
+    }, { passive: true });
+  }
+
+  /* ---------- Abschnitt 5: kein Ergebnisbild mehr ---------- */
   var saveImg = document.querySelector("#tryon .try__save");
   function layoutSave() {
     if (!saveImg || !comfy) return;

@@ -160,6 +160,11 @@ body {
 }
 /* Abschnitt 4: 100vh Morph + 100vh Halten + 100vh Stage; überlappt die letzten 200vh von Abschnitt 3 */
 .project.project--consistency { height: 400vh; z-index: 6; } /* + 100vh Halten für den Morph zu Abschnitt 5 */
+/* Abschnitt 5: Der Graph ist ~4800px hoch und wird per Mausrad im Graphen
+   selbst durchgescrollt (siehe js/script.js). Die Section-Hoehe bleibt wie
+   bei den anderen Morph-Abschnitten, damit der Morph-Fortschritt (offset aus
+   der Stage-Position) korrekt berechnet wird – eine groessere Hoehe wuerde die
+   Stage sofort pinnen und offset dauerhaft auf 0 setzen. */
 .project.project--try { height: 300vh; z-index: 7; }
 
 /* ---------- Morph-Reveal (wiederverwendbar) ---------- */
@@ -291,10 +296,10 @@ body {
   .project__specs { font-size: 1.15rem; }
 }
 
-/* ---------- Abschnitt 5: ComfyUI virtual try on ---------- */
+/* ---------- Abschnitt 5: ComfyUI virtual try on (Vollbild-Graph) ---------- */
 .project--try .project__stage {
   grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr .7fr;
+  grid-template-rows: auto 1fr;
   align-items: start;
 }
 .try__head { min-width: 0; }
@@ -320,17 +325,13 @@ body {
 .project__col--face .face.is-away { visibility: hidden; }
 @media (min-width: 900px) {
   .project--try .project__stage {
-    /* minmax(0, …) verhindert, dass die Node-Canvas-Spalte auf ihre
-       intrinsische Breite (bzw. auf 0) kollabiert und dabei in die
-       Textspalte laeuft. Feste Anteile statt 1fr 1fr. */
-    grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    column-gap: 4rem;
-    padding: 4rem 5vw 3rem 8vw;
+    /* Vollbild: Kopf oben, Graph füllt den Rest. */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 3rem 4vw 2rem;
   }
   .project--try .try__head { grid-column: 1; grid-row: 1; min-width: 0; }
-  .project--try .comfy { grid-column: 1; grid-row: 2; margin-top: 1.5rem; min-width: 0; }
-  .project--try .try__image { grid-column: 2; grid-row: 1 / -1; align-self: stretch; min-width: 0; }
+  .project--try .comfy { grid-column: 1; grid-row: 2; margin-top: 1.25rem; min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .comfy__face { visibility: visible; }

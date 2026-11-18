@@ -74,42 +74,56 @@
   overflow: hidden;
 }
 
-/* ---------- Raster ---------- */
+/* ---------- Raster ----------
+   8 Slots im Mosaikmuster. Nur der jeweils aktive Slot zeigt sein Video,
+   die uebrigen sind weisse Flaechen. Ein Slot pro Video, damit jedes
+   Video seinen festen Platz im Mosaik hat und dort aufleuchtet. */
 .collage__grid {
   display: grid;
   grid-template-columns: 1.15fr 1fr 1.15fr;
+  grid-template-rows: 1fr 1fr 0.85fr 1fr;
   gap: clamp(8px, 1.1vw, 20px);
   background: #000;
-  /* Feste Hoehe statt aspect-ratio: die Buehne ist sticky und braucht
-     eine definitive Groesse. 78vh laesst oben/unten Luft. */
   height: 78vh;
   max-width: min(1500px, 100%);
   margin: 0 auto;
   width: 100%;
-  /* Eckenrundung der Slots */
   --radius: clamp(8px, 1vw, 18px);
 }
 
-/* Jeder Slot ist eine Buehne: das aktive Video liegt darin, die
-   Schwarzbende liegt als eigene Ebene darueber. */
+/* Zeile 1+2: breit | hoch | zwei gestapelt */
+.collage__grid > .collage__slot:nth-child(1) { grid-column: 1;     grid-row: 1 / 3; }
+.collage__grid > .collage__slot:nth-child(2) { grid-column: 2;     grid-row: 1 / 3; }
+.collage__grid > .collage__slot:nth-child(3) { grid-column: 3;     grid-row: 1; }
+.collage__grid > .collage__slot:nth-child(4) { grid-column: 3;     grid-row: 2; }
+/* Zeile 3: zwei gestapelt rechts, links einer */
+.collage__grid > .collage__slot:nth-child(5) { grid-column: 1 / 3; grid-row: 3; }
+.collage__grid > .collage__slot:nth-child(6) { grid-column: 3;     grid-row: 3; }
+/* Zeile 4: 1 : 2 */
+.collage__grid > .collage__slot:nth-child(7) { grid-column: 1;     grid-row: 4; }
+.collage__grid > .collage__slot:nth-child(8) { grid-column: 2 / 4; grid-row: 4; }
+
+/* Jeder Slot ist eine Kachel im Raster. Es spielt immer nur EINER –
+   alle anderen bleiben weiss. Dadurch laeuft nur ein Decoder. */
 .collage__slot {
   position: relative;
   overflow: hidden;
-  background: #000;
-  /* Radius deutlich sichtbar. Der Radius liegt zusaetzlich direkt auf dem
-     Video (s.u.), weil die Einblende-Transform des Slots in Chrome das
-     Clipping von overflow:hidden aufheben kann. */
+  background: #fff;                 /* inaktive Slots: weisse Flaeche */
   border-radius: var(--radius, 14px);
-  isolation: isolate;          /* eigener Stacking-Kontext, sauberes Clipping */
+  isolation: isolate;
   min-width: 0;
   min-height: 0;
-  /* Startzustand fuer die Scroll-Einblendung */
   opacity: 0;
   transform: translateY(30px) scale(.98);
   transition: opacity .9s cubic-bezier(.22, .61, .36, 1),
               transform .9s cubic-bezier(.22, .61, .36, 1);
 }
 .collage__slot.is-in { opacity: 1; transform: none; }
+
+/* Im inaktiven Slot ist das Video unsichtbar -> weisse Kachel. */
+.collage__slot .collage__slot-video,
+.collage__slot video { visibility: hidden; }
+.collage__slot.is-active video { visibility: visible; }
 
 .collage__slot video {
   position: absolute;
@@ -118,12 +132,10 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  /* Radius auch am Video selbst – unabhaengig vom Slot-Clip. */
   border-radius: inherit;
 }
 
-/* Schwarzbende: liegt ueber dem Video und wird per JS ein-/ausgeblendet.
-   Radius uebernehmen, sonst deckt die Blende die runden Ecken eckig ab. */
+/* Schwarzbende ueber dem aktiven Video. */
 .collage__fade {
   position: absolute;
   inset: 0;
@@ -131,54 +143,8 @@
   border-radius: inherit;
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--fade, .45s) linear;
   z-index: 2;
 }
-.collage__fade.is-on { opacity: 1; }
-
-/* --- Slot-Platzierung --- */
-
-/* Links: ein hoher Slot ueber die volle Hoehe */
-.collage__slot--left {
-  grid-column: 1;
-  grid-row: 1 / 3;
-}
-
-/* Mitte: ein hoher Slot links, rechts zwei gestapelte */
-.collage__slot--tall {
-  grid-column: 2;
-  grid-row: 1 / 3;
-}
-.collage__slot--tr {
-  grid-column: 3;
-  grid-row: 1;
-}
-.collage__slot--br {
-  grid-column: 3;
-  grid-row: 2;
-}
-
-/* Untere Reihe: zwei getrennte Slots im Verhaeltnis 1 : 2.
-   Bewusst nicht ein durchgehend breiter Slot: die Quellvideos sind nur
-   818x460, ein 1296px breiter Slot haette sie 1.6x hochskaliert (pixelig).
-   Zwei kleinere Slots liegen unter 1.0x und bleiben scharf. */
-.collage__slot--bl {
-  grid-column: 1 / 2;
-  grid-row: 3;
-}
-.collage__slot--bw {
-  grid-column: 2 / 4;
-  grid-row: 3;
-}
-
-/* Das 1:2-Verhaeltnis der unteren Reihe gilt nur dort; die obere
-   Dreiteilung (1.15fr 1fr 1.15fr) bleibt unangetastet. */
-.collage__grid {
-  grid-template-rows: 1fr 1fr 1.25fr;
-}
-/* Untere Reihe als eigene 1:2-Teilung: die mittlere Spaltengrenze wird
-   fuer diese Zeile ueber eine Sub-Grid-Loesung nicht gebraucht – die
-   Breiten ergeben sich aus den Spalten 1 vs. 2+3. */
 
 /* ---------- Responsive ---------- */
 
@@ -189,6 +155,9 @@
    Strecke kommt dann aus der Sektionshoehe). */
 @media (max-width: 900px) {
   .collage { padding: 10vh 0 12vh; }
+  /* Kein Pinning auf schmalen Viewports: 8 Kacheln passen nicht in eine
+     Bildschirmhoehe. Die Kacheln stehen dann einfach untereinander und
+     das Scrubbing greift ueber die Sektionshoehe. */
   .collage__scrub { height: auto !important; }
   .collage__stage {
     position: static;
@@ -205,14 +174,11 @@
     max-width: 100%;
     gap: clamp(8px, 2vw, 14px);
   }
-  .collage__slot {
+  .collage__grid > .collage__slot {
     grid-column: 1 !important;
     grid-row: auto !important;
     aspect-ratio: 4 / 3;
   }
-  /* Hochkant-Videos behalten ihr Format */
-  .collage__slot[data-shape="portrait"] { aspect-ratio: 3 / 4; }
-  .collage__slot[data-shape="wide"] { aspect-ratio: 16 / 9; }
 }
 
 @media (prefers-reduced-motion: reduce) {

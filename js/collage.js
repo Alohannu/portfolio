@@ -1,30 +1,34 @@
 /* ==========================================================================
-   Video-Collage: Scroll-Scrubbing
+   Video-Collage: ein Video nach dem anderen, per Scrollen gescrubbt
 
-   Technik wie beim Hero-Video oben:
-     - Ein hoher Wrapper erzeugt die Scrollstrecke.
-     - Die Buehne darin ist position:sticky und steht still.
-     - Der Scrollfortschritt (0..1) steuert direkt video.currentTime.
+   Aufbau (wie das Hero-Video oben):
+     .collage__scrub   hoher Wrapper = Scrollstrecke (JS setzt die Hoehe)
+     .collage__stage   position:sticky, steht still
+     Fortschritt p     -> video.currentTime
 
-   Unterschied zum Hero: Jeder Slot spielt eine KETTE von Clips. Der
-   Fortschritt wird deshalb auf die Gesamtlaenge der Kette abgebildet:
-   Klick 1 -> Clip 1, Clip 2 ... Am Uebergang liegt die Schwarzbende,
-   ebenfalls an den Fortschritt gekoppelt (also auch rueckwaerts).
+   Wichtig: Es laeuft IMMER NUR EIN Video gleichzeitig. Genau ein Slot ist
+   aktiv und wird gescrubbt; alle anderen sind weisse Flaechen. Dadurch
+   arbeitet nur ein einziger Decoder, und das Scrollen bleibt fluessig
+   (vorher liefen bis zu sechs Videos parallel - das war das Ruckeln).
 
-   Alles ist vollstaendig reversibel: zurueckscrollen spult rueckwaerts,
-   anhalten haelt das Bild an der Stelle.
+   Ist ein Clip zu Ende, blendet der aktive Slot auf Schwarz, der naechste
+   Clip uebernimmt im selben Slot. Die Reihenfolge ist zufaellig.
+
+   Oeffentliche API: window.Collage.mount(root, {clips, order, fadeMs})
    ========================================================================== */
 (function () {
   "use strict";
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* Schwarzbende am Clip-Uebergang: Dauer in Sekunden Clipmaterial, je
-     halbe Dauer vor und nach dem Wechsel. Bei der aktuellen Scrollstrecke
-     entspricht 1s Clip etwa 96px Scroll, 1.2s Blende also ~231px – lang
-     genug, dass man den Uebergang beim Scrollen wirklich sieht. */
-  var BLEND = 1.2;
-  var SCRUB_VH_PER_SEC = 14; // Scrollstrecke in vh pro Sekunde Clipmaterial
+  /* Blende am Uebergang, in Sekunden Clipmaterial (je halbe Dauer vor und
+     nach dem Wechsel). Die Kette ist mit ~67s deutlich laenger als ein
+     einzelner Clip; 2s Blende sind daher noetig, damit der Uebergang beim
+     Scrollen nicht uebersprungen wird. */
+  var BLEND = 2.0;
+  /* Scrollstrecke pro Sekunde Clipmaterial. 6vh/s ergibt bei ~67s Kette
+     rund 4000px – lang genug zum Scrubben, kurz genug zum Durchscrollen. */
+  var SCRUB_VH_PER_SEC = 6;
 
   var state = null;
   var ticking = false;
@@ -35,200 +39,169 @@
     if (cls) el.className = cls;
     return el;
   }
-
-  /* Baut einen Slot mit seiner Clip-Kette und der Zeitachse. */
-  function createSlot(slotData) {
-    var el = makeEl("div", "collage__slot collage__slot--" + (slotData.pos || "left"));
-    el.dataset.shape = slotData.shape || "portrait";
-
-    var video = makeEl("video");
-    video.muted = true;
-    video.defaultMuted = true;
-    video.playsInline = true;
-    video.setAttribute("playsinline", "");
-    video.setAttribute("webkit-playsinline", "");
-    video.preload = "auto";
-    video.setAttribute("aria-label", slotData.label || "");
-
-    var fade = makeEl("div", "collage__fade");
-
-    el.appendChild(video);
-    el.appendChild(fade);
-
-    var clips = (slotData.clips || []).map(function (c) {
-      return { src: c.src, title: c.title || "", alt: c.alt || "", dur: c.duration || 0 };
-    });
-
-    var s = {
-      el: el, video: video, fade: fade,
-      clips: clips,
-      active: -1,          // aktuell geladener Clip
-      seeking: false,
-      pendingTime: null
-    };
-
-    /* --- Zeitachse: aus der Kette eine Gesamtdauer bauen --- */
-    s.buildTimeline = function () {
-      var durs = clips.map(function (c) { return c.dur; });
-      // Fallback, falls eine Dauer im JSON fehlt: erst nach Metadaten bekannt
-      if (durs.some(function (d) { return !d; })) {
-        durs = clips.map(function (c) { return c.dur || video.duration || 1; });
-      }
-      var total = durs.reduce(function (a, b) { return a + b; }, 0) || 1;
-      var acc = 0;
-      s.spans = durs.map(function (d, i) {
-        var span = { i: i, start: acc, end: acc + d, dur: d };
-        acc += d;
-        return span;
-      });
-      s.total = total;
-      return total;
-    };
-
-    /* Fortschritt 0..1 -> {clipIndex, time, fadeOpacity} */
-    s.resolve = function (p) {
-      if (!s.spans) s.buildTimeline();
-      var t = clamp(p, 0, 1) * s.total;
-      // Clip finden (letzter Treffer gewinnt)
-      var span = s.spans[s.spans.length - 1];
-      for (var k = 0; k < s.spans.length; k++) {
-        if (t < s.spans[k].end || k === s.spans.length - 1) { span = s.spans[k]; break; }
-      }
-      var local = clamp(t - span.start, 0, span.dur);
-
-      /* Schwarzbende an den Uebergaengen (nicht am Anfang/Ende der Kette,
-         dort waere ein Dauerzustand). */
-      var op = 0;
-      if (span.i > 0 && local < BLEND) {
-        op = 1 - local / BLEND;                 // aus der Blende heraus
-      } else if (span.i < s.spans.length - 1 && local > span.dur - BLEND) {
-        op = 1 - (span.dur - local) / BLEND;    // in die Blende hinein
-      }
-      return { idx: span.i, time: local, fade: clamp(op, 0, 1) };
-    };
-
-    /* Clip wechseln, ohne die Position zu verlieren. */
-    s.useClip = function (i, whenReady) {
-      if (i === s.active) { if (whenReady) whenReady(); return; }
-      var c = clips[i];
-      if (!c) return;
-      s.active = i;
-      lastSeek = -1;          // Zeitachse hat gewechselt: Seek-Sperre aufheben
-      s.pendingTime = null;
-      video.setAttribute("aria-label", c.alt || "");
-      el.title = c.title || c.alt || "";
-      video.src = c.src;
-      video.load();
-      var done = function () {
-        video.removeEventListener("loadeddata", done);
-        video.removeEventListener("canplay", done);
-        if (whenReady) whenReady();
-      };
-      video.addEventListener("loadeddata", done);
-      video.addEventListener("canplay", done);
-      // Fallback, falls das Ereignis ausbleibt (z. B. aus dem Cache)
-      setTimeout(done, 900);
-    };
-
-    /* Auf einen Fortschrittswert anwenden (der Kern des Scrubings). */
-    s.apply = function (p) {
-      var r = s.resolve(p);
-      fade.style.opacity = String(r.fade);
-      if (r.idx !== s.active) {
-        var target = r.time;
-        s.useClip(r.idx, function () { seekTo(target); });
-      } else {
-        seekTo(r.time);
-      }
-    };
-
-    /* iOS/Chrome liefern erst dann Frames beim Seeking, wenn das Video
-       einmal angespielt wurde. Deshalb jedes Video kurz primen:
-       play() -> sofort pause() -> danach greift currentTime zuverlaessig.
-       (Dieselbe Technik nutzt der Hero oben.) */
-    s.prime = function () {
-      if (s.primed) return;
-      s.primed = true;
-      var pr = video.play();
-      if (pr && pr.then) {
-        pr.then(function () {
-          video.pause();
-          lastSeek = -1;
-          if (s.lastProgress != null) s.apply(s.lastProgress);
-        }).catch(function () {
-          // Autoplay blockiert: Seeking funktioniert dann erst nach
-          // der ersten Nutzerinteraktion (siehe touchstart/click unten).
-          s.primed = false;
-        });
-      }
-    };
-
-    var lastSeek = -1;
-    function seekTo(t) {
-      var d = video.duration;
-      if (!d || !isFinite(d)) { s.pendingTime = t; return; }
-      var tt = clamp(t, 0, Math.max(0, d - 0.05));
-      // Nur bei echter Aenderung seeken (verhindert Seek-Spam)
-      if (Math.abs(tt - lastSeek) < 0.012) return;
-      lastSeek = tt;
-      try { video.currentTime = tt; } catch (e) {}
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
     }
-
-    /* Erstes Bild liefern, sobald Daten da sind, damit vor dem
-       Anspielen kein schwarzer Kasten steht. */
-    video.addEventListener("loadeddata", function () {
-      if (s.lastProgress != null && !s.primed) seekTo(s.resolve(s.lastProgress).time);
-    });
-
-    // Sobald Metadaten da sind: gemerkte Position nachziehen und Zeitachse
-    // mit den echten Dauern neu aufbauen.
-    video.addEventListener("loadedmetadata", function () {
-      if (video.duration && isFinite(video.duration)) {
-        clips[s.active] && (clips[s.active].dur = video.duration);
-        s.buildTimeline();
-      }
-      lastSeek = -1;
-      if (s.pendingTime != null) { var t = s.pendingTime; s.pendingTime = null; seekTo(t); }
-      if (s.lastProgress != null) s.apply(s.lastProgress);
-    });
-
-    return s;
+    return a;
   }
 
   function mount(root, opts) {
     if (!root) return null;
     destroy();
     opts = opts || {};
-    var slots = opts.slots || [];
-    if (!slots.length) return null;
 
-    /* --- Struktur: Wrapper (Scrollstrecke) + sticky Buehne --- */
+    /* Alle Clips einsammeln (flach) und zufaellig mischen. */
+    var clips = [];
+    (opts.slots || []).forEach(function (slot) {
+      (slot.clips || []).forEach(function (c) {
+        clips.push({ src: c.src, title: c.title || "", alt: c.alt || "", dur: c.duration || 0 });
+      });
+    });
+    if (opts.only && opts.only.length) {
+      var want = opts.only.map(function (s) { return s.toLowerCase(); });
+      clips = clips.filter(function (c) {
+        var f = c.src.split("/").pop().toLowerCase();
+        return want.some(function (w) { return f.indexOf(w) !== -1; });
+      });
+    }
+    if (opts.shuffle !== false) shuffle(clips);
+    if (!clips.length) return null;
+
+    /* --- Struktur --- */
     var wrap = makeEl("div", "collage__scrub");
     var stage = makeEl("div", "collage__stage");
     var grid = makeEl("div", "collage__grid");
 
-    var entries = [];
-    var fragment = document.createDocumentFragment();
-    slots.forEach(function (slotData) {
-      var s = createSlot(slotData);
-      s.buildTimeline();
-      entries.push(s);
-      fragment.appendChild(s.el);
+    /* Ein Slot je Video: das Raster bleibt als Mosaik sichtbar, und jedes
+       Video bekommt seinen Platz. Nur der aktive Slot zeigt Bewegung. */
+    var slots = clips.map(function (clip, i) {
+      var size = (opts.sizes && opts.sizes[i]) || "m";
+      var el = makeEl("div", "collage__slot collage__slot--" + size);
+      el.dataset.shape = clip.dur > 0 ? "" : "";
+      var video = makeEl("video");
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      video.preload = "metadata";
+      video.setAttribute("aria-label", clip.alt || "");
+      el.appendChild(video);
+      grid.appendChild(el);
+      return { el: el, video: video, clip: clip, active: false };
     });
-    grid.appendChild(fragment);
+
     stage.appendChild(grid);
     wrap.appendChild(stage);
     root.appendChild(wrap);
 
-    /* Scrollstrecke aus der laengsten Clip-Kette ableiten, damit jeder Slot
-       ungefaehr im selben Verhaeltnis durchlaeuft. */
-    var maxTotal = Math.max.apply(null, entries.map(function (s) { return s.total; }));
-    var vhLen = Math.max(300, Math.round(maxTotal * SCRUB_VH_PER_SEC / 10) * 10);
+    /* Zeitachse ueber alle Clips: Fortschritt 0..1 = gesamte Kette. */
+    var durs = clips.map(function (c) { return c.dur || 1; });
+    var total = durs.reduce(function (a, b) { return a + b; }, 0) || 1;
+    var spans = [];
+    var acc = 0;
+    durs.forEach(function (d, i) {
+      spans.push({ i: i, start: acc, end: acc + d, dur: d });
+      acc += d;
+    });
+
+    var vhLen = Math.max(300, Math.round(total * SCRUB_VH_PER_SEC / 10) * 10);
     wrap.style.height = vhLen + "vh";
 
-    var headEls = root.parentNode
-      ? Array.prototype.slice.call(root.parentNode.querySelectorAll("[data-collage-reveal]"))
-      : [];
+    var currentIdx = -1;      // welcher Clip gerade im aktiven Slot liegt
+    var lastSeek = -1;
+    var pendingTime = null;
+
+    function activeSlot() { return slots[currentIdx] || null; }
+
+    /* Clip in den aktiven Slot laden. Alle anderen bleiben weiss. */
+    function useClip(i, whenReady) {
+      var slot = slots[i];
+      if (!slot) return;
+      slots.forEach(function (s, k) {
+        var on = k === i;
+        s.el.classList.toggle("is-active", on);
+        s.el.classList.toggle("is-idle", !on);
+        /* Alten Clip freigeben: sonst bleibt in jedem schon benutzten Slot
+           eine geladene Datei im Speicher liegen. */
+        if (!on && s.video.getAttribute("src")) {
+          try { s.video.pause(); } catch (e) {}
+          s.video.removeAttribute("src");
+          s.video.load();
+        }
+      });
+      currentIdx = i;
+      lastSeek = -1;
+      pendingTime = null;
+      var video = slot.video;
+
+      var finish = function () {
+        video.removeEventListener("loadeddata", finish);
+        video.removeEventListener("canplay", finish);
+        if (whenReady) whenReady();
+      };
+      video.addEventListener("loadeddata", finish);
+      video.addEventListener("canplay", finish);
+      setTimeout(finish, 900);
+
+      if (video.getAttribute("src") !== slot.clip.src) {
+        video.src = slot.clip.src;
+        video.load();
+      } else {
+        finish();
+      }
+      slot.el.title = slot.clip.title || slot.clip.alt || "";
+    }
+
+    function seekTo(t) {
+      var slot = activeSlot();
+      if (!slot) return;
+      var video = slot.video;
+      var d = video.duration;
+      if (!d || !isFinite(d)) { pendingTime = t; return; }
+      var tt = clamp(t, 0, Math.max(0, d - 0.05));
+      if (Math.abs(tt - lastSeek) < 0.012) return;
+      lastSeek = tt;
+      try { video.currentTime = tt; } catch (e) {}
+    }
+
+    /* Fortschritt auf die Kette abbilden. */
+    function resolve(p) {
+      var t = clamp(p, 0, 1) * total;
+      var span = spans[spans.length - 1];
+      for (var k = 0; k < spans.length; k++) {
+        if (t < spans[k].end || k === spans.length - 1) { span = spans[k]; break; }
+      }
+      var local = clamp(t - span.start, 0, span.dur);
+      var op = 0;
+      if (span.i > 0 && local < BLEND) op = 1 - local / BLEND;
+      else if (span.i < spans.length - 1 && local > span.dur - BLEND) op = 1 - (span.dur - local) / BLEND;
+      return { idx: span.i, time: local, fade: clamp(op, 0, 1) };
+    }
+
+    /* Aktuellen Fortschritt anwenden. */
+    function apply(p) {
+      var r = resolve(p);
+      if (r.idx !== currentIdx) {
+        useClip(r.idx, function () { seekTo(r.time); });
+      } else {
+        seekTo(r.time);
+      }
+      /* Blende als Overlay ueber dem aktiven Slot. */
+      slots.forEach(function (s, k) {
+        if (k !== r.idx) return;
+        var f = s.el.querySelector(".collage__fade");
+        if (!f) {
+          f = makeEl("div", "collage__fade");
+          s.el.appendChild(f);
+        }
+        var others = s.el.querySelectorAll(".collage__fade");
+        for (var n = 0; n < others.length; n++) if (others[n] !== f) others[n].remove();
+        f.style.opacity = String(r.fade);
+      });
+    }
 
     function progress() {
       var top = wrap.getBoundingClientRect().top;
@@ -240,73 +213,122 @@
     function update() {
       ticking = false;
       var p = progress();
-      if (reduceMotion) {
-        // Kein Scrubbing: jeden Slot am Anfang seines ersten Clips zeigen.
-        entries.forEach(function (s) { if (s.lastProgress !== 0) { s.lastProgress = 0; s.apply(0); } });
-        return;
-      }
-      entries.forEach(function (s) {
-        s.lastProgress = p;
-        s.apply(p);
-      });
+      lastProgress = p;
+      if (reduceMotion) { if (currentIdx !== 0) apply(0.0001); return; }
+      apply(p);
     }
+    var lastProgress = 0;
 
     function requestUpdate() {
       if (!ticking) { ticking = true; requestAnimationFrame(update); }
     }
 
+    /* --- Einblenden der Kacheln und der Kopfzeile ---
+       Ohne das bleiben die Slots auf opacity:0 und man sieht nur Schwarz.
+       Beobachtet wird die ganze Sektion, nicht jede Kachel einzeln: die
+       Slots liegen in einer sticky Buehne und wuerden bei einem
+       Beobachter mit negativem rootMargin nie als sichtbar gelten. */
+    var headEls = root.parentNode
+      ? Array.prototype.slice.call(root.parentNode.querySelectorAll("[data-collage-reveal]"))
+      : [];
+    function revealAll() {
+      slots.forEach(function (s, i) {
+        s.el.style.transitionDelay = (i * 60) + "ms";
+        s.el.classList.add("is-in");
+      });
+      headEls.forEach(function (h) { h.classList.add("is-in"); });
+    }
+    if ("IntersectionObserver" in window && !reduceMotion) {
+      var revealIO = new IntersectionObserver(function (ents) {
+        ents.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          revealAll();
+          revealIO.disconnect();
+        });
+      }, { threshold: 0, rootMargin: "0px 0px -8% 0px" });
+      /* Nicht die Buehne beobachten: die ist auf schmalen Viewports hoeher
+         als das Fenster, dann greift keine Schwelle. Stattdessen die erste
+         Kachel – die ist immer kleiner als der Viewport. */
+      revealIO.observe(slots[0].el);
+    } else {
+      revealAll();
+    }
+
+    /* --- Sichtbarkeit: ausserhalb des Bildes wird nichts geladen --- */
+    var io = null;
+    if ("IntersectionObserver" in window) {
+      io = new IntersectionObserver(function (ents) {
+        ents.forEach(function (e) {
+          if (e.isIntersecting) {
+            if (currentIdx === -1) requestUpdate();
+          } else {
+            var slot = activeSlot();
+            if (slot && !slot.video.paused) slot.video.pause();
+          }
+        });
+      }, { threshold: [0, 0.2, 0.6] });
+      io.observe(wrap);
+    }
+
     window.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", requestUpdate);
 
-    /* Priming: erst nach einer echten Nutzerinteraktion erlauben Browser
-       das play(). Wir versuchen es sofort; klappt das nicht, wird beim
-       ersten Klick/Tastendruck/Touch erneut geprimt. */
-    entries.forEach(function (s) {
-      s.video.addEventListener("loadedmetadata", function () { s.prime(); });
+    /* Seeking liefert erst Frames, wenn einmal angespielt wurde. */
+    var primed = false;
+    function prime() {
+      if (primed) return;
+      var slot = activeSlot();
+      if (!slot) { requestUpdate(); return; }
+      var pr = slot.video.play();
+      if (pr && pr.then) {
+        pr.then(function () {
+          slot.video.pause();
+          primed = true;
+          lastSeek = -1;
+          requestUpdate();
+        }).catch(function () {});
+      }
+    }
+    window.addEventListener("pointerdown", prime, { passive: true, once: true });
+    window.addEventListener("wheel", prime, { passive: true, once: true });
+    window.addEventListener("keydown", prime, { once: true });
+    window.addEventListener("touchstart", prime, { passive: true, once: true });
+
+    /* Metadaten nachreichen: Dauer korrigieren und Position nachziehen. */
+    slots.forEach(function (s, i) {
+      s.video.addEventListener("loadedmetadata", function () {
+        if (s.video.duration && isFinite(s.video.duration)) {
+          var alt = spans[i].dur;
+          spans[i].dur = s.video.duration;
+          var delta = s.video.duration - alt;
+          if (delta) {
+            total += delta;
+            for (var k = i; k < spans.length; k++) {
+              spans[k].start += delta;
+              spans[k].end += delta;
+            }
+          }
+        }
+        if (i === currentIdx) {
+          lastSeek = -1;
+          if (pendingTime != null) { var t = pendingTime; pendingTime = null; seekTo(t); }
+          else requestUpdate();
+        }
+      });
     });
 
-    var primeAll = function () {
-      entries.forEach(function (s) { s.prime(); });
-      requestUpdate();
-    };
-    window.addEventListener("pointerdown", primeAll, { passive: true, once: true });
-    window.addEventListener("keydown", primeAll, { once: true });
-    window.addEventListener("touchstart", primeAll, { passive: true, once: true });
-    window.addEventListener("wheel", primeAll, { passive: true, once: true });
-
-    /* Einblenden der Slots, sobald die Sektion sichtbar wird. */
-    if ("IntersectionObserver" in window && !reduceMotion) {
-      var io = new IntersectionObserver(function (ents) {
-        ents.forEach(function (e) {
-          if (!e.isIntersecting) return;
-          e.target.classList.add("is-in");
-          io.unobserve(e.target);
-        });
-      }, { rootMargin: "0px 0px -5% 0px", threshold: 0.05 });
-      entries.forEach(function (s) { io.observe(s.el); });
-      headEls.forEach(function (h) { io.observe(h); });
-      state = state || {};
-      state.io = io;
-    } else {
-      entries.forEach(function (s) { s.el.classList.add("is-in"); });
-      headEls.forEach(function (h) { h.classList.add("is-in"); });
-    }
-
-    state = {
-      root: root, wrap: wrap, stage: stage, grid: grid,
-      entries: entries, requestUpdate: requestUpdate,
-      io: (state && state.io) || null
-    };
-
-    update();
+    state = { root: root, wrap: wrap, stage: stage, grid: grid, slots: slots, requestUpdate: requestUpdate, io: io };
+    useClip(0, function () { requestUpdate(); });
+    requestUpdate();
     return state;
   }
 
   function destroy() {
     if (!state) return;
     window.removeEventListener("scroll", state.requestUpdate);
+    window.removeEventListener("resize", state.requestUpdate);
     if (state.io) state.io.disconnect();
-    state.entries.forEach(function (s) {
+    state.slots.forEach(function (s) {
       try { s.video.pause(); } catch (e) {}
       s.video.removeAttribute("src");
     });
@@ -322,7 +344,17 @@
     var data;
     try { data = JSON.parse(dataEl.textContent); }
     catch (e) { console.error("[collage] Daten konnten nicht gelesen werden", e); return; }
-    mount(root, data);
+
+    /* Rastergroessen fuer die 8 Videos: Hochkant bevorzugt hoch,
+       Quer bevorzugt breit. */
+    var order = ["e-commerce", "ucg-outfit1", "ucg-outfit2", "fashion",
+                 "hero-video", "outtake1", "outtake2", "outtake3"];
+    mount(root, {
+      slots: data.slots,
+      only: order,
+      shuffle: true,
+      fadeMs: data.fadeMs
+    });
   }
 
   window.Collage = { mount: mount, destroy: destroy, boot: boot };
