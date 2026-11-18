@@ -17,10 +17,15 @@
   z-index: 7;
   background: #000;
   color: #fff;
-  padding: 14vh 5vw 16vh;
+  /* Der Kopfbereich hat eigenes Padding; die Buehne bringt ihre eigene
+     Zentrierung mit. Kein grosses Padding unten, sonst reisst die
+     gepinnte Buehne optisch ab. */
+  padding: 12vh 0 0;
 }
-
-.collage__head { margin: 0 0 7vh; }
+.collage__head {
+  margin: 0 0 6vh;
+  padding: 0 5vw;
+}
 
 .collage__head [data-collage-reveal] {
   opacity: 0;
@@ -47,20 +52,41 @@
   color: rgba(255, 255, 255, .72);
 }
 
+/* ---------- Scroll-Scrubbing: Wrapper + sticky Buehne ----------
+   Derselbe Aufbau wie beim Hero oben: der Wrapper liefert die
+   Scrollstrecke (Hoehe setzt das JS), die Buehne darin steht per
+   position:sticky still, waehrend der Fortschritt die Videos spult. */
+.collage__scrub {
+  position: relative;
+  /* Hoehe wird per JS aus der Clip-Laenge gesetzt */
+}
+
+.collage__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5vw;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
 /* ---------- Raster ---------- */
 .collage__grid {
   display: grid;
-  /* breit | hoch | breit  – der breite Aussenrahmen bleibt schmal,
-     damit die Hochkant-Slots echte Hoehe bekommen. */
   grid-template-columns: 1.15fr 1fr 1.15fr;
   gap: clamp(8px, 1.1vw, 20px);
   background: #000;
-  aspect-ratio: 16 / 9;
-  max-height: 88vh;
+  /* Feste Hoehe statt aspect-ratio: die Buehne ist sticky und braucht
+     eine definitive Groesse. 78vh laesst oben/unten Luft. */
+  height: 78vh;
+  max-width: min(1500px, 100%);
   margin: 0 auto;
   width: 100%;
-  /* Eckenrundung der Slots; per JS/JSON ueberschreibbar.
-     Bei sehr kleinen Viewports automatisch kleiner. */
+  /* Eckenrundung der Slots */
   --radius: clamp(8px, 1vw, 18px);
 }
 
@@ -157,14 +183,26 @@
 /* ---------- Responsive ---------- */
 
 /* Schmal: alles untereinander, natuerliche Hoehen */
+/* Schmal / flach: kein Pinning moeglich, weil 6 gestapelte Slots nicht in
+   eine Bildschirmhoehe passen. Dort laeuft die Collage normal mit und die
+   Buehne wird zur normalen Sektion (Scrubbing greift weiterhin, die
+   Strecke kommt dann aus der Sektionshoehe). */
 @media (max-width: 900px) {
-  .collage { padding: 10vh 5vw 12vh; }
+  .collage { padding: 10vh 0 12vh; }
+  .collage__scrub { height: auto !important; }
+  .collage__stage {
+    position: static;
+    height: auto;
+    padding: 0 5vw;
+    overflow: visible;
+  }
   .collage__grid {
     grid-template-columns: 1fr;
     grid-template-rows: none;
     grid-auto-rows: auto;
-    aspect-ratio: auto;
+    height: auto;
     max-height: none;
+    max-width: 100%;
     gap: clamp(8px, 2vw, 14px);
   }
   .collage__slot {
