@@ -171,7 +171,6 @@
         if (slot.clip.image) slot.video.paused = true;
       }
     }
-    var lastProgress = 0;
 
     var io = null;
     if ("IntersectionObserver" in window) {
