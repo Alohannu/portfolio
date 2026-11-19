@@ -2,11 +2,13 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
+  <script>document.documentElement.classList.add("js");</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sylvia Trieu – Portfolio</title>
   <meta name="description" content="Online-Portfolio von Sylvia Trieu – creative vision.">
   <link rel="preload" href="fonts/Jost-Medium.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/selected-works.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
@@ -92,7 +94,7 @@
       <div class="project__stage morph-reveal__stage">
         <div class="try__head">
           <h2 class="project__title reveal"><span class="reveal__inner">ComfyUI virtual try on</span></h2>
-          <p class="project__text fade-in">Textplatzhalter: Hier folgt die Beschreibung des ComfyUI-Workflows für die virtuelle Anprobe.</p>
+          <p class="project__text fade-in">Entwicklung einer reproduzierbaren ComfyUI-Pipeline zur automatisierten Erstellung fotorealistischer E-Commerce-Visuals auf Basis mehrerer unabhängiger Referenzen für Models, Produkte, Posen und Umgebungen.</p>
         </div>
         <div class="comfy" id="comfy">
           <img class="comfy__img" src="media/projects/projekt-1/comfyui.png" alt="ComfyUI-Workflow für die virtuelle Anprobe mit Load-Image-Nodes für Model, Outfit und Pose" width="720" height="570">
@@ -104,18 +106,314 @@
       </div>
     </section>
 
-    <!-- Abschnitt 6: Vollbild -->
-    <section class="fullscreen" id="abschnitt6" aria-label="Abschnitt 6">
-      <img src="media/projects/projekt-1/abschnitt6.png" alt="Abschnitt 6: Übersicht der Ergebnisse" width="1920" height="1080">
+    <!-- Abschnitt 6: Dashboard Tool (weiß, zwei Spalten) -->
+    <section class="tool" id="abschnitt6" aria-label="Virtual-Try-On Web-App">
+      <div class="tool__text">
+        <h2 class="tool__title">virtual-try-on web-app</h2>
+        <p class="tool__desc">Entwicklung eines webbasierten KI-Prototyps für Modesdesigner inklusive Modellauswahl, Produkt-Upload, Bildgenerierung und Ergebnisvorschau. Umsetzung mit Claude Code, Versionsverwaltung über GitHub und Deployment über Netlify.</p>
+        <a class="tool__btn" href="https://ai-photo-studio-cd-a2006f264f.netlify.app" target="_blank" rel="noopener noreferrer">prototyp öffnen</a>
+      </div>
+      <div class="tool__image">
+        <img src="media/projects/projekt-1/dashboard_tool.png" alt="Dashboard-Tool Photo Studio: Model wählen, Items hinzufügen und Foto generieren" width="817" height="975">
+      </div>
     </section>
 
-    <!-- Abschnitt 7: leer -->
-    <section class="placeholder" id="weiter" aria-label="Abschnitt 7"></section>
+<!-- Abschnitt 8: Video-Collage – Slots spielen ihre Videos nacheinander -->
+    <section class="collage" id="collage" aria-label="Video-Collage: Arbeiten aus allen Projekten">
+      <div class="collage__head" data-collage-head>
+        <h2 class="collage__title reveal" data-collage-reveal><span class="reveal__inner">selected works</span></h2>
+        <p class="collage__text fade-in" data-collage-reveal>Videos aus allen Projekten – generiert mit Midjourney, RunwayML, Seedance, Suno und ComfyUI. Alle Clips laufen gleichzeitig und in Schleife.</p>
+      </div>
+      <!-- Slots werden von js/collage.js aus dem JSON unten gerendert -->
+      <div data-collage></div>
+    </section>
+
+    <!-- Abschnitt 7: Outtakes – Überschrift wie "selected works" -->
+    <section class="collage collage--intro" aria-label="Outtakes">
+      <div class="collage__head">
+        <h2 class="collage__title" data-collage-reveal>outtakes</h2>
+        <p class="collage__text" data-collage-reveal>Takes, die es nicht in den Film geschafft haben – Ausschuss, Aussetzer, Verworfens. Die drei Videos laufen von selbst, die Notizen dazu erscheinen beim Weiterscrollen.</p>
+      </div>
+    </section>
+
+    <!-- Die drei Outtakes: links zwei uebereinander, rechts eines gross.
+         Alles zusammen auf eine Bildschirmhoehe, laufen frei und geloopt. -->
+    <section class="ot-stack" id="outtakes" aria-label="Die drei Outtakes">
+      <div class="ot-stack__grid">
+        <div class="ot-stack__col ot-stack__col--left">
+          <figure class="ot-tile">
+            <video src="media/selected-works/videos/outtake1.mp4" muted playsinline loop preload="metadata"
+                   aria-label="Outtake 1 – Video-Generierung"></video>
+          </figure>
+          <figure class="ot-tile">
+            <video src="media/selected-works/videos/outtake2.mp4" muted playsinline loop preload="metadata"
+                   aria-label="Outtake 2 – Video-Generierung"></video>
+          </figure>
+        </div>
+        <div class="ot-stack__col ot-stack__col--right">
+          <figure class="ot-tile">
+            <video src="media/selected-works/videos/outtake3.mp4" muted playsinline loop preload="metadata"
+                   aria-label="Outtake 3 – Video-Generierung"></video>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Abschnitt 8: die Projekttexte in Kästen mit demselben Eckenradius -->
+    <section class="ot-notes" aria-label="Notizen zu den Produktionen">
+      <h2 class="ot-notes__title" data-collage-reveal>was dahinter steckte</h2>
+
+      <article class="ot-box" data-collage-reveal>
+        <header class="ot-box__head">
+          <p class="ot-box__kicker">Fashion Film</p>
+          <h3 class="ot-box__title">Stadt → Unterwasser</h3>
+          <p class="ot-box__tools">Midjourney · RunwayML · CapCut</p>
+        </header>
+        <div class="ot-box__body">
+          <section class="ot-block">
+            <h4 class="ot-block__label">Challenges</h4>
+            <p>Die größte Hürde bei der Produktion des Fashion Films lag in einer komplexen visuellen Transition: Der Protagonist sollte sich nahtlos von einer urbanen Stadtszene in eine surreale („Impossible Reality“) Unterwasserwelt bewegen.</p>
+            <p>Dabei traten zwei wesentliche Probleme auf:</p>
+            <ul>
+              <li><strong>Mangelnde Kamera-Kontrolle:</strong> Trotz intensiver Prompt-Versuche ließ sich die für den Übergang notwendige Kameradrehung in Midjourney und RunwayML nicht präzise genug steuern.</li>
+              <li><strong>Stilbrüche:</strong> Versuche, die Wasserwelt in der Stadt auftauchen zu lassen, wirkten unnatürlich und zerstörten den minimalistischen Look des Modevideos.</li>
+            </ul>
+          </section>
+
+          <section class="ot-block">
+            <h4 class="ot-block__label">Solutions</h4>
+            <p>Um die wertvollen Generierungs-Credits effizient zu nutzen, habe ich mich gegen unkontrollierbares Prompt-Iterieren und für eine neue Schnittlösung entschieden:</p>
+            <ul>
+              <li>Ich ließ den Protagonisten kontrolliert nach hinten fallen.</li>
+              <li><strong>Der „Hard Cut“:</strong> Unmittelbar vor dem Aufprall auf den Boden erfolgt ein harter Schnitt, der die Spannung hält.</li>
+              <li><strong>Szenenwechsel &amp; Morphing:</strong> Der Schnitt führt direkt in eine neue, sauber generierte Sequenz, in der der Protagonist schwerelos unter Wasser schwebt. Ein anschließender, feiner Morph-Effekt leitet elegant in die finale Dialogszene über.</li>
+            </ul>
+          </section>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- ===== Selected Works: Serum-Hero, ai face serum, ai solution ===== -->
+    <div class="sw-hero" id="swHero">
+      <div class="sw-hero__stage">
+        <video class="sw-video" id="swVideo" src="media/selected-works/serum/serum-campaign.mp4"
+               muted playsinline preload="auto" loop aria-label="Serum-Kampagnenvideo"></video>
+        <button class="sound-toggle" id="swSoundToggle" type="button"
+                aria-label="Stummschalten" aria-pressed="true">
+          <svg class="icon icon--muted" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+            <path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/>
+            <path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <svg class="icon icon--sound" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+            <path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/>
+            <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <section class="project project--sw morph-reveal" data-morph aria-label="Projekt ai face serum">
+      <div class="project__stage morph-reveal__stage sw-stack">
+        <div class="project__col project__col--text">
+          <h2 class="project__title reveal"><span class="reveal__inner">ai face serum</span></h2>
+          <p class="project__text fade-in">Konzeption und visuelle Entwicklung einer Skincare-Produktlinie sowie der zugehörigen Social-Media-Assets.</p>
+        </div>
+        <div class="project__col project__col--image">
+          <img class="sw-avatar is-active" src="media/selected-works/serum/ai-serum.avif" alt="Serum-Produktbild, Ansicht 1 von 6" width="566" height="916">
+          <img class="sw-avatar" src="media/selected-works/serum/ai-serum-1.avif" alt="Serum-Produktbild, Ansicht 2 von 6" width="566" height="916">
+          <img class="sw-avatar" src="media/selected-works/serum/ai-serum-2.avif" alt="Serum-Produktbild, Ansicht 3 von 6" width="566" height="916">
+          <img class="sw-avatar" src="media/selected-works/serum/ai-serum-3.avif" alt="Serum-Produktbild, Ansicht 4 von 6" width="566" height="916">
+          <img class="sw-avatar" src="media/selected-works/serum/ai-serum-skin.avif" alt="Serum-Anwendung auf der Haut, Ansicht 5 von 6" width="566" height="916">
+          <img class="sw-avatar" src="media/selected-works/serum/ai-aloevera.avif" alt="Aloe-Vera-Produktbild, Ansicht 6 von 6" width="566" height="916">
+        </div>
+      </div>
+    </section>
+
+    <section class="project project--sw-phases p2-phases"
+               aria-label="Serum Produktentwicklung">
+        <div class="project__stage">
+          <h2 class="project__title p2-phases__title">ai solution</h2>
+
+          <!-- Tab-Leiste: ein Button je Phase, aria-selected zeigt die
+               aktive Phase an (tablist/tab-Muster). -->
+          <div class="phase-tabs" role="tablist" aria-label="Produktentwicklungsphasen">
+            <button class="phase-tab is-active" type="button" role="tab" id="phaseTab1"
+                    aria-selected="true" aria-controls="phasePanel" data-phase="0">Phase 1</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab2"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="1">Phase 2</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab3"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="2">Phase 3</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab4"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="3">Phase 4</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab5"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="4">Phase 5</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab6"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="5">Phase 6</button>
+          </div>
+
+          <!-- Panel: Inhalt der aktiven Phase. Kopf, Bilder und Zeilen
+               werden von js/serum-phases.js gesetzt. aria-live sorgt
+               dafuer, dass Screenreader den Wechsel mitbekommen. -->
+          <div class="phase-panel" id="phasePanel" role="tabpanel"
+               aria-labelledby="phaseTab1" tabindex="0" aria-live="polite">
+            <div class="phase-panel__head">
+              <h3 class="phase-panel__heading" id="phaseHeading"></h3>
+            </div>
+            <div class="phase-panel__body">
+              <div class="phase-panel__media" id="phaseMedia"></div>
+              <div class="phase-panel__rows" id="phaseRows"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    <!-- Abschnitt 7: Sunglass-Brand, Vorhang-Effekt (Bild 2 und 3 schieben sich per Scroll von unten über Bild 1) -->
+    <section class="curtain" id="curtain" aria-label="eggo – AI Sunglass Brand">
+      <div class="curtain__stage">
+        <img class="curtain__img curtain__img--1" src="media/projects/projekt-2/sunglass-hd-1.avif" alt="Sonnenbrille der Marke eggo, Bild 1">
+        <div class="stage__overlay curtain__overlay" id="curtainOverlay">
+          <div class="stage__text">
+            <h2 class="stage__title">eggo</h2>
+            <p class="stage__subtitle">AI SUNGLASS BRAND</p>
+          </div>
+        </div>
+        <img class="curtain__img curtain__img--2" src="media/projects/projekt-2/sunglass-hd-2.avif" alt="Sonnenbrille der Marke eggo, Bild 2">
+        <img class="curtain__img curtain__img--3" src="media/projects/projekt-2/sunglass-hd-3.avif" alt="Sonnenbrille der Marke eggo, Bild 3">
+      </div>
+    </section>
+
+    <!-- Abschnitt 8: Skincare-Video im Vollbild (läuft nur beim Scrollen, Ton läuft mit) -->
+    <section class="skin" id="skin" aria-label="face serum – AI Skincare Brand">
+      <div class="skin__stage">
+        <video class="skin__video" id="skin-video" src="media/projects/projekt-3/skincare.mp4" playsinline preload="auto" muted></video>
+        <div class="stage__overlay">
+          <div class="stage__text">
+            <h2 class="stage__title">face serum</h2>
+            <p class="stage__subtitle">AI SKINCARE BRAND</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Abschnitt 9: Serum-Kampagne (Morph aus Abschnitt 8, Bildcollage) -->
+    <section class="serum morph-reveal" id="serum" data-morph aria-label="AI Serum Kampagne">
+      <div class="serum__stage morph-reveal__stage">
+        <div class="serum__board">
+          <img class="serum__item serum__skin" src="media/projects/projekt-3/ai-serum-skin.avif" alt="Nahaufnahme von Haut mit Serum-Tropfen" width="800" height="1250">
+          <figure class="serum__item serum__card">
+            <div class="serum__videowrap">
+              <video class="serum__video" id="serum-video" src="media/projects/projekt-3/serum-campaign.mp4" autoplay muted loop playsinline preload="auto"></video>
+              <button class="serum__sound" id="serumSound" type="button" aria-pressed="false" aria-label="Ton einschalten">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                  <path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/>
+                  <path class="serum__waves" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span class="serum__soundlabel">SOUND ON</span>
+              </button>
+            </div>
+            <figcaption>INSTAGRAM POST</figcaption>
+          </figure>
+          <img class="serum__item serum__bottle" src="media/projects/projekt-3/ai-serum.avif" alt="Serumflasche mit grünem Aloe-Vera-Serum" width="800" height="1250">
+          <img class="serum__item serum__aloe" src="media/projects/projekt-3/ai-aloevera.avif" alt="Aufgeschnittenes Aloe-Vera-Blatt mit Gel" width="800" height="1250">
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- Fliegendes Gesichtsbild: liegt während des Morphs 4 → 5 über beiden Abschnitten -->
   <img class="face-fly" id="faceFly" src="media/projects/projekt-1/avatar-jason-face.webp" alt="" aria-hidden="true">
 
+
+  <script type="application/json" id="collage-data">
+{
+ "fadeMs": 450,
+ "slots": [
+  {
+   "pos": "left",
+   "shape": "wide",
+   "label": "Showreel und Fashion-Film",
+   "clips": [
+    {
+     "src": "media/selected-works/videos/hero-video.mp4",
+     "title": "Hero-Showreel",
+     "alt": "Hero-Showreel – creative vision",
+     "duration": 5.93
+    },
+    {
+     "src": "media/selected-works/videos/Fashion-Video-Swim-Upstream.mp4",
+     "title": "Fashion Film",
+     "alt": "Fashion Film „Swim Upstream“",
+     "duration": 22.09
+    }
+   ]
+  },
+  {
+   "pos": "tall",
+   "shape": "portrait",
+   "label": "nandemoii Kampagne",
+   "clips": [
+    {
+     "src": "media/selected-works/videos/e-commerce-video.mp4",
+     "title": "E-Commerce",
+     "alt": "E-Commerce-Video – nandemoii",
+     "duration": 15.21
+    },
+    {
+     "src": "media/selected-works/videos/ucg-outfit1.mp4",
+     "title": "UCG Outfit 1",
+     "alt": "UCG 9:16 – Outfit 1",
+     "duration": 5.06
+    },
+    {
+     "src": "media/selected-works/videos/ucg-outfit2.mp4",
+     "title": "UCG Outfit 2",
+     "alt": "UCG 9:16 – Outfit 2",
+     "duration": 8.06
+    }
+   ]
+  }
+ ]
+}
+  </script>
+
+<div class="showroom" id="showroom" hidden>
+    <div class="showroom__backdrop" data-showroom-close></div>
+
+    <div class="showroom__panel" role="dialog" aria-modal="true" aria-label="Video-Ansicht">
+      <button class="showroom__close" type="button" data-showroom-close aria-label="Schliessen (ESC)">
+        <span aria-hidden="true">&#215;</span>
+      </button>
+
+      <div class="showroom__frame">
+        <video class="showroom__video" id="showroomVideo" playsinline preload="metadata"></video>
+
+        <button class="showroom__nav showroom__nav--prev" type="button" data-showroom-prev
+                aria-label="Vorheriges Video (Pfeil links)">
+          <span aria-hidden="true">&#8249;</span>
+        </button>
+        <button class="showroom__nav showroom__nav--next" type="button" data-showroom-next
+                aria-label="Naechstes Video (Pfeil rechts)">
+          <span aria-hidden="true">&#8250;</span>
+        </button>
+
+      </div>
+
+      <!-- Der Ton-Knopf liegt AUSSERHALB des Rahmens. Innerhalb wuerde er
+           auf dem Bild sitzen, weil der Rahmen genau das Video umschliesst. -->
+      <button class="showroom__sound" type="button" data-showroom-sound
+              aria-label="Ton einschalten" aria-pressed="false">
+        <span class="showroom__sound-icon" aria-hidden="true"></span>
+        <span class="showroom__sound-text" data-showroom-sound-text>stumm</span>
+      </button>
+    </div>
+  </div>
+
   <script src="js/script.js"></script>
+  <script src="js/collage.js"></script>
+  <script src="js/outtakes.js"></script>
+  <script src="js/showroom.js"></script>
+  <script src="js/serum-phases.js"></script>
+  <script src="js/selected-works.js"></script>
 </body>
 </html>

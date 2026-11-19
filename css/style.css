@@ -344,6 +344,101 @@ body {
   .try__save { height: min(64vh, 100%); margin-right: 3.6vw; }
 }
 
-/* ---------- Abschnitt 6: Vollbild ---------- */
-.fullscreen { position: relative; z-index: 8; height: 100vh; height: 100svh; background: #fdfdfd; }
-.fullscreen img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* ---------- Abschnitt 6: Dashboard Tool ---------- */
+.tool {
+  position: relative;
+  z-index: 8;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: center;
+  padding: 4rem 1.5rem;
+  background: #fff;
+  color: #111;
+}
+.tool__title { margin: 0 0 1.5rem; font-weight: 500; font-size: clamp(2rem, 8vw, 3.4rem); line-height: 1.1; }
+.tool__desc {
+  margin: 0;
+  max-width: 34rem;
+  font-weight: 400;
+  font-size: clamp(1rem, 4vw, 1.4rem);
+  line-height: 1.6;
+  letter-spacing: .12em;
+}
+.tool__image img { display: block; width: 100%; max-width: 46rem; height: auto; margin: 0 auto; }
+@media (min-width: 900px) {
+  .tool { grid-template-columns: 1fr 1fr; gap: 4rem; padding: 3rem 5vw 3rem 6vw; }
+  .tool__image img { max-height: calc(100vh - 6rem); width: auto; max-width: 100%; margin: 0 0 0 auto; }
+}
+
+/* ---------- Abschnitt 7: Vorhang-Effekt ---------- */
+/* Ohne JS: drei Bilder untereinander. Mit JS: 300vh Container, Stage sticky, Bild 2/3 per clip-path von unten */
+.curtain { position: relative; z-index: 9; background: #d6d8d5; }
+.curtain__stage { position: relative; background: #d6d8d5; }
+.curtain__img { display: block; width: 100%; height: 100vh; height: 100svh; object-fit: cover; }
+.curtain__overlay { background: var(--overlay); }
+.curtain__overlay { position: absolute; inset: 0 auto auto 0; width: 100%; height: 100vh; height: 100svh; }
+.js .curtain { height: 300vh; }
+.js .curtain__stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+.js .curtain__img { position: absolute; inset: 0; height: 100%; }
+.js .curtain__img--1 { z-index: 1; }
+.js .curtain__overlay { z-index: 2; height: 100%; will-change: opacity; }
+.js .curtain__img--2 { z-index: 3; clip-path: inset(100% 0 0 0); will-change: clip-path; }
+.js .curtain__img--3 { z-index: 4; clip-path: inset(100% 0 0 0); will-change: clip-path; }
+
+/* ---------- Abschnitt 8: Skincare-Video (Scroll-gesteuert, sticky) ---------- */
+.skin { position: relative; z-index: 10; height: 100vh; height: 100svh; background: #000; }
+.skin__stage { position: relative; height: 100vh; height: 100svh; overflow: hidden; background: #000; }
+.skin__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.skin .stage__overlay { z-index: 2; }
+.js .skin { height: 400vh; } /* 300vh Scrollstrecke + 100vh Stage */
+.js .skin__stage { position: sticky; top: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .js .skin { height: 100vh; height: 100svh; }
+  .js .skin__stage { position: relative; }
+}
+
+/* ---------- Abschnitt 9: Serum-Kampagne (Morph + Collage) ---------- */
+.serum { position: relative; z-index: 11; margin-top: -100vh; height: 400vh; } /* 100vh Morph + 200vh Pan + 100vh Stage; überlappt Abschnitt 8 */
+.serum__stage {
+  position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden;
+  display: flex; align-items: flex-start; justify-content: center; padding: 1.5rem;
+  background: linear-gradient(to bottom, #2a432c 0%, #fdfdfd 100%);
+}
+.serum__board {
+  position: relative; container-type: inline-size; aspect-ratio: 1846 / 2000;
+  width: min(100%, 1400px); will-change: transform; flex: none;
+}
+.serum__item { position: absolute; display: block; object-fit: cover; background: #fff; }
+.serum__skin   { left: 16.6%; top: 5.7%;  width: 30.6%; height: 44.3%; }
+.serum__bottle { left: 56.9%; top: 43%; width: 30.2%; height: 44.2%; }
+.serum__aloe   { left: 15.9%; top: 54.1%; width: 32.2%; height: 43.9%; }
+.serum__card {
+  left: 59.6%; top: 5.7%; width: 24.8%; margin: 0;
+  display: flex; flex-direction: column; padding: 1.35cqw 1.35cqw 0; box-sizing: border-box;
+}
+.serum__videowrap { position: relative; aspect-ratio: 720 / 960; background: #ddd; } /* Originalformat des Videos (720×960) */
+.serum__video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.serum__card figcaption {
+  text-align: center; font-size: clamp(.4rem, 1.5cqw, .8rem); letter-spacing: .2em; color: #777; white-space: nowrap;
+  padding: .7em 0;
+}
+.serum__sound {
+  position: absolute; top: 4%; right: 4%; display: inline-flex; align-items: center; gap: .5em;
+  padding: .5em .8em; border: 0; border-radius: 999px; background: rgba(20, 20, 20, .88); color: #fff;
+  font: 500 clamp(.4rem, 1.3cqw, .75rem) / 1 "Jost", sans-serif; letter-spacing: .08em; cursor: pointer; white-space: nowrap;
+}
+.serum__sound svg { width: 1.3em; height: 1.3em; flex: none; }
+.serum__sound:hover { background: #000; }
+.serum__sound:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.serum__sound[aria-pressed="false"] .serum__waves { display: none; }
+
+.tool__btn {
+  display: inline-block; margin-top: 2rem; padding: .9em 2em; border: 1px solid #111; border-radius: 999px;
+  background: #111; color: #fff; text-decoration: none; font-weight: 500; font-size: .95rem; letter-spacing: .08em;
+  transition: background .2s ease, color .2s ease;
+}
+.tool__btn:hover { background: transparent; color: #111; }
+.tool__btn:focus-visible { outline: 2px solid #111; outline-offset: 3px; }

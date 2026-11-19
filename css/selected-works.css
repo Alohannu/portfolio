@@ -1,0 +1,967 @@
+/* ==========================================================================
+   Selected Works (aus beispiel_portfolio uebernommen)
+   Teile: Video-Collage, Outtakes, Showroom, Serum-Hero, 'ai face serum',
+   'ai solution' (Phasen). Alle Abschnitte stehen untereinander (kein
+   horizontaler Track).
+   ========================================================================== */
+
+/* ---------- Collage ---------- */
+/* ==========================================================================
+   Video-Collage (Abschnitt 8)
+
+   Aufbau nach Vorlage: feste Slots auf schwarzem Grund, sichtbare
+   Zwischenraeume. Fuer Widescreen um 90 Grad gedreht:
+
+     [ breit  ][ hoch  ][ breit ]      Reihe 1: breit + hoch + breit
+     [ breit  ][ halb  ][ breit ]      Reihe 2: der hohe Slot laeuft weiter,
+     [ breit  ][ halb  ][ breit ]      rechts zwei gestapelte Slots
+
+   In jedem Slot laufen die Videos nacheinander durch: ist eins zu Ende,
+   folgt eine Schwarzbende und danach das naechste Video im selben Slot.
+   Alles ist an das Scrollen gekoppelt – ohne Sichtbarkeit laeuft nichts.
+   ========================================================================== */
+.collage {
+  position: relative;
+  z-index: 7;
+  background: #000;
+  color: #fff;
+  /* Der Kopfbereich hat eigenes Padding; die Buehne bringt ihre eigene
+     Zentrierung mit. Kein grosses Padding unten, sonst reisst die
+     gepinnte Buehne optisch ab. */
+  padding: 12vh 0 0;
+}
+.collage__head {
+  /* Der Abstand zum Raster haelt den Kopf mit im Bild. */
+  margin: 0 0 clamp(1.4rem, 3.5vh, 3rem);
+  padding: 0;
+  flex: none;
+}
+
+/* Der Outtakes-Kopf steht OHNE .collage__stage direkt in der Sektion.
+   Normalerweise kommt der seitliche Einzug von der Buehne
+   (.collage__stage { padding: 0 5vw }); hier fehlt er sonst und die
+   Ueberschrift klebt am linken Rand (gemessen: left 0 statt 72 bei
+   1440px). Deshalb derselbe Einzug wie an der Buehne.
+   Der Einzug sitzt am Kopf, nicht am Kasten: so bleibt die Kante bei
+   jeder Breite gleich (bei 1920px sonst 306 statt 210, weil der
+   zentrierte Kasten und das Padding sich addieren). */
+.collage--intro .collage__head {
+  padding: 0 5vw;
+  max-width: min(1500px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: content-box;
+}
+
+/* Die Ueberschrift nutzt denselben Effekt wie "ComfyUI virtual try on":
+   .reveal als Maske (overflow: hidden) und .reveal__inner, das von unten
+   herauffaehrt. Die Styles dafuer stehen in style.css. Hier bewusst
+   KEIN eigenes opacity/transform mehr - das wuerde die Maske aushebeln. */
+.collage__head .reveal { display: block; }
+.collage__head .fade-in { transition-delay: .25s; }
+
+.collage__title {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: .01em;
+}
+.collage__text {
+  margin: 0;
+  max-width: 52ch;
+  font-weight: 400;
+  font-size: clamp(.95rem, 1.1vw, 1.1rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, .72);
+}
+
+/* ---------- Scroll-Scrubbing: Wrapper + sticky Buehne ----------
+   Derselbe Aufbau wie beim Hero oben: der Wrapper liefert die
+   Scrollstrecke (Hoehe setzt das JS), die Buehne darin steht per
+   position:sticky still, waehrend der Fortschritt die Videos spult. */
+.collage__scrub {
+  position: relative;
+  /* Kein Scrubbing der Videos mehr. Etwas mehr als eine Bildschirmhoehe,
+     damit die sticky Buehne Spielraum hat und Ueberschrift und Raster
+     zusammen im Bild bleiben, waehrend man daran vorbeiscrollt. */
+  height: 175vh;
+}
+
+.collage__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5vw;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Kopf und Raster liegen gemeinsam in der gepinnten Buehne, damit die
+   Ueberschrift nicht wegscrollt, waehrend die Videos stehen bleiben. */
+.collage__stage-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
+/* ---------- Raster ----------
+   5 Videos, alle Kacheln mit brauchbarer Hoehe. Zwei grosse Kacheln oben,
+   drei gleich grosse darunter – statt der flachen Streifen von vorher
+   (die unterste war 823x188, also 4.37:1, und damit nicht erkennbar). */
+.collage__grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  /* Oben die hohen Kacheln, unten die drei flacheren. Unten bekommt mehr
+     Hoehe als vorher, damit die Kacheln nicht zu Streifen werden. */
+  grid-template-rows: 1.35fr 1fr;
+  gap: clamp(8px, 1.1vw, 20px);
+  background: #000;
+  height: 62vh;
+  max-width: min(1500px, 100%);
+  margin: 0 auto;
+  width: 100%;
+  --radius: clamp(8px, 1vw, 18px);
+}
+
+/* Oben: zwei breite, hohe Kacheln */
+.collage__grid > .collage__slot:nth-child(1) { grid-column: 1 / 4; grid-row: 1; }
+.collage__grid > .collage__slot:nth-child(2) { grid-column: 4 / 7; grid-row: 1; }
+/* Unten: drei gleich grosse */
+.collage__grid > .collage__slot:nth-child(3) { grid-column: 1 / 3; grid-row: 2; }
+.collage__grid > .collage__slot:nth-child(4) { grid-column: 3 / 5; grid-row: 2; }
+.collage__grid > .collage__slot:nth-child(5) { grid-column: 5 / 7; grid-row: 2; }
+/* Falls mehr Videos dazukommen: unten anfuegen statt ueberlappen */
+.collage__grid > .collage__slot:nth-child(n+6) {
+  grid-column: span 2;
+  grid-row: auto;
+  min-height: 24vh;
+}
+
+/* Jeder Slot ist eine Kachel im Raster. Es spielt immer nur EINER –
+   alle anderen bleiben weiss. Dadurch laeuft nur ein Decoder. */
+.collage__slot {
+  position: relative;
+  overflow: hidden;
+  background: #000;                 /* Kachelgrund, das Video liegt davor */
+  border-radius: var(--radius, 14px);
+  isolation: isolate;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(30px) scale(.98);
+  transition: opacity .9s cubic-bezier(.22, .61, .36, 1),
+              transform .9s cubic-bezier(.22, .61, .36, 1);
+}
+.collage__slot.is-in { opacity: 1; transform: none; }
+
+/* Im inaktiven Slot ist das Video unsichtbar -> weisse Kachel. */
+.collage__slot .collage__slot-video,
+.collage__slot video { visibility: hidden; }
+.collage__slot.is-active video { visibility: visible; }
+
+.collage__slot video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+
+/* Schwarzbende ueber dem aktiven Video. */
+.collage__fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ---------- Responsive ---------- */
+
+/* Schmal: alles untereinander, natuerliche Hoehen */
+/* Schmal / flach: kein Pinning moeglich, weil 6 gestapelte Slots nicht in
+   eine Bildschirmhoehe passen. Dort laeuft die Collage normal mit und die
+   Buehne wird zur normalen Sektion (Scrubbing greift weiterhin, die
+   Strecke kommt dann aus der Sektionshoehe). */
+@media (max-width: 900px) {
+  .collage { padding: 10vh 0 12vh; }
+  /* Kein Pinning auf schmalen Viewports: 8 Kacheln passen nicht in eine
+     Bildschirmhoehe. Die Kacheln stehen dann einfach untereinander und
+     das Scrubbing greift ueber die Sektionshoehe. */
+  .collage__scrub { height: auto !important; }
+  .collage__stage {
+    position: static;
+    height: auto;
+    padding: 0 5vw;
+    overflow: visible;
+  }
+  .collage__grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+    height: auto;
+    max-height: none;
+    max-width: 100%;
+    gap: clamp(8px, 2vw, 14px);
+  }
+  .collage__grid > .collage__slot {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collage__slot,
+  .collage__head .reveal__inner,
+  .collage__head .fade-in { opacity: 1; transform: none; transition: none; }
+  .collage__fade { display: none; }
+}
+
+/* ---------- Link zur Outtake-Seite ---------- */
+.collage__more {
+  margin: 6vh 0 0;
+  padding: 0 5vw;
+  text-align: center;
+}
+
+.collage__more-link {
+  display: inline-block;
+  padding: .7rem 1.3rem;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 999px;
+  color: #fff;
+  text-decoration: none;
+  font-size: .82rem;
+  letter-spacing: .06em;
+  transition: border-color .25s ease, background-color .25s ease;
+}
+.collage__more-link:hover,
+.collage__more-link:focus-visible {
+  border-color: rgba(255, 255, 255, .7);
+  background: rgba(255, 255, 255, .08);
+}
+
+/* ---------- Outtakes ---------- */
+/* ==========================================================================
+   Outtakes – Abschnitt auf der Startseite
+   Die drei Videos laufen frei und geloopt, quadratisch, untereinander,
+   je eine Bildschirmhoehe hoch. Kein Scrubbing.
+   Darunter die Projekttexte, zeilenweise eingeblendet beim Scrollen.
+   ========================================================================== */
+
+/* ---------- Die drei Kacheln ----------
+   Alles zusammen auf EINE Bildschirmhoehe: links zwei uebereinander,
+   rechts eines gross. Kein Scrollen noetig, um alles zu sehen.
+
+   Der seitliche Einzug ist derselbe wie bei den Assets davor. Die
+   Collage bekommt 5vw von .collage__stage, ihr Raster ist zusaetzlich
+   auf 1500px begrenzt und zentriert (bei 1440px: 72px Rand, bei 1920px:
+   210px). Vorher stand hier ein eigener, kleinerer clamp (2.2vw -> 38px)
+   und keine Breitenbegrenzung; dadurch sassen die Kacheln bei 1440px
+   34px zu weit aussen und waeren ab ~1500px ueber das Raster hinaus
+   gelaufen. Jetzt dieselbe Rechnung wie beim Raster.
+
+   Der Rand sitzt als Padding am inneren Raster (.ot-stack__grid), nicht
+   an der Sektion: so bleibt der schwarze Grund vollflaechig und die
+   Kante liegt exakt wie bei .collage__grid. */
+.ot-stack {
+  background: #000;
+  position: relative;
+  z-index: 6;
+  height: 100vh;
+  height: 100svh;
+  box-sizing: border-box;
+  padding: clamp(10px, 1.6vw, 26px) 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(10px, 1.4vw, 24px);
+}
+
+/* Genau die Box von .collage__grid: 5vw Rand, max 1500px, zentriert. */
+.ot-stack__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(10px, 1.4vw, 24px);
+  width: 100%;
+  max-width: min(1500px, 100%);
+  margin: 0 auto;
+  padding: 0 5vw;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.ot-stack__col {
+  display: grid;
+  gap: clamp(10px, 1.4vw, 24px);
+  min-width: 0;
+  min-height: 0;
+}
+/* Links zwei gleich hohe Kacheln uebereinander */
+.ot-stack__col--left { grid-template-rows: 1fr 1fr; }
+/* Rechts eine Kachel ueber die volle Hoehe */
+.ot-stack__col--right { grid-template-rows: 1fr; }
+
+.ot-tile {
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #000;
+  border-radius: var(--radius, clamp(8px, 1vw, 18px));
+  position: relative;
+  /* Startzustand fuer das Einblenden */
+  opacity: 0;
+  transform: translateY(30px) scale(.98);
+  transition: opacity .9s cubic-bezier(.22, .61, .36, 1),
+              transform .9s cubic-bezier(.22, .61, .36, 1);
+}
+.ot-tile.is-in { opacity: 1; transform: none; }
+
+.ot-tile video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+
+/* ---------- Textbereich ---------- */
+.ot-notes {
+  background: #000;
+  color: #fff;
+  padding: 16vh 5vw 14vh;
+  max-width: min(1100px, 100%);
+  margin: 0 auto;
+  position: relative;
+  z-index: 7;
+}
+
+.ot-notes__title {
+  margin: 0 0 3rem;
+  font-size: clamp(1.1rem, 1.6vw, 1.5rem);
+  font-weight: 500;
+  letter-spacing: .01em;
+  color: rgba(255, 255, 255, .55);
+}
+
+/* Der Kasten hat denselben Radius wie eine Video-Kachel. */
+.ot-box {
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: var(--radius, clamp(8px, 1vw, 18px));
+  background: rgba(255, 255, 255, .03);
+  padding: clamp(1.4rem, 2.6vw, 2.6rem);
+  margin: 0 0 clamp(1.6rem, 3vw, 2.6rem);
+}
+
+.ot-box__head {
+  margin: 0 0 1.8rem;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+
+.ot-box__kicker {
+  margin: 0 0 .5rem;
+  font-size: .68rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .42);
+}
+
+.ot-box__title {
+  margin: 0 0 .5rem;
+  font-size: clamp(1.3rem, 2.4vw, 2rem);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.ot-box__tools {
+  margin: 0;
+  font-size: .8rem;
+  letter-spacing: .04em;
+  color: rgba(255, 255, 255, .45);
+}
+
+/* Challenges / Solutions: zweispaltig, auf schmal einspaltig. */
+.ot-box__body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: clamp(1.4rem, 3vw, 2.6rem);
+}
+
+.ot-block__label {
+  margin: 0 0 .9rem;
+  font-size: .7rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .5);
+}
+
+.ot-block p {
+  margin: 0 0 .9rem;
+  font-size: clamp(.9rem, 1vw, 1rem);
+  line-height: 1.65;
+  color: rgba(255, 255, 255, .78);
+}
+
+.ot-block ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ot-block li {
+  position: relative;
+  margin: 0 0 .7rem;
+  padding-left: 1.1rem;
+  font-size: clamp(.9rem, 1vw, 1rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, .68);
+}
+
+.ot-block li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .35);
+}
+
+.ot-block strong {
+  font-weight: 600;
+  color: rgba(255, 255, 255, .9);
+}
+
+/* ---------- Zeilenweises Einblenden ----------
+   js/outtakes.js haengt an jedes Element die Klasse .ot-line und setzt
+   --i (Index) fuer den Versatz. Ohne JS bleibt alles sichtbar.
+   100ms Versatz: bei ~16 Zeilen ist der Kasten nach gut 1,5s komplett da.
+   Mit 220ms zog sich das auf ueber 3s. */
+.ot-notes .ot-line {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .6s cubic-bezier(.22, .61, .36, 1),
+              transform .6s cubic-bezier(.22, .61, .36, 1);
+  transition-delay: calc(var(--i, 0) * 100ms);
+}
+.ot-notes .ot-line.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Schmal ---------- */
+@media (max-width: 900px) {
+  /* Auf schmalen Viewports nebeneinander waere alles zu klein:
+     die drei Kacheln stehen dann untereinander. */
+  .ot-stack {
+    height: auto;
+    /* Seitlich 0: den Einzug bringt .ot-stack__grid (5vw), damit die
+       Kante auch hier mit dem Raster der Collage uebereinstimmt. */
+    padding: 12px 0;
+    gap: 12px;
+  }
+  .ot-stack__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    max-width: min(1500px, 100%);
+  }
+  .ot-stack__col { grid-template-rows: none; gap: 12px; }
+  .ot-tile { aspect-ratio: 4 / 5; border-radius: 14px; }
+  .ot-notes { padding: 12vh 5vw 10vh; }
+}
+
+/* ---------- Reduced Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .ot-tile,
+  .ot-notes .ot-line,
+  [data-collage-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- Showroom ---------- */
+/* ==========================================================================
+   Showroom – Klick auf ein Video oeffnet es gross ueber der Seite
+
+   Die Videos im Mosaik haben drei verschiedene Formen (16:9, 9:16, 3:4).
+   Im Showroom behaelt jedes seine echte Form: der Rahmen bekommt das
+   Seitenverhaeltnis des Videos und wird nur gedeckelt, damit er in den
+   Bildschirm passt. So wird nichts abgeschnitten.
+
+   Ablauf: das Overlay liegt ueber der Seite, die Seite dahinter scrollt
+   nicht mehr (html.is-locked). ESC / Klick daneben / X schliessen.
+   ========================================================================== */
+
+.showroom {
+  position: fixed;
+  inset: 0;
+  z-index: 900;              /* ueber allem, auch ueber dem gepinnten Graphen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 56px);
+  box-sizing: border-box;
+}
+
+.showroom[hidden] { display: none; }
+
+/* Dunkler Grund. Etwas transparent, damit die Seite noch durchscheint. */
+.showroom__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .9);
+  opacity: 0;
+  transition: opacity .28s ease;
+}
+.showroom.is-open .showroom__backdrop { opacity: 1; }
+
+.showroom__panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Panel und Knopf stehen untereinander. Die verfuegbare Hoehe im
+     Overlay ist die Flaeche minus Abstand, damit nichts hinausragt. */
+  flex-direction: column;
+  gap: 12px;
+  max-width: 100%;
+  max-height: 100%;
+  opacity: 0;
+  transform: scale(.97);
+  transition: opacity .3s cubic-bezier(.22, .61, .36, 1),
+              transform .3s cubic-bezier(.22, .61, .36, 1);
+}
+.showroom.is-open .showroom__panel { opacity: 1; transform: none; }
+
+/* Der Rahmen bekommt das Seitenverhaeltnis des Videos per JS
+   (--ar), damit die echte Form erhalten bleibt. */
+.showroom__frame {
+  position: relative;
+  aspect-ratio: var(--ar, 16 / 9);
+  /* Breite und Hoehe setzt js/showroom.js in Pixeln (siehe fitFrame).
+     Hier nur die Obergrenzen als Sicherheitsnetz. */
+  width: var(--fw, 80vw);
+  height: var(--fh, 45vw);
+  max-width: 100%;
+  max-height: 100%;
+  background: #000;
+  border-radius: clamp(8px, 1vw, 18px);
+  overflow: hidden;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .6);
+}
+
+.showroom__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* contain statt cover: das ganze Bild ist zu sehen, nichts abgeschnitten */
+  object-fit: contain;
+  background: #000;
+  display: block;
+  border-radius: inherit;
+}
+
+/* ---------- Schliessen ---------- */
+.showroom__close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 50%;
+  background: rgba(18, 18, 20, .92);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+.showroom__close:hover { background: rgba(40, 40, 44, .98); border-color: rgba(255, 255, 255, .45); }
+.showroom__close:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* ---------- Blaettern ---------- */
+.showroom__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 50%;
+  background: rgba(18, 18, 20, .72);
+  color: #fff;
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .2s ease, opacity .2s ease;
+}
+.showroom__nav:hover { background: rgba(40, 40, 44, .95); }
+.showroom__nav:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.showroom__nav--prev { left: -20px; }
+.showroom__nav--next { right: -20px; }
+
+/* Gibt es nur ein Video, sind die Pfeile ohne Funktion. */
+.showroom.is-single .showroom__nav { display: none; }
+
+/* ---------- Ton ---------- */
+.showroom__sound {
+  /* Im Fluss unter dem Rahmen: so kann er nie auf dem Bild liegen,
+     unabhaengig von Seitenverhaeltnis und Bildschirmgroesse. */
+  position: relative;
+  flex: none;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .9rem;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 999px;
+  background: rgba(18, 18, 20, .82);
+  color: rgba(255, 255, 255, .82);
+  font: inherit;
+  font-size: .78rem;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.showroom__sound:hover { background: rgba(40, 40, 44, .95); color: #fff; }
+.showroom__sound:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.showroom__sound[aria-pressed="true"] { color: #fff; border-color: rgba(255, 255, 255, .4); }
+
+/* Kleines Lautsprecherzeichen, rein per CSS. */
+.showroom__sound-icon {
+  width: 12px;
+  height: 12px;
+  position: relative;
+  flex: none;
+}
+.showroom__sound-icon::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  width: 4px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 1px;
+}
+.showroom__sound-icon::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid currentColor;
+}
+.showroom__sound[aria-pressed="true"] .showroom__sound-icon {
+  box-shadow: 0 0 0 1px transparent;
+}
+
+/* ---------- Hinweis auf den Kacheln ---------- */
+/* Die Kacheln werden klickbar: Zeiger zur Hand und ein dezentes Symbol,
+   sonst sieht das Mosaik wie ein reines Schaufenster aus. */
+.collage__slot[data-playable],
+.ot-tile[data-playable] {
+  cursor: pointer;
+}
+
+.collage__slot[data-playable]::after,
+.ot-tile[data-playable]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .5) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E") center / 26px 26px no-repeat;
+  opacity: 0;
+  transform: scale(.85);
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.collage__slot[data-playable]:hover::after,
+.collage__slot[data-playable]:focus-visible::after,
+.ot-tile[data-playable]:hover::after,
+.ot-tile[data-playable]:focus-visible::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.collage__slot[data-playable]:focus-visible,
+.ot-tile[data-playable]:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+/* ---------- Scroll-Sperre, solange der Showroom offen ist ---------- */
+html.is-locked,
+html.is-locked body {
+  overflow: hidden;
+  /* Kein Sprung: die Scrollposition bleibt erhalten */
+  touch-action: none;
+}
+
+/* ---------- Schmal ---------- */
+@media (max-width: 900px) {
+  .showroom { padding: 12px; }
+  .showroom__frame {
+    width: min(100%, calc((100svh - 24px) * var(--arn, 1.7778)));
+    max-height: calc(100svh - 24px);
+    border-radius: 14px;
+  }
+  /* Pfeile nach innen, sonst liegen sie ausserhalb des Schirms */
+  .showroom__nav--prev { left: 8px; }
+  .showroom__nav--next { right: 8px; }
+  .showroom__nav { width: 42px; height: 42px; }
+  .showroom__close { top: 4px; right: 4px; }
+}
+
+/* Sehr flache Schirme: Ton-Leiste ueber das Video legen */
+@media (max-height: 480px) {
+  .showroom__sound { bottom: 10px; }
+}
+
+/* ---------- Reduced Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .showroom__backdrop,
+  .showroom__panel { transition: none; }
+  .collage__slot[data-playable]::after,
+  .ot-tile[data-playable]::after { transition: none; }
+}
+
+/* ---------- Phasen (ai solution) ----------
+   Aufbau wie im Original (yytrieu.github.io/ai-portfolio/#serum):
+   zentrierte Spalte, oben der Titel, darunter die Pill-Buttons, darunter
+   das Panel mit Bild links und Texten rechts. Im Original lag das in
+   einem Vollbild-Overlay mit max-width 1400px - dieselbe Breite hier,
+   damit Zeilenlaenge und Abstaende uebereinstimmen.
+
+   Wichtig: die Stage ist hier KEIN Grid mehr. Sie trug vorher das
+   3-Spalten-Raster (Text + zwei Bilder) und einen Pin; beides faellt weg,
+   weil der Inhalt jetzt eine zentrierte Spalte ist. */
+.p2-phases .project__stage {
+  /* Aus style.css bringt .project__stage drei Eigenschaften mit, die hier
+     alle drei stoeren und deshalb ausdruecklich aufgehoben werden:
+       position: sticky  -> nagelt die Stage am Viewport fest
+       height: 100vh     -> Stage waere genau bildschirmhoch, obwohl der
+                            Phasen-Inhalt hoeher ist
+       overflow: hidden  -> schneidet den ueberstehenden Inhalt ab
+     Gemessen ohne diese Overrides: stage.scrollHeight 920 >
+     stage.offsetHeight 900 - der Inhalt war also wirklich abgeschnitten. */
+  position: static;
+  height: auto;
+  overflow: visible;
+  display: block;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: clamp(48px, 8vh, 110px) clamp(20px, 4vw, 64px);
+  text-align: left;
+}
+
+.p2-phases__title {
+  margin: 0 0 clamp(32px, 5vh, 64px);
+  text-align: center;
+  font-size: clamp(28px, 4.6vw, 60px);
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+
+/* ---------- Tab-Leiste ---------- */
+.phase-tabs {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: clamp(24px, 4vh, 44px);
+}
+
+.phase-tab {
+  border: 1px solid #ddd9d5;
+  background: transparent;
+  color: #8d857c;
+  border-radius: 999px;
+  padding: 8px 17px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .2s ease, color .2s ease, background .2s ease;
+}
+.phase-tab:hover,
+.phase-tab:focus-visible { border-color: #111; color: #111; }
+.phase-tab.is-active {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+/* ---------- Panel ---------- */
+.phase-panel {
+  border-top: 1px solid #e4e1e6;
+  border-bottom: 1px solid #e4e1e6;
+}
+.phase-panel:focus-visible { outline: 2px solid #5257b0; outline-offset: 4px; }
+
+.phase-panel__head {
+  padding: clamp(20px, 3vh, 32px) 0;
+  border-bottom: 1px solid #e4e1e6;
+}
+
+.phase-panel__heading {
+  margin: 0;
+  font-size: clamp(18px, 2.2vw, 30px);
+  font-weight: 600;
+  letter-spacing: -.015em;
+}
+
+/* Bild links, Texte rechts; bricht unter 300px+300px auf eine Spalte um -
+   dieselbe auto-fit-Regel wie im Original. */
+.phase-panel__body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: clamp(28px, 4vw, 60px);
+  padding: clamp(28px, 4vh, 52px) 0;
+}
+
+.phase-panel__media { width: 100%; max-width: 804px; }
+
+/* Paar: links 360, rechts 444 -> 44.776% / 55.224%, wie im Original.
+   Die Bilder fuellen ihre Spalte und werden beschnitten (cover), damit
+   beide gleich hoch stehen. */
+.phase-media__pair { display: flex; gap: 0; width: 100%; }
+.phase-media__pair img {
+  display: block;
+  height: auto;
+  object-fit: cover;
+  background: #dcdad7;
+}
+.phase-media__pair img:first-child { width: 44.776%; aspect-ratio: 360 / 554; }
+.phase-media__pair img:last-child { width: 55.224%; aspect-ratio: 444 / 554; }
+
+/* Einzelbild (Phase 4): ein breites Bild ueber die volle Breite. */
+.phase-media__single img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 804 / 499;
+  object-fit: cover;
+  background: #dcdad7;
+}
+
+.phase-panel__rows {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 2.4vw, 28px);
+  align-self: center;
+}
+
+.phase-row { display: flex; flex-direction: column; gap: 7px; }
+.phase-row__label {
+  font-size: 11px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: #8d857c;
+}
+.phase-row__text {
+  margin: 0;
+  font-size: clamp(14px, 1.2vw, 17px);
+  line-height: 1.6;
+  font-weight: 300;
+  color: #3a3634;
+  text-wrap: pretty;
+}
+
+
+/* ---------- Serum-Hero: Kampagnenvideo (hochkant, 720x960) ---------- */
+.sw-hero {
+  position: relative;
+  z-index: 7;
+  height: 100vh;
+  height: 100svh;
+  background: #000;
+}
+.sw-hero__stage {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+.sw-video {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 720 / 960;
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+/* ---------- 'ai face serum': Morph + Bildwechsel ---------- */
+.project.project--sw { margin-top: 0; height: 500vh; z-index: 7; background: #000; }
+.project.project--sw-phases { margin-top: 0; height: auto; z-index: 7; background: #fdfdfd; }
+.sw-stack.project__stage { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+.sw-stack .project__col--text { grid-column: 1 / -1; }
+.sw-avatar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 0;
+  transition: opacity .35s ease;
+}
+.sw-avatar.is-active { opacity: 1; }
+@media (min-width: 900px) {
+  .sw-stack.project__stage {
+    grid-template-columns: 1.1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 2rem;
+    padding: 3rem 5vw 3rem 8vw;
+  }
+  .sw-stack .project__col--text { grid-column: auto; align-self: center; }
+}
+@media (prefers-reduced-motion: reduce) { .sw-avatar { transition: none; } }

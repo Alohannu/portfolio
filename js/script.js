@@ -366,9 +366,9 @@
     var title = el.querySelector(".reveal"), fade = el.querySelector(".fade-in");
     initMorphReveal(el, {
       onProgress: function (raw) {
-        title.classList.toggle("is-visible", raw >= 0.9);
+        if (title) title.classList.toggle("is-visible", raw >= 0.9);
         if (el.id === "tryon") faceFlight(raw);
-        if (el !== project) fade.classList.toggle("is-visible", raw >= 1); // Abschnitt 3 steuert den Text über den Bildwechsel
+        if (el !== project && fade) fade.classList.toggle("is-visible", raw >= 1); // Abschnitt 3 steuert den Text über den Bildwechsel
       }
     });
   });
@@ -390,4 +390,142 @@
   layoutSave();
   window.addEventListener("resize", layoutSave);
   window.addEventListener("load", layoutSave);
+
+  /* ---------- Abschnitt 7: Vorhang (Scrollfortschritt 1:1, ohne Easing, umkehrbar) ---------- */
+  var curtain = document.getElementById("curtain");
+  var curtainOverlay = document.getElementById("curtainOverlay");
+  var curtainImgs = [2, 3].map(function (n) { return curtain.querySelector(".curtain__img--" + n); });
+  var curtainFade = 0.5; // Overlay und Schrift sind nach 50 % der ersten Bildschirmhöhe ausgeblendet
+  var curtainTicking = false, curtainActive = true, curtainLast = -1;
+
+  function updateCurtain() {
+    curtainTicking = false;
+    var vh = window.innerHeight;
+    if (!vh) return;
+    var offset = clamp(-curtain.getBoundingClientRect().top / vh, 0, 2); // 0–1: Bild 2, 1–2: Bild 3
+    if (offset === curtainLast) return; // nur bei Änderung
+    curtainLast = offset;
+    curtainImgs.forEach(function (img, i) {
+      var t = clamp(offset - i, 0, 1);
+      img.style.clipPath = "inset(" + ((1 - t) * 100).toFixed(3) + "% 0 0 0)";
+    });
+    curtainOverlay.style.opacity = (1 - clamp(offset / curtainFade, 0, 1)).toFixed(3);
+  }
+  function requestCurtain() {
+    if (!curtainActive || curtainTicking) return;
+    curtainTicking = true;
+    requestAnimationFrame(updateCurtain);
+  }
+  window.addEventListener("scroll", requestCurtain, { passive: true });
+  window.addEventListener("resize", function () { curtainLast = -1; requestCurtain(); });
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      curtainActive = entries[entries.length - 1].isIntersecting;
+      if (curtainActive) requestCurtain();
+    }, { threshold: 0, rootMargin: "100px 0px 100px 0px" }).observe(curtain);
+  }
+  updateCurtain();
+
+  /* ---------- Abschnitt 8: Skincare-Video – läuft nur beim Scrollen (vorwärts), Ton läuft mit ---------- */
+  var skin = document.getElementById("skin");
+  var skinVideo = document.getElementById("skin-video");
+  var skinOverlay = skin.querySelector(".stage__overlay");
+  var SKIN_FADE = 0.5; // Overlay und Schrift sind nach 50 % der ersten Bildschirmhöhe Scrollen ausgeblendet
+  function skinFade() {
+    var vh = window.innerHeight;
+    if (!vh || reduceMotion) return;
+    skinOverlay.style.opacity = (1 - clamp(-skin.getBoundingClientRect().top / (vh * SKIN_FADE), 0, 1)).toFixed(3);
+  }
+  var skinActive = false, skinTicking = false, skinLastY = window.pageYOffset, skinDir = 1, skinTimer = 0;
+  var SKIN_IDLE_MS = 160; // so lange nach dem letzten Scroll-Event läuft das Video weiter
+
+  function skinProgress() {
+    var dist = skin.offsetHeight - window.innerHeight;
+    return dist > 0 ? clamp(-skin.getBoundingClientRect().top / dist, 0, 1) : 0;
+  }
+  function skinPause() { if (!skinVideo.paused) skinVideo.pause(); }
+  function skinPlay() {
+    if (!skinVideo.paused) return;
+    skinVideo.muted = false; // Ton läuft mit; Browser ohne Nutzer-Geste lehnen das ab → Fallback stumm
+    var pr = skinVideo.play();
+    if (pr && pr.catch) pr.catch(function () {
+      skinVideo.muted = true;
+      var p2 = skinVideo.play();
+      if (p2 && p2.catch) p2.catch(function () {});
+    });
+  }
+  function skinUpdate() {
+    skinTicking = false;
+    var dur = skinVideo.duration;
+    if (!skinActive || !isFinite(dur) || reduceMotion) return;
+    var p = skinProgress(), target = p * dur;
+    var scrolling = p > 0 && p < 1 && skinDir > 0;
+    if (!scrolling) { // rückwärts, am Anfang oder Ende: kein Abspielen, Bild folgt dem Scroll
+      skinPause();
+      if (Math.abs(skinVideo.currentTime - target) > 0.04) skinVideo.currentTime = target;
+      return;
+    }
+    if (Math.abs(skinVideo.currentTime - target) > 0.8) skinVideo.currentTime = target; // Drift korrigieren
+    skinPlay();
+    clearTimeout(skinTimer);
+    skinTimer = setTimeout(skinPause, SKIN_IDLE_MS); // Scrollstopp → Video und Ton halten an
+  }
+  function skinOnScroll() {
+    var y = window.pageYOffset;
+    if (y !== skinLastY) { skinDir = y > skinLastY ? 1 : -1; skinLastY = y; }
+    if (skinActive) skinFade();
+    if (!skinActive || skinTicking) return;
+    skinTicking = true;
+    requestAnimationFrame(skinUpdate);
+  }
+  window.addEventListener("scroll", skinOnScroll, { passive: true });
+  window.addEventListener("resize", skinOnScroll);
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      skinActive = entries[entries.length - 1].isIntersecting;
+      if (skinActive) skinOnScroll(); else { clearTimeout(skinTimer); skinPause(); }
+    }, { threshold: 0, rootMargin: "0px" }).observe(skin);
+  }
+  document.addEventListener("visibilitychange", function () { if (document.hidden) skinPause(); });
+  // Ton nach der ersten Nutzer-Geste freischalten, falls der Browser zunächst stumm abspielen musste
+  ["pointerdown", "keydown", "touchend"].forEach(function (evt) {
+    window.addEventListener(evt, function unlock() {
+      window.removeEventListener(evt, unlock);
+      if (!skinVideo.paused) skinVideo.muted = false;
+    }, { passive: true });
+  });
+
+  /* ---------- Abschnitt 9: Serum-Video – Autoplay stumm, Ton per Button ---------- */
+  var serumVideo = document.getElementById("serum-video");
+  var serumBtn = document.getElementById("serumSound");
+  var serumLabel = serumBtn.querySelector(".serum__soundlabel");
+  function setSerumSound(on) {
+    serumVideo.muted = !on;
+    serumBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    serumBtn.setAttribute("aria-label", on ? "Ton ausschalten" : "Ton einschalten");
+    serumLabel.textContent = on ? "SOUND OFF" : "SOUND ON";
+    if (on && serumVideo.paused) { var pr = serumVideo.play(); if (pr && pr.catch) pr.catch(function () {}); }
+  }
+  // Collage ist größer als der Bildschirm: nach dem Morph wandert sie mit dem Scrollen nach oben (reversibel)
+  var serumSec = document.getElementById("serum"), serumBoard = serumSec.querySelector(".serum__board");
+  var serumVisible = false, serumTicking = false;
+  function serumUpdate() {
+    serumTicking = false;
+    var vh = window.innerHeight, rect = serumSec.getBoundingClientRect();
+    if (!vh) return;
+    var over = Math.max(0, serumBoard.offsetHeight + 3 * 16 - vh); // Überstand (Stage-Padding 1.5rem oben/unten)
+    var p = reduceMotion ? 0 : clamp((-rect.top - vh) / (serumSec.offsetHeight - 2 * vh), 0, 1);
+    serumBoard.style.transform = over ? "translateY(" + (-p * over).toFixed(1) + "px)" : "";
+    serumVisible = rect.bottom > 0 && rect.top < vh;
+    if (serumVisible && serumVideo.paused) { var pr = serumVideo.play(); if (pr && pr.catch) pr.catch(function () {}); }
+    else if (!serumVisible && !serumVideo.paused) { serumVideo.pause(); if (!serumVideo.muted) setSerumSound(false); }
+  }
+  function serumRequest() { if (!serumTicking) { serumTicking = true; requestAnimationFrame(serumUpdate); } }
+  window.addEventListener("scroll", serumRequest, { passive: true });
+  window.addEventListener("resize", serumRequest);
+  serumVideo.addEventListener("pause", function () { // Video darf im sichtbaren Abschnitt nie hängen bleiben
+    if (serumVisible && !serumVideo.ended) { var pr = serumVideo.play(); if (pr && pr.catch) pr.catch(function () {}); }
+  });
+  serumUpdate();
+  serumBtn.addEventListener("click", function () { setSerumSound(serumVideo.muted); });
 })();
