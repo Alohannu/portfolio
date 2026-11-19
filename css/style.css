@@ -160,6 +160,11 @@ body {
 }
 /* Abschnitt 4: 100vh Morph + 100vh Halten + 100vh Stage; überlappt die letzten 200vh von Abschnitt 3 */
 .project.project--consistency { height: 400vh; z-index: 6; } /* + 100vh Halten für den Morph zu Abschnitt 5 */
+/* Abschnitt 5: Der Graph ist ~4800px hoch und wird per Mausrad im Graphen
+   selbst durchgescrollt (siehe js/script.js). Die Section-Hoehe bleibt wie
+   bei den anderen Morph-Abschnitten, damit der Morph-Fortschritt (offset aus
+   der Stage-Position) korrekt berechnet wird – eine groessere Hoehe wuerde die
+   Stage sofort pinnen und offset dauerhaft auf 0 setzen. */
 .project.project--try { height: 300vh; z-index: 7; }
 
 /* ---------- Morph-Reveal (wiederverwendbar) ---------- */
@@ -291,16 +296,65 @@ body {
   .project__specs { font-size: 1.15rem; }
 }
 
-/* ---------- Abschnitt 5: ComfyUI virtual try on ---------- */
+/* ---------- Abschnitt 5: ComfyUI virtual try on (Vollbild-Graph) ---------- */
 .project--try .project__stage {
   grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr .7fr;
+  grid-template-rows: auto 1fr;
   align-items: start;
 }
 .try__head { min-width: 0; }
 .comfy { position: relative; width: 100%; height: 100%; min-height: 0; }
-.comfy__img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: left top; }
-.comfy__face { position: absolute; display: block; object-fit: cover; visibility: hidden; } /* Position per JS (Slot im Bild) */
+/* ComfyUI-Node-Ansicht (context/nodeview.js) füllt den Slot; eigenes CSS kommt gescoped mit. */
+#comfy-slot { width: 100%; height: 100%; min-height: 0; }
+#comfy-slot .nv-root { height: 100%; }
+#comfy-slot .nv-editor { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+#comfy-slot .nv-canvas { flex: 1 1 auto; min-height: 0; }
+.comfy__face { position: absolute; display: block; object-fit: cover; visibility: hidden; z-index: 2; } /* Position per JS (Slot in der Ansicht) */
+
+/* ---------- Abschnitt 5: 180-Grad-Flip am Ende des Graphen ----------
+   Vorbild: effect-labs.com/effects/transitions/flip-transition.
+   Unterschiede, bewusst:
+   - perspective sitzt auf .comfy (der Vaterflaeche), nicht auf dem drehenden
+     Element. Nur so bleibt der Augpunkt waehrend der ganzen Drehung stehen.
+     Die Flaeche ist ~1200px breit; 800px waeren stark bauchig, deshalb
+     groesser. Regel aus der Vorlage: etwa das 3- bis 4-fache der Breite.
+   - Der Sichtbarkeitswechsel haengt an der Scrollposition (p >= .5), nicht an
+     einer festen 0.27s-Verzoegerung. Bei einer gescrubbten, umkehrbaren
+     Drehung wuerde ein Timer sofort auseinanderlaufen.
+   Tuning live in DevTools: --flip-perspective und --flip-runway. */
+.comfy {
+  --flip-perspective: min(1200px, 120vw);
+  /* Scrollstrecke der Drehung, in Anteilen der Viewport-Hoehe.
+     Wird in js/script.js gelesen; Fallback dort ist derselbe Wert. */
+  --flip-runway: 0.6;
+  perspective: var(--flip-perspective);
+}
+.flip { position: relative; width: 100%; height: 100%; min-height: 0; }
+.flip__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  /* Kein CSS-transition: die Drehung kommt 1:1 aus der Scrollposition,
+     eine Transition wuerde dem Scrollen nachlaufen. */
+  transform: rotateY(0deg);
+  will-change: transform;
+}
+.flip__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  border-radius: 14px;
+  /* Sicherheitsnetz fuer Engines, die backface-visibility unter preserve-3d
+     nicht anwenden (siehe Vorlage: Playwright-WebKit zeigt sonst die
+     Rueckseite gespiegelt). Der Zustand wird per JS an p >= .5 gehaengt. */
+  visibility: hidden;
+}
+.flip__front { visibility: visible; }
+.flip__back { transform: rotateY(180deg); background: var(--nv-bg, #0A0A0F); }
+.flip__shot { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
 .try__image { position: relative; width: 100%; height: 100%; min-height: 0; }
 .face-fly {
   position: fixed;
@@ -316,17 +370,20 @@ body {
 .project__col--face .face.is-away { visibility: hidden; }
 @media (min-width: 900px) {
   .project--try .project__stage {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr;
-    column-gap: 4rem;
-    padding: 4rem 5vw 3rem 8vw;
+    /* Vollbild: Kopf oben, Graph füllt den Rest. */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 3rem 4vw 2rem;
   }
-  .project--try .try__head { grid-column: 1; grid-row: 1; }
-  .project--try .comfy { grid-column: 1; grid-row: 2; margin-top: 1.5rem; }
-  .project--try .try__image { grid-column: 2; grid-row: 1 / -1; align-self: stretch; }
+  .project--try .try__head { grid-column: 1; grid-row: 1; min-width: 0; }
+  .project--try .comfy { grid-column: 1; grid-row: 2; margin-top: 1.25rem; min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .comfy__face { visibility: visible; }
+  /* Keine 3D-Drehung: die Flaeche springt direkt auf die Zielseite.
+     Steuerung uebernimmt js/script.js (p wird auf 0 oder 1 gesetzt). */
+  .flip__inner { transform: none !important; }
+  .flip__front, .flip__back { transform: none; }
 }
 
 /* ---------- Abschnitt 5: Ergebnisbild (comfyui_save.png) ---------- */

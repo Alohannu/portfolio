@@ -1,0 +1,830 @@
+{
+  "meta": {
+    "name": "comfyui_workflow",
+    "title": "virtual try-on",
+    "subtitle": "ComfyUI Node Explorer",
+    "source": "native ComfyUI export",
+    "note": "Aus context/comfyui_workflow.json konvertiert. Koordinaten bewusst NICHT normalisiert: der Graph ist 1112 x 5414 px und erzaehlt den Datenfluss vertikal."
+  },
+  "canvas": {
+    "width": 1112,
+    "height": 5414,
+    "initialZoom": 1.0,
+    "minZoom": 0.15,
+    "maxZoom": 3.0,
+    "zoomStep": 0.15
+  },
+  "palette": {
+    "model": "#b57bff",
+    "clip": "#f0d868",
+    "vae": "#ff6b6b",
+    "image": "#6fb7ff",
+    "cond": "#ff9f45",
+    "latent": "#ff7bd5",
+    "out": "#8fe3c0",
+    "none": "rgba(255,255,255,.22)"
+  },
+  "wireStyle": {
+    "baseWidth": 2,
+    "baseOpacity": 0.5,
+    "pulseWidth": 3.6,
+    "pulseDasharray": "5 40",
+    "pulseAnimation": "1.15s linear infinite"
+  },
+  "groups": [
+    {
+      "label": "Models",
+      "x": 24.0,
+      "y": 1015.6,
+      "w": 427.0,
+      "h": 670.1
+    },
+    {
+      "label": "Prompt",
+      "x": 250.9,
+      "y": 2258.0,
+      "w": 797.9,
+      "h": 664.0
+    },
+    {
+      "label": "Load Image",
+      "x": 305.6,
+      "y": 24.0,
+      "w": 783.1,
+      "h": 754.2
+    },
+    {
+      "label": "",
+      "x": 740.2,
+      "y": 2713.7,
+      "w": 332.1,
+      "h": 630.7
+    }
+  ],
+  "nodes": [
+    {
+      "id": "61",
+      "type": "CLIPLoader",
+      "title": "Load CLIP",
+      "accent": "#f0d868",
+      "x": 40.0,
+      "y": 1394.6,
+      "w": 395,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "clip_name",
+          "v": "qwen_2.5_vl_7b_fp8_scaled.safetensors"
+        },
+        {
+          "k": "type",
+          "v": "qwen_image"
+        },
+        {
+          "k": "device",
+          "v": "default"
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "type": "VAELoader",
+      "title": "Load VAE",
+      "accent": "#ff6b6b",
+      "x": 40.0,
+      "y": 1572.6,
+      "w": 395,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "vae_name",
+          "v": "qwen_image_vae.safetensors"
+        }
+      ]
+    },
+    {
+      "id": "69",
+      "type": "TextEncodeQwenImageEditPlus",
+      "title": "Text Encode Qwen Image Edit Plus",
+      "accent": "#ff9f45",
+      "x": 266.9,
+      "y": 2653.9,
+      "w": 419,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP"
+        },
+        {
+          "name": "vae",
+          "type": "VAE"
+        },
+        {
+          "name": "image1",
+          "type": "IMAGE"
+        },
+        {
+          "name": "image2",
+          "type": "IMAGE"
+        },
+        {
+          "name": "image3",
+          "type": "IMAGE"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "text",
+          "v": "bad anatomy, extra limbs, missing fingers, fused fingers, distorted face, asymmetrical eyes, unnatural skin texture, plastic skin, harsh makeup, oversharpened, inconsistent lighting, strange shadows, over-smoothed skin, doll face, loss of skin detail"
+        }
+      ],
+      "text": "bad anatomy, extra limbs, missing fingers, fused fingers, distorted face, asymmetrical eyes, unnatural skin texture, plastic skin, harsh makeup, oversharpened, inconsistent lighting, strange shadows, over-smoothed skin, doll face, loss of skin detail"
+    },
+    {
+      "id": "74",
+      "type": "LoraLoaderModelOnly",
+      "title": "Load LoRA",
+      "accent": "#b57bff",
+      "x": 40.0,
+      "y": 1240.6,
+      "w": 395,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "lora_name",
+          "v": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors"
+        },
+        {
+          "k": "strength_model",
+          "v": "1"
+        }
+      ]
+    },
+    {
+      "id": "68",
+      "type": "TextEncodeQwenImageEditPlus",
+      "title": "TextEncodeQwenImageEditPlus (Positive)",
+      "accent": "#ff9f45",
+      "x": 266.9,
+      "y": 2332.9,
+      "w": 420,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP"
+        },
+        {
+          "name": "vae",
+          "type": "VAE"
+        },
+        {
+          "name": "image1",
+          "type": "IMAGE"
+        },
+        {
+          "name": "image2",
+          "type": "IMAGE"
+        },
+        {
+          "name": "image3",
+          "type": "IMAGE"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "text",
+          "v": "Image 1 is the fashion model. Image 2 and image 3 are items to wear (garments or accessories). Dress the model from image 1 in both items, keeping each item's exact colour, cut, fabric, print and details. Ignore the backgrounds in images 2 and 3. Keep the model's face, hair, body and pose from image 1. Full-body fashion photo, seen from the front, plain light studio, soft daylight."
+        }
+      ],
+      "text": "Image 1 is the fashion model. Image 2 and image 3 are items to wear (garments or accessories). Dress the model from image 1 in both items, keeping each item's exact colour, cut, fabric, print and details. Ignore the backgrounds in images 2 and 3. Keep the model's face, hair, body and pose from image 1. Full-body fashion photo, seen from the front, plain light studio, soft daylight."
+    },
+    {
+      "id": "12",
+      "type": "UNETLoader",
+      "title": "Load Diffusion Model",
+      "accent": "#b57bff",
+      "x": 40.0,
+      "y": 1086.6,
+      "w": 395,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "unet_name",
+          "v": "Qwen-Image-Edit-2511-FP8_e4m3fn.safetensors"
+        },
+        {
+          "k": "weight_dtype",
+          "v": "default"
+        }
+      ]
+    },
+    {
+      "id": "70",
+      "type": "FluxKontextMultiReferenceLatentMethod",
+      "title": "Reference Latent Method",
+      "accent": "#ff9f45",
+      "x": 756.2,
+      "y": 3089.1,
+      "w": 299,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "reference_latent",
+          "v": "index_timestep_zero"
+        }
+      ]
+    },
+    {
+      "id": "64",
+      "type": "CFGNorm",
+      "title": "CFGNorm",
+      "accent": "#b57bff",
+      "x": 763.8,
+      "y": 2940.1,
+      "w": 269,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "patched_model",
+          "type": "MODEL"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "strength",
+          "v": "1"
+        },
+        {
+          "k": "pre_cfg",
+          "v": "False"
+        }
+      ]
+    },
+    {
+      "id": "67",
+      "type": "ModelSamplingAuraFlow",
+      "title": "Model Sampling Aura Flow",
+      "accent": "#b57bff",
+      "x": 761.0,
+      "y": 2795.3,
+      "w": 269,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "shift",
+          "v": "2.79"
+        }
+      ]
+    },
+    {
+      "id": "65",
+      "type": "KSampler",
+      "title": "KSampler",
+      "accent": "#ff7bd5",
+      "x": 585.8,
+      "y": 3957.3,
+      "w": 279,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL"
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING"
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING"
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "seed",
+          "v": "654006574702861"
+        },
+        {
+          "k": "control_after_generate",
+          "v": "randomize"
+        },
+        {
+          "k": "steps",
+          "v": "4"
+        },
+        {
+          "k": "cfg",
+          "v": "1"
+        },
+        {
+          "k": "sampler_name",
+          "v": "euler"
+        },
+        {
+          "k": "scheduler",
+          "v": "simple"
+        },
+        {
+          "k": "denoise",
+          "v": "1"
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "type": "SaveImage",
+      "title": "Save Image",
+      "accent": "#6fb7ff",
+      "x": 394.9,
+      "y": 4683.2,
+      "w": 463.0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE"
+        }
+      ],
+      "outputs": [],
+      "widgets": [
+        {
+          "k": "filename_prefix",
+          "v": "Look/Jason"
+        }
+      ],
+      "image": "comfy-result.avif",
+      "imageW": 445,
+      "imageH": 589,
+      "caption": "445 × 589"
+    },
+    {
+      "id": "8",
+      "type": "VAEDecode",
+      "title": "VAEDecode",
+      "accent": "#6fb7ff",
+      "x": 254.4,
+      "y": 4338.7,
+      "w": 240,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT"
+        },
+        {
+          "name": "vae",
+          "type": "VAE"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE"
+        }
+      ],
+      "widgets": []
+    },
+    {
+      "id": "71",
+      "type": "FluxKontextMultiReferenceLatentMethod",
+      "title": "Reference Latent Method",
+      "accent": "#ff9f45",
+      "x": 757.3,
+      "y": 3231.3,
+      "w": 299,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "reference_latent",
+          "v": "index_timestep_zero"
+        }
+      ]
+    },
+    {
+      "id": "75",
+      "type": "VAEEncode",
+      "title": "VAEEncode",
+      "accent": "#ff7bd5",
+      "x": 832.7,
+      "y": 514.7,
+      "w": 240,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE"
+        },
+        {
+          "name": "vae",
+          "type": "VAE"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT"
+        }
+      ],
+      "widgets": []
+    },
+    {
+      "id": "79",
+      "type": "ImageScaleToTotalPixels",
+      "title": "Scale To Total Pixels",
+      "accent": "#6fb7ff",
+      "x": 519.7,
+      "y": 597.3,
+      "w": 269,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "",
+          "v": "lanczos"
+        },
+        {
+          "k": "",
+          "v": "1"
+        },
+        {
+          "k": "",
+          "v": "1"
+        }
+      ]
+    },
+    {
+      "id": "41",
+      "type": "LoadImage",
+      "title": "model",
+      "accent": "#6fb7ff",
+      "x": 321.6,
+      "y": 114.7,
+      "w": 216.0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE"
+        },
+        {
+          "name": "MASK",
+          "type": "MASK"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "image",
+          "v": "Model Jason 1.png"
+        },
+        {
+          "k": "upload",
+          "v": "image"
+        }
+      ],
+      "image": "comfy-model.avif",
+      "imageW": 198,
+      "imageH": 248,
+      "caption": "198 × 248"
+    },
+    {
+      "id": "87",
+      "type": "LoadImage",
+      "title": "pose",
+      "accent": "#6fb7ff",
+      "x": 795.6,
+      "y": 114.7,
+      "w": 208.0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE"
+        },
+        {
+          "name": "MASK",
+          "type": "MASK"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "image",
+          "v": "Pants.png"
+        },
+        {
+          "k": "upload",
+          "v": "image"
+        }
+      ],
+      "image": "comfy-standing.avif",
+      "imageW": 190,
+      "imageH": 190,
+      "caption": "190 × 190"
+    },
+    {
+      "id": "83",
+      "type": "LoadImage",
+      "title": "outfit",
+      "accent": "#6fb7ff",
+      "x": 581.6,
+      "y": 111.2,
+      "w": 170.0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE"
+        },
+        {
+          "name": "MASK",
+          "type": "MASK"
+        }
+      ],
+      "widgets": [
+        {
+          "k": "image",
+          "v": "Shirt Front.png"
+        },
+        {
+          "k": "upload",
+          "v": "image"
+        }
+      ],
+      "image": "comfy-outfit.avif",
+      "imageW": 152,
+      "imageH": 272,
+      "caption": "152 × 272"
+    }
+  ],
+  "links": [
+    {
+      "from": "8",
+      "fromPort": "out:IMAGE",
+      "to": "9",
+      "toPort": "in:images",
+      "type": "image"
+    },
+    {
+      "from": "10",
+      "fromPort": "out:VAE",
+      "to": "8",
+      "toPort": "in:vae",
+      "type": "vae"
+    },
+    {
+      "from": "64",
+      "fromPort": "out:patched_model",
+      "to": "65",
+      "toPort": "in:model",
+      "type": "model"
+    },
+    {
+      "from": "65",
+      "fromPort": "out:LATENT",
+      "to": "8",
+      "toPort": "in:samples",
+      "type": "latent"
+    },
+    {
+      "from": "67",
+      "fromPort": "out:MODEL",
+      "to": "64",
+      "toPort": "in:model",
+      "type": "model"
+    },
+    {
+      "from": "61",
+      "fromPort": "out:CLIP",
+      "to": "68",
+      "toPort": "in:clip",
+      "type": "clip"
+    },
+    {
+      "from": "61",
+      "fromPort": "out:CLIP",
+      "to": "69",
+      "toPort": "in:clip",
+      "type": "clip"
+    },
+    {
+      "from": "10",
+      "fromPort": "out:VAE",
+      "to": "68",
+      "toPort": "in:vae",
+      "type": "vae"
+    },
+    {
+      "from": "10",
+      "fromPort": "out:VAE",
+      "to": "69",
+      "toPort": "in:vae",
+      "type": "vae"
+    },
+    {
+      "from": "68",
+      "fromPort": "out:CONDITIONING",
+      "to": "70",
+      "toPort": "in:conditioning",
+      "type": "cond"
+    },
+    {
+      "from": "70",
+      "fromPort": "out:CONDITIONING",
+      "to": "65",
+      "toPort": "in:positive",
+      "type": "cond"
+    },
+    {
+      "from": "69",
+      "fromPort": "out:CONDITIONING",
+      "to": "71",
+      "toPort": "in:conditioning",
+      "type": "cond"
+    },
+    {
+      "from": "71",
+      "fromPort": "out:CONDITIONING",
+      "to": "65",
+      "toPort": "in:negative",
+      "type": "cond"
+    },
+    {
+      "from": "74",
+      "fromPort": "out:MODEL",
+      "to": "67",
+      "toPort": "in:model",
+      "type": "model"
+    },
+    {
+      "from": "10",
+      "fromPort": "out:VAE",
+      "to": "75",
+      "toPort": "in:vae",
+      "type": "vae"
+    },
+    {
+      "from": "75",
+      "fromPort": "out:LATENT",
+      "to": "65",
+      "toPort": "in:latent_image",
+      "type": "latent"
+    },
+    {
+      "from": "79",
+      "fromPort": "out:IMAGE",
+      "to": "68",
+      "toPort": "in:image1",
+      "type": "image"
+    },
+    {
+      "from": "79",
+      "fromPort": "out:IMAGE",
+      "to": "69",
+      "toPort": "in:image1",
+      "type": "image"
+    },
+    {
+      "from": "79",
+      "fromPort": "out:IMAGE",
+      "to": "75",
+      "toPort": "in:pixels",
+      "type": "image"
+    },
+    {
+      "from": "41",
+      "fromPort": "out:IMAGE",
+      "to": "79",
+      "toPort": "in:image",
+      "type": "image"
+    },
+    {
+      "from": "83",
+      "fromPort": "out:IMAGE",
+      "to": "68",
+      "toPort": "in:image2",
+      "type": "image"
+    },
+    {
+      "from": "83",
+      "fromPort": "out:IMAGE",
+      "to": "69",
+      "toPort": "in:image2",
+      "type": "image"
+    },
+    {
+      "from": "87",
+      "fromPort": "out:IMAGE",
+      "to": "68",
+      "toPort": "in:image3",
+      "type": "image"
+    },
+    {
+      "from": "87",
+      "fromPort": "out:IMAGE",
+      "to": "69",
+      "toPort": "in:image3",
+      "type": "image"
+    },
+    {
+      "from": "12",
+      "fromPort": "out:MODEL",
+      "to": "74",
+      "toPort": "in:model",
+      "type": "model"
+    }
+  ]
+}
