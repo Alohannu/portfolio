@@ -91,17 +91,46 @@
       return { el: el, video: video, clip: clip, active: false };
     });
 
-    stage.appendChild(grid);
+    /* --- Kopf mit in die gepinnte Buehne ---
+       Steht der Kopf ausserhalb, scrollt er weg, waehrend das Raster
+       stehen bleibt. Er gehoert deshalb in dieselbe Buehne und bleibt
+       zusammen mit den Videos im Bild.
+       Der Kopf ist ein GESCHWISTER von root (nicht darin), deshalb wird
+       im umgebenden Abschnitt gesucht. */
+    var scope = root.parentNode || document;
+    var head = scope.querySelector("[data-collage-head]");
+    var stageInner = makeEl("div", "collage__stage-inner");
+    if (head && !root.contains(head)) {
+      head.parentNode.removeChild(head);
+      stageInner.appendChild(head);
+    }
+    stageInner.appendChild(grid);
+    stage.appendChild(stageInner);
     wrap.appendChild(stage);
     root.appendChild(wrap);
 
-    /* Zeitachse ueber alle Clips: Fortschritt 0..1 = gesamte Kette. */
-    var durs = clips.map(function (c) { return c.dur || 1; });
-    var total = durs.reduce(function (a, b) { return a + b; }, 0) || 1;
-    var spans = [];
+    /* --- Abspielreihenfolge ---
+       Die Kacheln behalten ihre Position im Raster, aber sie leuchten in
+       zufaelliger Reihenfolge auf. Ohne das laeuft die Kette immer von
+       links nach rechts (Kachel 0, 1, 2 ...), weil die Zeitachse sonst
+       schlicht der DOM-Reihenfolge folgt. */
+    var playOrder = slots.map(function (_, i) { return i; });
+    if (opts.shuffle !== false && playOrder.length > 1) {
+      playOrder = shuffle(playOrder);
+    }
+    /* playOrder[k] = welcher Slot an k-ter Stelle der Kette dran ist.
+       orderOf[i]   = an welcher Stelle Slot i steht (Umkehrung). */
+    var orderOf = [];
+    playOrder.forEach(function (slotIdx, k) { orderOf[slotIdx] = k; });
+
+    /* Zeitachse ueber alle Clips: Fortschritt 0..1 = gesamte Kette.
+       Aufgebaut in Abspielreihenfolge, nicht in DOM-Reihenfolge. */
+    var total = clips.reduce(function (a, c) { return a + (c.dur || 1); }, 0) || 1;
+    var spans = new Array(slots.length);
     var acc = 0;
-    durs.forEach(function (d, i) {
-      spans.push({ i: i, start: acc, end: acc + d, dur: d });
+    playOrder.forEach(function (slotIdx) {
+      var d = clips[slotIdx].dur || 1;
+      spans[orderOf[slotIdx]] = { i: slotIdx, start: acc, end: acc + d, dur: d };
       acc += d;
     });
 
@@ -298,16 +327,19 @@
     window.addEventListener("keydown", prime, { once: true });
     window.addEventListener("touchstart", prime, { passive: true, once: true });
 
-    /* Metadaten nachreichen: Dauer korrigieren und Position nachziehen. */
+    /* Metadaten nachreichen: Dauer korrigieren und Position nachziehen.
+       Achtung: spans liegt in ABSPIELREIHENFOLGE, nicht in Slot-Reihenfolge.
+       Der Eintrag fuer Slot i steht daher an der Stelle orderOf[i]. */
     slots.forEach(function (s, i) {
       s.video.addEventListener("loadedmetadata", function () {
-        if (s.video.duration && isFinite(s.video.duration)) {
-          var alt = spans[i].dur;
-          spans[i].dur = s.video.duration;
+        var at = orderOf[i];
+        if (s.video.duration && isFinite(s.video.duration) && spans[at]) {
+          var alt = spans[at].dur;
+          spans[at].dur = s.video.duration;
           var delta = s.video.duration - alt;
           if (delta) {
             total += delta;
-            for (var k = i; k < spans.length; k++) {
+            for (var k = at; k < spans.length; k++) {
               spans[k].start += delta;
               spans[k].end += delta;
             }

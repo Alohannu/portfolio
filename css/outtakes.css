@@ -5,28 +5,37 @@
    Darunter die Projekttexte, zeilenweise eingeblendet beim Scrollen.
    ========================================================================== */
 
-/* ---------- Die drei Kacheln ---------- */
+/* ---------- Die drei Kacheln ----------
+   Alles zusammen auf EINE Bildschirmhoehe: links zwei uebereinander,
+   rechts eines gross. Kein Scrollen noetig, um alles zu sehen. */
 .ot-stack {
   background: #000;
-  padding: 0 clamp(10px, 2.2vw, 40px);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(10px, 1.6vw, 26px);
-  /* Bleibt unter der Collage, damit nichts darueber liegt */
   position: relative;
   z-index: 6;
-}
-
-/* Quadratisch und bildschirmhoch. Da die Kachel hoeher als breit sein
-   muesste, gilt: Hoehe = 100vh, Breite = gleiche Kantenlaenge -> quadratisch.
-   Auf breiten Viewports bleibt so links/rechts Platz. */
-.ot-tile {
-  margin: 0;
-  width: min(100vh, 100%);
   height: 100vh;
   height: 100svh;
-  aspect-ratio: 1 / 1;
-  margin-inline: auto;
+  box-sizing: border-box;
+  padding: clamp(10px, 1.6vw, 26px) clamp(10px, 2.2vw, 40px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(10px, 1.4vw, 24px);
+}
+
+.ot-stack__col {
+  display: grid;
+  gap: clamp(10px, 1.4vw, 24px);
+  min-width: 0;
+  min-height: 0;
+}
+/* Links zwei gleich hohe Kacheln uebereinander */
+.ot-stack__col--left { grid-template-rows: 1fr 1fr; }
+/* Rechts eine Kachel ueber die volle Hoehe */
+.ot-stack__col--right { grid-template-rows: 1fr; }
+
+.ot-tile {
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
   background: #000;
   border-radius: var(--radius, clamp(8px, 1vw, 18px));
@@ -177,13 +186,16 @@
 
 /* ---------- Schmal ---------- */
 @media (max-width: 900px) {
-  .ot-stack { padding: 0 12px; gap: 12px; }
-  .ot-tile {
-    width: 100%;
+  /* Auf schmalen Viewports nebeneinander waere alles zu klein:
+     die drei Kacheln stehen dann untereinander. */
+  .ot-stack {
     height: auto;
-    aspect-ratio: 4 / 5;
-    border-radius: 14px;
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 12px;
   }
+  .ot-stack__col { grid-template-rows: none; gap: 12px; }
+  .ot-tile { aspect-ratio: 4 / 5; border-radius: 14px; }
   .ot-notes { padding: 12vh 5vw 10vh; }
 }
 

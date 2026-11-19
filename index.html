@@ -113,7 +113,7 @@
 
     <!-- Abschnitt 8: Video-Collage – Slots spielen ihre Videos nacheinander -->
     <section class="collage" id="collage" aria-label="Video-Collage: Arbeiten aus allen Projekten">
-      <div class="collage__head">
+      <div class="collage__head" data-collage-head>
         <h2 class="collage__title" data-collage-reveal>selected works</h2>
         <p class="collage__text" data-collage-reveal>Videos aus allen Projekten – generiert mit Midjourney, RunwayML, Seedance, Suno und ComfyUI. Ist ein Clip zu Ende, blendet der Slot auf Schwarz und startet den nächsten. Alles folgt dem Scrollen.</p>
       </div>
@@ -129,21 +129,25 @@
       </div>
     </section>
 
-    <!-- Die drei Outtakes: quadratisch, untereinander, je bildschirmhoch,
-         laufen frei und geloopt. Kein Scrubbing. -->
+    <!-- Die drei Outtakes: links zwei uebereinander, rechts eines gross.
+         Alles zusammen auf eine Bildschirmhoehe, laufen frei und geloopt. -->
     <section class="ot-stack" id="outtakes" aria-label="Die drei Outtakes">
-      <figure class="ot-tile">
-        <video src="media/videos/outtake1.mp4" muted playsinline loop preload="metadata"
-               aria-label="Outtake 1 – Video-Generierung"></video>
-      </figure>
-      <figure class="ot-tile">
-        <video src="media/videos/outtake2.mp4" muted playsinline loop preload="metadata"
-               aria-label="Outtake 2 – Video-Generierung"></video>
-      </figure>
-      <figure class="ot-tile">
-        <video src="media/videos/outtake3.mp4" muted playsinline loop preload="metadata"
-               aria-label="Outtake 3 – Video-Generierung"></video>
-      </figure>
+      <div class="ot-stack__col ot-stack__col--left">
+        <figure class="ot-tile">
+          <video src="media/videos/outtake1.mp4" muted playsinline loop preload="metadata"
+                 aria-label="Outtake 1 – Video-Generierung"></video>
+        </figure>
+        <figure class="ot-tile">
+          <video src="media/videos/outtake2.mp4" muted playsinline loop preload="metadata"
+                 aria-label="Outtake 2 – Video-Generierung"></video>
+        </figure>
+      </div>
+      <div class="ot-stack__col ot-stack__col--right">
+        <figure class="ot-tile">
+          <video src="media/videos/outtake3.mp4" muted playsinline loop preload="metadata"
+                 aria-label="Outtake 3 – Video-Generierung"></video>
+        </figure>
+      </div>
     </section>
 
     <!-- Abschnitt 10: die Projekttexte in Kästen mit demselben Eckenradius -->

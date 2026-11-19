@@ -163,6 +163,11 @@
 
   var BLOB_JITTER = [0.06, -0.09, 0.11, -0.05, 0.08, -0.1, 0.05, -0.07]; // feste, leicht unregelmäßige Form
 
+  // Scrollstrecke des Morphs in Viewport-Höhen. Muss zum morphVh der
+  // [data-morph]-Sections passen – der Graph-Handler prüft damit, ob der
+  // Morph fertig ist (siehe tryonIsActive).
+  var MORPH_VH = 1;
+
   function initMorphReveal(el, options) {
     var stage = el.querySelector(".morph-reveal__stage");
     if (!stage) return null;
@@ -172,7 +177,7 @@
       startScale: isMobile ? 0.4 : 0.2, // Breite der Startform relativ zum Stage
       points: 8,                        // Stützpunkte (Vielfaches von 4)
       easing: easeOutCubic,
-      morphVh: 1,                       // Scrollstrecke des Morphs in Viewport-Höhen
+      morphVh: MORPH_VH,                // Scrollstrecke des Morphs in Viewport-Höhen
       onProgress: null
     };
     for (var k in options) if (options[k] !== undefined) opts[k] = options[k];
@@ -249,9 +254,23 @@
       if (opts.onProgress) opts.onProgress(reduceMotion ? 1 : raw);
     }
 
+    // Fortschrittsquelle des Morphs.
+    // Standard: Position der Section-Oberkante. Das funktioniert, solange die
+    // Stage erst später pinnt (Sections mit margin-top: -200vh).
+    // Bei #tryon pinnt die Stage sofort (top: 0, height: 100vh), die
+    // Oberkante steht also still und der Morph käme nie über raw = 0 hinaus.
+    // Dort messen wir deshalb den Weg durch die Section selbst.
+    function progressOffset() {
+      if (opts.progressMode === "section") {
+        var r = el.getBoundingClientRect();
+        return clamp(-r.top, 0, Math.max(1, el.offsetHeight - window.innerHeight));
+      }
+      return -el.getBoundingClientRect().top;
+    }
+
     function update(force) {
       ticking = false;
-      var offset = -el.getBoundingClientRect().top;
+      var offset = progressOffset();
       var raw = clamp(offset / (window.innerHeight * opts.morphVh), 0, 1);
       if (raw === lastRaw && !force) return; // nur bei Änderung
       lastRaw = raw;
@@ -344,6 +363,9 @@
   Array.prototype.slice.call(document.querySelectorAll("[data-morph]")).forEach(function (el) {
     var title = el.querySelector(".reveal"), fade = el.querySelector(".fade-in");
     initMorphReveal(el, {
+      // #tryon pinnt sofort; der Morph muss über den Weg durch die Section
+      // laufen, sonst bleibt er auf raw = 0 stehen (siehe progressOffset).
+      progressMode: el.id === "tryon" ? "section" : "top",
       onProgress: function (raw) {
         title.classList.toggle("is-visible", raw >= 0.9);
         if (el.id === "tryon") faceFlight(raw);
@@ -380,13 +402,19 @@
     return canvasEl;
   }
 
-  // Die Section ist "aktiv", sobald ihre Stage im Viewport steht – nicht erst
-  // wenn sie exakt oben klebt. Sonst bleibt die Seite am Canvas hängen,
-  // bevor der Graph-Handler übernimmt.
+  // Die Section ist "aktiv", sobald der Morph vollständig offen steht.
+  // Ohne diese Bedingung übernimmt der Graph-Handler zu früh: die Ansicht
+  // wäre dann nur teilweise aufgeklappt und der Rest des Weges würde
+  // übersprungen.
   function tryonIsActive() {
     if (!tryonSection || !tryonStage) return false;
     var r = tryonStage.getBoundingClientRect();
-    return r.top <= 2 && r.bottom >= window.innerHeight * 0.6;
+    if (r.top > 2 || r.bottom < window.innerHeight * 0.6) return false;
+    // Fortschritt wie im Morph (progressMode "section"): der Weg durch die
+    // Section, nicht die (gepinnte) Stage-Position.
+    var offset = clamp(-tryonSection.getBoundingClientRect().top, 0,
+                       Math.max(1, tryonSection.offsetHeight - window.innerHeight));
+    return offset >= window.innerHeight * MORPH_VH - 2;
   }
 
   function atGraphEnd(c) {
