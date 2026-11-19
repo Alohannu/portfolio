@@ -197,10 +197,19 @@
        (siehe setActive unten, aufgerufen von track.js). Der Observer
        bleibt nur als Absicherung fuer den Fall, dass das Video anders
        in den Blick kommt (z.B. Hash-Sprung beim Laden). */
+    /* setActive(true) startet die Wiedergabe und pausiert NICHT.
+       Die vorige Fassung pausierte bei document.hidden - dadurch blieb
+       das Video stehen, wenn die Seite (oder ein Headless-Browser) sich
+       als nicht sichtbar meldete. Ist der Tab wirklich im Hintergrund,
+       blockiert der Browser das Abspielen ohnehin; der
+       visibilitychange-Handler weiter unten startet es dann nach. */
     function setActive(on) {
       serumVisible = !!on;
-      if (on && !document.hidden) serumPlay();
-      else if (!serumVideo.paused) serumVideo.pause();
+      if (on) {
+        if (!document.hidden) serumPlay();
+      } else if (!serumVideo.paused) {
+        serumVideo.pause();
+      }
     }
 
     if ("IntersectionObserver" in window) {

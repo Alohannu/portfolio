@@ -7,7 +7,19 @@
 
 /* ---------- Die drei Kacheln ----------
    Alles zusammen auf EINE Bildschirmhoehe: links zwei uebereinander,
-   rechts eines gross. Kein Scrollen noetig, um alles zu sehen. */
+   rechts eines gross. Kein Scrollen noetig, um alles zu sehen.
+
+   Der seitliche Einzug ist derselbe wie bei den Assets davor. Die
+   Collage bekommt 5vw von .collage__stage, ihr Raster ist zusaetzlich
+   auf 1500px begrenzt und zentriert (bei 1440px: 72px Rand, bei 1920px:
+   210px). Vorher stand hier ein eigener, kleinerer clamp (2.2vw -> 38px)
+   und keine Breitenbegrenzung; dadurch sassen die Kacheln bei 1440px
+   34px zu weit aussen und waeren ab ~1500px ueber das Raster hinaus
+   gelaufen. Jetzt dieselbe Rechnung wie beim Raster.
+
+   Der Rand sitzt als Padding am inneren Raster (.ot-stack__grid), nicht
+   an der Sektion: so bleibt der schwarze Grund vollflaechig und die
+   Kante liegt exakt wie bei .collage__grid. */
 .ot-stack {
   background: #000;
   position: relative;
@@ -15,10 +27,23 @@
   height: 100vh;
   height: 100svh;
   box-sizing: border-box;
-  padding: clamp(10px, 1.6vw, 26px) clamp(10px, 2.2vw, 40px);
+  padding: clamp(10px, 1.6vw, 26px) 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(10px, 1.4vw, 24px);
+}
+
+/* Genau die Box von .collage__grid: 5vw Rand, max 1500px, zentriert. */
+.ot-stack__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(10px, 1.4vw, 24px);
+  width: 100%;
+  max-width: min(1500px, 100%);
+  margin: 0 auto;
+  padding: 0 5vw;
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 .ot-stack__col {
@@ -190,9 +215,15 @@
      die drei Kacheln stehen dann untereinander. */
   .ot-stack {
     height: auto;
-    grid-template-columns: 1fr;
-    padding: 12px;
+    /* Seitlich 0: den Einzug bringt .ot-stack__grid (5vw), damit die
+       Kante auch hier mit dem Raster der Collage uebereinstimmt. */
+    padding: 12px 0;
     gap: 12px;
+  }
+  .ot-stack__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    max-width: min(1500px, 100%);
   }
   .ot-stack__col { grid-template-rows: none; gap: 12px; }
   .ot-tile { aspect-ratio: 4 / 5; border-radius: 14px; }

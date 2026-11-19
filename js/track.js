@@ -40,11 +40,27 @@
     var busy = false;
     var timer = null;
 
+    /* Hoehe des Tracks an die AKTIVE Ansicht anpassen.
+       Panel 1 ist 16268px hoch, Panel 2 nur 9000px. Ohne Anpassung waere
+       das Dokument immer 16268px hoch und man koennte in Panel 2 ab 9000px
+       ins Leere scrollen. Statt die Scrollposition zu klemmen (das hat das
+       Scrollen komplett blockiert), wird die Hoehe des Tracks gesetzt:
+       die laengere, nicht sichtbare Ansicht wird durch overflow: clip
+       abgeschnitten und traegt nicht mehr zur Dokumenthoehe bei. */
+    function applyTrackHeight(i) {
+      var panel = panels[i];
+      if (!panel) return;
+      var h = panel.offsetHeight;
+      if (h > 0) track.style.height = h + "px";
+      measurePanels();
+    }
+
     function applyTransform(i) {
       /* Nur die aktive Ansicht darf oben liegen: die Panels ueberlappen
          sich vertikal (Panel 1 ist hoeher als Panel 2), sonst verdeckt
          das laengere Panel die kuerzere Ansicht. */
       panels.forEach(function (p, n) { p.classList.toggle("is-current", n === i); });
+      applyTrackHeight(i);
 
       if (i === 0) {
         /* Kein transform -> kein Containing Block -> sticky pinnt wieder
@@ -94,6 +110,14 @@
       busy = true;
       current = i;
 
+      /* Scrollposition SOFORT auf den Anfang der Zielansicht setzen -
+         nicht erst nach der Transition. Sonst steht man beim Schwenk
+         noch auf der Scrollposition der alten Ansicht und sieht in
+         Panel 2 eine leere Flaeche unterhalb des Videos. */
+      if (viaClick) {
+        try { window.scrollTo(0, 0); } catch (e) {}
+      }
+
       /* Nur die sichtbare Ansicht darf spielen und Ton haben: sonst
          laufen Hero und Serum gleichzeitig. Das Serum-Video wird direkt
          angestossen - ein IntersectionObserver meldet es beim reinen
@@ -109,9 +133,6 @@
           if (!heroVideo.paused) heroVideo.pause();
           if (!heroVideo.muted) heroVideo.muted = true;
         } else if (heroVideo.paused && !heroVideo.ended) {
-          /* Zurueck auf Panel 1: den Hero wieder anlaufen lassen, sofern
-             er ueberhaupt schon gestartet war (sonst uebernimmt das
-             Scroll-Scrubbing in script.js). */
           var pr = heroVideo.play();
           if (pr && pr.catch) pr.catch(function () {});
         }
@@ -121,12 +142,6 @@
       window.clearTimeout(timer);
       timer = window.setTimeout(function () {
         busy = false;
-        /* Am Ziel nach oben: sonst landet man mitten in den Notizen der
-           vorigen Ansicht bzw. in Panel 2 unterhalb des Videos. */
-        if (viaClick) {
-          window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
-        }
-        clampScrollToPanel(i);
       }, reduceMotion ? 0 : SLIDE_MS);
     }
 
@@ -164,21 +179,27 @@
     jumpForHash();
     window.addEventListener("hashchange", jumpForHash);
 
-    /* --- Scrollbereich je Ansicht ---
-       Beide Panels liegen nebeneinander, teilen sich aber den vertikalen
-       Scrollbereich des Tracks - und der ist so hoch wie das HOECHSTE
-       Panel. Panel 2 ist deutlich kuerzer als Panel 1 (Serum ~9000px,
-       Track 1 ~16268px). Ohne Klammerung koennte man in Panel 2 ueber
-       dessen Ende hinaus scrollen und saehe leeren Raum. */
-    function panelScrollMax(i) {
-      var panel = panels[i];
-      if (!panel) return 0;
-      return Math.max(0, panel.offsetHeight - window.innerHeight);
-    }
+    /* --- Scrollbereich ---
+       Der Track ist so hoch wie das HOECHSTE Panel (Panel 1). Beide
+       Panels teilen sich diesen Bereich, deshalb ist in Panel 2 das
+       Panel-Ende die natuerliche Untergrenze: weiter unten kommt nichts
+       mehr.
 
-    function clampScrollToPanel(i) {
-      var max = panelScrollMax(i);
-      if (window.scrollY > max) window.scrollTo(0, max);
+       Hier wird bewusst NICHT geklemmt. Ein frueherer Versuch hat die
+       Scrollposition per scrollTo zurueckgesetzt - das hat das Scrollen
+       auf der ganzen Seite unterdrueckt (der Browser schrieb bei jedem
+       Rad-Event zurueck), sodass sich die Seite nicht mehr bewegen
+       liess. Stattdessen: das Panel ist genau so hoch wie sein Inhalt,
+       und der Pfeil erscheint an seinem Ende. */
+    var PANEL_END_PX = 160; // so nah am Ende gilt "angekommen"
+
+    /* Endposition jeder Ansicht im Dokument (offsetTop + Hoehe), gemerkt
+       beim Schwenk und bei Resize. So kann die Scroll-Pruefung bei jedem
+       Scroll-Event laufen, ohne das Layout abzufragen - ein offsetHeight
+       pro Scroll-Event wuerde Layout-Thrashing verursachen. */
+    var endOffsets = [];
+    function measurePanels() {
+      endOffsets = panels.map(function (p) { return p.offsetTop + p.offsetHeight; });
     }
 
     /* --- Sichtbarkeit: der Pfeil erscheint erst am ENDE der Ansicht ---
@@ -186,12 +207,9 @@
        ein Element mit Hoehe 0 an der Dokumentunterkante meldet ein
        IntersectionObserver nie als sichtbar (es liegt exakt auf der
        Grenze), der Pfeil bliebe dauerhaft unsichtbar. */
-    var PANEL_END_PX = 160; // so nah am Ende gilt "angekommen"
-
     function atPanelEnd() {
-      var panel = panels[current];
-      if (!panel) return false;
-      var end = panel.offsetTop + panel.offsetHeight;
+      var end = endOffsets[current];
+      if (end === undefined) return false;
       var seen = window.scrollY + window.innerHeight;
       return seen >= end - PANEL_END_PX;
     }
@@ -199,8 +217,7 @@
     function syncArrowVisibility() {
       var end = atPanelEnd();
       var arrow = end ? (current < panels.length - 1 ? next : prev) : null;
-      [[next], [prev]].forEach(function (pair) {
-        var el = pair[0];
+      [next, prev].forEach(function (el) {
         if (!el) return;
         var show = el === arrow && !el.hidden;
         el.classList.toggle("is-visible", show);
@@ -209,22 +226,15 @@
       });
     }
 
-    var arrowTicking = false;
-    function requestArrowSync() {
-      if (arrowTicking) return;
-      arrowTicking = true;
-      requestAnimationFrame(function () {
-        arrowTicking = false;
-        /* Nur klemmen, wenn Panel 2 kuerzer ist als der Track - sonst
-           wuerde hier bei jedem Scroll reagiert. */
-        if (panels[current] && panels[current].offsetHeight < track.offsetHeight) {
-          clampScrollToPanel(current);
-        }
-        syncArrowVisibility();
-      });
-    }
-    window.addEventListener("scroll", requestArrowSync, { passive: true });
-    window.addEventListener("resize", requestArrowSync);
+    /* Direkt statt ueber requestAnimationFrame: die Pruefung liest kein
+       Layout mehr (endOffsets ist gecacht), und ein rAF-Rueckruf laeuft
+       nicht in jedem Kontext zuverlaessig - dann bliebe der Pfeil aus. */
+    window.addEventListener("scroll", syncArrowVisibility, { passive: true });
+    window.addEventListener("resize", function () {
+      /* vh-basierte Abschnitte aendern ihre Hoehe mit dem Viewport. */
+      applyTrackHeight(current);
+      syncArrowVisibility();
+    });
     syncArrowVisibility();
 
     applyTransform(0);

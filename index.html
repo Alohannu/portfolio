@@ -123,12 +123,7 @@
       </div>
     </section>
 
-    <!-- Abschnitt 6: Vollbild -->
-    <section class="fullscreen" id="abschnitt6" aria-label="Abschnitt 6">
-      <img src="media/projects/projekt-1/abschnitt6.png" alt="Abschnitt 6: Übersicht der Ergebnisse" width="1920" height="1080">
-    </section>
-
-    <!-- Abschnitt 7: leer -->
+    <!-- Abschnitt 6: leer -->
     <section class="placeholder" id="weiter" aria-label="Abschnitt 7"></section>
 
     <!-- Abschnitt 8: Video-Collage – Slots spielen ihre Videos nacheinander -->
@@ -141,7 +136,7 @@
       <div data-collage></div>
     </section>
 
-    <!-- Abschnitt 9: Outtakes – Überschrift wie "selected works" -->
+    <!-- Abschnitt 7: Outtakes – Überschrift wie "selected works" -->
     <section class="collage collage--intro" aria-label="Outtakes">
       <div class="collage__head">
         <h2 class="collage__title" data-collage-reveal>outtakes</h2>
@@ -152,25 +147,27 @@
     <!-- Die drei Outtakes: links zwei uebereinander, rechts eines gross.
          Alles zusammen auf eine Bildschirmhoehe, laufen frei und geloopt. -->
     <section class="ot-stack" id="outtakes" aria-label="Die drei Outtakes">
-      <div class="ot-stack__col ot-stack__col--left">
-        <figure class="ot-tile">
-          <video src="media/videos/outtake1.mp4" muted playsinline loop preload="metadata"
-                 aria-label="Outtake 1 – Video-Generierung"></video>
-        </figure>
-        <figure class="ot-tile">
-          <video src="media/videos/outtake2.mp4" muted playsinline loop preload="metadata"
-                 aria-label="Outtake 2 – Video-Generierung"></video>
-        </figure>
-      </div>
-      <div class="ot-stack__col ot-stack__col--right">
-        <figure class="ot-tile">
-          <video src="media/videos/outtake3.mp4" muted playsinline loop preload="metadata"
-                 aria-label="Outtake 3 – Video-Generierung"></video>
-        </figure>
+      <div class="ot-stack__grid">
+        <div class="ot-stack__col ot-stack__col--left">
+          <figure class="ot-tile">
+            <video src="media/videos/outtake1.mp4" muted playsinline loop preload="metadata"
+                   aria-label="Outtake 1 – Video-Generierung"></video>
+          </figure>
+          <figure class="ot-tile">
+            <video src="media/videos/outtake2.mp4" muted playsinline loop preload="metadata"
+                   aria-label="Outtake 2 – Video-Generierung"></video>
+          </figure>
+        </div>
+        <div class="ot-stack__col ot-stack__col--right">
+          <figure class="ot-tile">
+            <video src="media/videos/outtake3.mp4" muted playsinline loop preload="metadata"
+                   aria-label="Outtake 3 – Video-Generierung"></video>
+          </figure>
+        </div>
       </div>
     </section>
 
-    <!-- Abschnitt 10: die Projekttexte in Kästen mit demselben Eckenradius -->
+    <!-- Abschnitt 8: die Projekttexte in Kästen mit demselben Eckenradius -->
     <section class="ot-notes" aria-label="Notizen zu den Produktionen">
       <h2 class="ot-notes__title" data-collage-reveal>was dahinter steckte</h2>
 
@@ -203,32 +200,6 @@
         </div>
       </article>
 
-      <article class="ot-box" data-collage-reveal>
-        <header class="ot-box__head">
-          <p class="ot-box__kicker">Kampagne</p>
-          <h3 class="ot-box__title">Kunststoffblock &amp; Sonnenbrille</h3>
-          <p class="ot-box__tools">Midjourney · RunwayML Aleph 2.0</p>
-        </header>
-        <div class="ot-box__body">
-          <section class="ot-block">
-            <h4 class="ot-block__label">Challenges</h4>
-            <p>Das visuelle Leitmotiv dieser Kampagne ist ein stilisierter menschlicher Kopf mit einer Sonnenbrille, der vollständig in einem transparenten, hochglänzenden Kunststoffblock eingeschlossen ist.</p>
-            <p>Die primäre Herausforderung bestand darin, konsistente Design-Variationen dieser Idee zu entwickeln (andere Gesichtsformen, neue Brillenmodelle), ohne dass die komplexe physikalische Ästhetik bricht.</p>
-            <ul>
-              <li><strong>Die physikalische Hürde:</strong> Die Brille und das Gesicht müssen optisch korrekt innerhalb des Blocks liegen, inklusive realistischer Lichtbrechung (Refraktion) und Spiegelungen auf der Kunststoffoberfläche.</li>
-              <li>Selbst unter Verwendung von Bild-zu-Bild-Referenzen (Style/Omni Reference) oder Inpainting-Editierfunktionen lieferte Midjourney keine brauchbaren Ergebnisse. Es zerstörte entweder die geometrische Struktur des Blocks oder veränderte das Brillendesign unkontrollierbar.</li>
-            </ul>
-          </section>
-
-          <section class="ot-block">
-            <h4 class="ot-block__label">Solutions</h4>
-            <p>Anstatt Zeit in ineffizientes Prompt-Engineering in Midjourney zu investieren, habe ich einen gezielten Wechsel in der Tool-Pipeline vollzogen und auf die Stärken von RunwayML Aleph 2.0 gesetzt:</p>
-            <ul>
-              <li><strong>Gezielter Element-Austausch:</strong> Da Aleph 2.0 die komplexe Geometrie und die Lichtphysik exakt beibehielt, konnte ich die inneren Elemente präzise variieren und austauschen.</li>
-            </ul>
-          </section>
-        </div>
-      </article>
     </section>
     </div><!-- /Panel 1 -->
 
@@ -280,34 +251,51 @@
         </div>
       </section>
 
-      <!-- Projekt 2, Abschnitt 2: Mittelabschnitt; Aufbau wie #konsistenz,
-           die Liste traegt hier die Phasen statt Koerpermasse. -->
-      <section class="project project--serum-phases morph-reveal p2-phases" data-morph
-               aria-label="Serum Produktionsphasen">
-        <div class="project__stage morph-reveal__stage">
-          <div class="project__col project__col--text">
-            <h2 class="project__title reveal"><span class="reveal__inner">ai solution</span></h2>
-            <ul class="project__specs fade-in">
-              <li>Phase 1</li>
-              <li>Phase 2</li>
-              <li>Phase 3</li>
-              <li>Phase 4</li>
-              <li>Phase 5</li>
-              <li>Phase 6</li>
-            </ul>
+      <!-- Projekt 2, Abschnitt 2: Produktentwicklung in sechs Phasen.
+           Aufbau und Inhalte stammen 1:1 aus dem Original
+           (yytrieu.github.io/ai-portfolio/#serum), dort lag der Bereich in
+           einem Vollbild-Overlay. Hier steht er als normaler Abschnitt im
+           Track: kein Pinning, keine Scrollstrecke - die Phase wird per
+           Klick gewechselt. Die Section ist deshalb nur so hoch wie ihr
+           Inhalt (siehe track.css).
+           Die Tabs und das Panel fuellt js/serum-phases.js aus dem
+           PHASES-Array; im Markup steht nur das Geruest. -->
+      <section class="project project--serum-phases p2-phases"
+               aria-label="Serum Produktentwicklung">
+        <div class="project__stage">
+          <h2 class="project__title p2-phases__title">ai solution</h2>
+
+          <!-- Tab-Leiste: ein Button je Phase, aria-selected zeigt die
+               aktive Phase an (tablist/tab-Muster). -->
+          <div class="phase-tabs" role="tablist" aria-label="Produktentwicklungsphasen">
+            <button class="phase-tab is-active" type="button" role="tab" id="phaseTab1"
+                    aria-selected="true" aria-controls="phasePanel" data-phase="0">Phase 1</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab2"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="1">Phase 2</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab3"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="2">Phase 3</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab4"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="3">Phase 4</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab5"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="4">Phase 5</button>
+            <button class="phase-tab" type="button" role="tab" id="phaseTab6"
+                    aria-selected="false" aria-controls="phasePanel" data-phase="5">Phase 6</button>
           </div>
-          <div class="project__col project__col--face">
-            <img class="face" src="media/projects/projekt-2/ai-serum-skin.avif" alt="Serum auf der Haut" width="566" height="916">
-          </div>
-          <div class="project__col project__col--body">
-            <img class="body-shot" src="media/projects/projekt-2/ai-serum-1.avif" alt="Serum-Flaschen als Ganzansicht" width="566" height="916">
+
+          <!-- Panel: Inhalt der aktiven Phase. Kopf, Bilder und Zeilen
+               werden von js/serum-phases.js gesetzt. aria-live sorgt
+               dafuer, dass Screenreader den Wechsel mitbekommen. -->
+          <div class="phase-panel" id="phasePanel" role="tabpanel"
+               aria-labelledby="phaseTab1" tabindex="0" aria-live="polite">
+            <div class="phase-panel__head">
+              <h3 class="phase-panel__heading" id="phaseHeading"></h3>
+            </div>
+            <div class="phase-panel__body">
+              <div class="phase-panel__media" id="phaseMedia"></div>
+              <div class="phase-panel__rows" id="phaseRows"></div>
+            </div>
           </div>
         </div>
-      </section>
-
-      <!-- Projekt 2, Abschluss: Vollbild -->
-      <section class="p2-fullscreen" aria-label="Serum Übersicht">
-        <img src="media/projects/projekt-2/ai-serum-4.avif" alt="Serum: Übersicht der Ergebnisse" width="1902" height="746">
       </section>
 
     </div><!-- /Panel 2 -->
@@ -411,6 +399,7 @@
   <script src="js/outtakes.js"></script>
   <script src="js/showroom.js"></script>
   <script src="js/track.js"></script>
+  <script src="js/serum-phases.js"></script>
   <script>
     // ComfyUI-Node-Ansicht (virtual try-on) aus dem normalisierten JSON rendern.
     // Ersetzt das frühere statische comfyui.png in Abschnitt 5.
