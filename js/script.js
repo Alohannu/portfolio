@@ -158,7 +158,108 @@
 
   update();
 
-  /* ---------- Morph-Reveal (wiederverwendbar, Initialisierung über [data-morph]) ---------- */
+  /* ---------- Projekt 2: Kampagnenvideo (verhaelt sich wie video-2) ----------
+     Es spielt, sobald es im Bild steht, pausiert beim Verlassen und hat
+     einen eigenen Mute-Button. Damit nie zwei Videos gleichzeitig Ton
+     machen, schaltet der Schwenk das jeweils andere stumm (siehe
+     track.js -> window.SerumVideo.setAudible). */
+  var serumVideo = document.getElementById("serumVideo");
+  var serumToggle = document.getElementById("serumSoundToggle");
+
+  if (serumVideo) {
+    var serumVisible = false;
+    var serumUserChoseMute = false;
+
+    function serumSyncToggle() {
+      if (serumToggle) {
+        serumToggle.setAttribute("aria-pressed", serumVideo.muted ? "true" : "false");
+      }
+    }
+
+    function serumPlay() {
+      var pr = serumVideo.play();
+      if (pr && pr.catch) {
+        pr.catch(function () {
+          if (!serumVideo.muted) {
+            serumVideo.muted = true;
+            serumSyncToggle();
+            safePlay(serumVideo);
+          }
+        });
+      }
+    }
+
+    /* Sichtbarkeit wird NICHT per IntersectionObserver auf dem Video
+       ermittelt: beim seitlichen Schwenk aendert sich die Position im
+       Viewport, ohne dass die Seite scrollt - der Observer meldete das
+       Video dann nicht zuverlaessig als sichtbar und der erste Frame
+       blieb stehen. Stattdessen sagt der Schwenk selbst Bescheid
+       (siehe setActive unten, aufgerufen von track.js). Der Observer
+       bleibt nur als Absicherung fuer den Fall, dass das Video anders
+       in den Blick kommt (z.B. Hash-Sprung beim Laden). */
+    function setActive(on) {
+      serumVisible = !!on;
+      if (on && !document.hidden) serumPlay();
+      else if (!serumVideo.paused) serumVideo.pause();
+    }
+
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        var vis = entries[entries.length - 1].isIntersecting;
+        /* Nur uebernehmen, wenn er wirklich etwas sieht - sonst wuerde
+           ein spaetes "nicht sichtbar" das Video wieder anhalten. */
+        if (vis) setActive(true);
+      }, { threshold: 0.25 }).observe(serumVideo);
+    }
+
+    if (serumToggle) {
+      serumToggle.addEventListener("click", function () {
+        serumUserChoseMute = true;
+        serumVideo.muted = !serumVideo.muted;
+        serumSyncToggle();
+      });
+    }
+
+    /* Ton ist Standard; blockiert der Browser das, wird beim ersten
+       Nutzerkontakt eingeschaltet - wie beim Hero. */
+    ["pointerdown", "keydown", "touchend"].forEach(function (evt) {
+      window.addEventListener(evt, function serumEnableSound(e) {
+        if (serumToggle && serumToggle.contains(e.target)) return;
+        window.removeEventListener(evt, serumEnableSound);
+        if (!serumUserChoseMute && serumVideo.muted && serumVisible) {
+          serumVideo.muted = false;
+          serumSyncToggle();
+        }
+      }, { passive: true });
+    });
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) {
+        if (!serumVideo.paused) serumVideo.pause();
+      } else if (serumVisible) {
+        serumPlay();
+      }
+    });
+
+    serumSyncToggle();
+
+    /* Von track.js aufgerufen, wenn die Ansicht gewechselt wird: das
+       sichtbare Video spielt und darf Ton haben, das andere nicht. */
+    window.SerumVideo = {
+      setActive: setActive,
+      setAudible: function (on) {
+        if (!on && !serumVideo.muted) {
+          serumVideo.muted = true;
+          serumSyncToggle();
+        } else if (on && serumVideo.muted && !serumUserChoseMute) {
+          serumVideo.muted = false;
+          serumSyncToggle();
+        }
+      }
+    };
+  }
+
+  /* ---------- Morph-Reveal (wiedervereinbar, Initialisierung über [data-morph]) ---------- */
   function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
   var BLOB_JITTER = [0.06, -0.09, 0.11, -0.05, 0.08, -0.1, 0.05, -0.07]; // feste, leicht unregelmäßige Form
@@ -302,44 +403,57 @@
     return { update: function () { update(true); } };
   }
 
-  /* ---------- Abschnitt 3: Avatar-Wechsel (beide Spalten synchron) + Reveal/Fade-in ---------- */
+  /* ---------- Abschnitt 3: Avatar-Wechsel (beide Spalten synchron) + Reveal/Fade-in ----------
+     Gilt jetzt fuer JEDEN Projekt-Abschnitt mit .avatar-stack, nicht nur
+     fuer #projekte: Projekt 1 hat zwei Spalten mit je 5 Bildern, Projekt 2
+     eine Spalte mit 6. Jeder Abschnitt wird eigenstaendig aus seiner
+     eigenen Scroll-Position gesteuert. */
   var project = document.getElementById("projekte");
-  var stacks = Array.prototype.slice.call(document.querySelectorAll(".avatar-stack")).map(function (el) {
-    return Array.prototype.slice.call(el.querySelectorAll(".avatar"));
-  });
-  var steps = stacks[0].length;
-  var activeAvatar = 0;
-  var avatarTicking = false;
-  var revealTitle = project.querySelector(".reveal");
-  var fadeText = project.querySelector(".fade-in");
 
-  // Scrollstrecke des Wrappers: 100vh Morph, dann Bildwechsel (Rest abzüglich Stage-Höhe)
-  function updateAvatar() {
-    avatarTicking = false;
-    var vh = window.innerHeight;
-    if (!vh) return; // Viewport (noch) ohne Höhe, z. B. während Resize
-    var offset = -project.getBoundingClientRect().top;
-    var p = clamp((offset - vh) / (2 * vh), 0, 1); // 100vh Morph, dann 200vh Bildwechsel
-    var idx = Math.min(steps - 1, Math.floor(p * steps));
-    if (idx !== activeAvatar) {
-      stacks.forEach(function (imgs) {
-        imgs[activeAvatar].classList.remove("is-active");
-        imgs[idx].classList.add("is-active");
-      });
-      activeAvatar = idx;
+  function makeAvatarSwitcher(section) {
+    var stacks = Array.prototype.slice.call(section.querySelectorAll(".avatar-stack")).map(function (el) {
+      return Array.prototype.slice.call(el.querySelectorAll(".avatar"));
+    }).filter(function (imgs) { return imgs.length > 0; });
+    if (!stacks.length) return null;
+
+    // Schrittweite: der Abschnitt mit den meisten Bildern gibt sie vor.
+    var steps = stacks.reduce(function (n, imgs) { return Math.max(n, imgs.length); }, 0);
+    var activeAvatar = -1; // erzwingt den ersten Durchlauf
+    var ticking = false;
+    var fadeText = section.querySelector(".fade-in");
+
+    // Scrollstrecke: 100vh Morph, danach der Bildwechsel ueber den Rest.
+    function updateAvatar() {
+      ticking = false;
+      var vh = window.innerHeight;
+      if (!vh) return;
+      var offset = -section.getBoundingClientRect().top;
+      var p = clamp((offset - vh) / (2 * vh), 0, 1);
+      var idx = Math.min(steps - 1, Math.floor(p * steps));
+      if (idx !== activeAvatar) {
+        stacks.forEach(function (imgs) {
+          // Kuerzere Stacks behalten ihr letztes Bild, statt zu verschwinden.
+          var next = Math.min(idx, imgs.length - 1);
+          var prevIdx = Math.min(activeAvatar < 0 ? 0 : activeAvatar, imgs.length - 1);
+          if (imgs[prevIdx] && imgs[prevIdx] !== imgs[next]) imgs[prevIdx].classList.remove("is-active");
+          if (imgs[next]) imgs[next].classList.add("is-active");
+        });
+        activeAvatar = idx;
+      }
+      if (fadeText) fadeText.classList.toggle("is-visible", idx >= 1);
     }
-    // Text blendet beim zweiten Scroll-Moment ein (reversibel)
-    fadeText.classList.toggle("is-visible", idx >= 1);
-  }
-  function requestAvatarUpdate() {
-    if (!avatarTicking) {
-      avatarTicking = true;
-      requestAnimationFrame(updateAvatar);
+    function requestAvatarUpdate() {
+      if (!ticking) { ticking = true; requestAnimationFrame(updateAvatar); }
     }
+    window.addEventListener("scroll", requestAvatarUpdate, { passive: true });
+    window.addEventListener("resize", requestAvatarUpdate);
+    updateAvatar();
+    return { update: updateAvatar };
   }
-  window.addEventListener("scroll", requestAvatarUpdate, { passive: true });
-  window.addEventListener("resize", requestAvatarUpdate);
-  updateAvatar();
+
+  Array.prototype.slice.call(document.querySelectorAll(".project")).forEach(function (section) {
+    if (section.querySelector(".avatar-stack")) makeAvatarSwitcher(section);
+  });
 
   /* ---------- Gesichtsbild: nicht mehr nötig ----------
      Die frühere Animation schob das Gesicht in einen leeren Bildslot im
@@ -408,6 +522,10 @@
   // übersprungen.
   function tryonIsActive() {
     if (!tryonSection || !tryonStage) return false;
+    // Laeuft die Drehung (oder steht sie halb offen), bleibt die Section
+    // zustaendig: sonst gibt der Graph am Ende die Seite frei, die Seite
+    // laeuft aus der Section heraus, und die Laufstrecke bekommt nie das Rad.
+    if (flipP > 0) return true;
     var r = tryonStage.getBoundingClientRect();
     if (r.top > 2 || r.bottom < window.innerHeight * 0.6) return false;
     // Fortschritt wie im Morph (progressMode "section"): der Weg durch die
@@ -425,18 +543,94 @@
     return c.scrollTop <= 1;
   }
 
+  /* ---------- Flip am Graph-Ende ------------------------------------------
+     Nach dem Graph-Ende laeuft eine Laufstrecke (--flip-runway, Standard 0.6
+     Viewport-Hoehen). Darin dreht die ganze Flaeche von 0 auf 180 Grad,
+     eins zu eins an der Scrollposition: hochscrollen dreht zurueck.
+
+     Warum die Drehung aus der Scrollposition kommt und nicht aus einem
+     eigenen Delta-Sammler: so bleibt sie umkehrbar, deterministisch und
+     testbar, und sie laeuft nicht auseinander, wenn ein Trackpad mit
+     Nachlauf oder die Tastatur ins Spiel kommt.
+     ---------------------------------------------------------------------- */
+  var flip = document.getElementById("flip");
+  var flipInner = document.getElementById("flipInner");
+  var flipFront = flip && flip.querySelector(".flip__front");
+  var flipBack = flip && flip.querySelector(".flip__back");
+  var flipP = 0;            // 0 = Graph, 1 = Screenshot
+  var flipApplied = -1;
+
+  function runwayPx() {
+    var v = flip && getComputedStyle(flip).getPropertyValue("--flip-runway");
+    var n = parseFloat(v);
+    if (!(n > 0)) n = 0.6;
+    return Math.max(1, window.innerHeight * n);
+  }
+
+  // Setzt die Flaeche auf den Fortschritt p. Der Sichtbarkeitswechsel haengt
+  // an p >= .5 (Kante an), nicht an einem Timer.
+  function applyFlip(p) {
+    flipP = clamp(p, 0, 1);
+    if (flipApplied === flipP) return;
+    flipApplied = flipP;
+    if (!flipInner) return;
+    if (reduceMotion) {
+      // Ohne Drehung: Zielseite direkt zeigen. .flip__inner hat per CSS
+      // transform:none, hier wird nur die sichtbare Seite gewaehlt.
+      if (flipFront) flipFront.style.visibility = flipP >= .5 ? "hidden" : "visible";
+      if (flipBack) flipBack.style.visibility = flipP >= .5 ? "visible" : "hidden";
+      return;
+    }
+    flipInner.style.transform = "rotateY(" + (flipP * 180).toFixed(2) + "deg)";
+    var showBack = flipP >= .5;
+    if (flipFront) flipFront.style.visibility = showBack ? "hidden" : "visible";
+    if (flipBack) flipBack.style.visibility = showBack ? "visible" : "hidden";
+  }
+
   if (tryonSection) {
     findCanvas();
 
     window.addEventListener("wheel", function (e) {
       var c = findCanvas();
       if (!c) return;
-      if (reduceMotion) return;
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // horizontal nicht anfassen
       if (!tryonIsActive()) return;
+      // Bei reduzierter Bewegung gibt es keine Drehung; die Zielseite wird
+      // weiter unten direkt gesetzt, ohne das Rad zu kapern.
 
       var down = e.deltaY > 0;
       var atEnd = atGraphEnd(c), atStart = atGraphStart(c);
+
+      // --- Laufstrecke: die Drehung hat Vorrang vor allem anderen ---------
+      // Die Drehung beginnt erst, wenn der Graph wirklich am Ende steht.
+      // Sonst schluckt das Rad, das den Graphen ans Ende faehrt, gleich noch
+      // die halbe Drehung: der Uebergang springt statt zu scrubben.
+      // Beim Zurueckdrehen auf 0 wird der Rest des Deltas an den Graphen
+      // weitergegeben, damit die Bewegung an der Nahtstelle nicht stockt.
+      var rest = e.deltaY;
+      if (!reduceMotion) {
+        var inRunway = atEnd
+          ? (down && flipP < 1) || (!down && flipP > 0)
+          : (!down && flipP > 0);   // Rueckweg: erst drehen, dann Graph scrollen
+        if (inRunway && (atEnd || flipP > 0)) {
+          e.preventDefault();
+          pausedAt = 0;
+          endReachedAt = 0;
+          var before = flipP;
+          var step = e.deltaY / runwayPx();
+          applyFlip(flipP + step);
+          // Tatsaechlich verbrauchter Anteil des Deltas.
+          rest = (flipP - before) * runwayPx();
+          if (down || flipP > 0) return;
+          // p ist wieder auf 0: rest (<= 0) laeuft unten in den Graphen.
+          if (!down && atStart) { pausedAt = 0; return; }
+          c.scrollTop += rest;
+          return;
+        }
+      } else {
+        // Ohne Drehung: am Graph-Ende direkt auf die Zielseite springen.
+        applyFlip(atEnd ? 1 : flipP);
+      }
 
       // --- Graph-Ende: kurze Pause, dann Seite weiter -------------------
       if (down && atEnd) {
@@ -460,8 +654,17 @@
     }, { passive: false });
 
     window.addEventListener("scroll", function () {
-      if (!tryonIsActive()) { pausedAt = 0; endReachedAt = 0; }
+      if (!tryonIsActive()) {
+        pausedAt = 0;
+        endReachedAt = 0;
+        // Section verlassen: Flaeche wieder auf den Graphen stellen, damit
+        // sie beim naechsten Durchlauf sauber von vorn beginnt.
+        if (flipP !== 0) applyFlip(0);
+      }
     }, { passive: true });
+
+    // Startzustand setzen (Vorderseite sichtbar, Rueckseite verborgen).
+    applyFlip(0);
   }
 
   /* ---------- Abschnitt 5: kein Ergebnisbild mehr ---------- */

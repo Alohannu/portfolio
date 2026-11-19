@@ -96,9 +96,25 @@
           <h2 class="project__title reveal"><span class="reveal__inner">ComfyUI virtual try on</span></h2>
           <p class="project__text fade-in">Scrollen Sie durch den Workflow – von den Referenzbildern bis zum fertigen Ergebnis.</p>
         </div>
-        <!-- ComfyUI-Node-Ansicht: aus context/nodeview.json gerendert -->
+        <!-- ComfyUI-Node-Ansicht: aus context/nodeview.json gerendert.
+             Am Ende des Graphen dreht die ganze Flaeche um 180 Grad und zeigt
+             den Screenshot. Aufbau wie im Referenz-Effekt:
+             .comfy = Perspektive, .flip__inner = preserve-3d + rotateY,
+             beide Seiten inset:0 und backface-visibility:hidden.
+             Der Sichtbarkeitswechsel haengt an der Scrollposition (p >= .5),
+             nicht an einem Timer - sonst laeuft er beim Zurueckscrollen auseinander. -->
         <div class="comfy" id="comfy">
-          <div id="comfy-slot"></div>
+          <div class="flip" id="flip">
+            <div class="flip__inner" id="flipInner">
+              <div class="flip__face flip__front">
+                <div id="comfy-slot"></div>
+              </div>
+              <div class="flip__face flip__back" aria-hidden="true">
+                <img class="flip__shot" id="flipShot" src="assets/photo-studio.png"
+                     alt="Photo Studio – Oberfläche mit Model-Auswahl und Item-Upload" width="1920" height="1080">
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -210,7 +226,106 @@
         </div>
       </article>
     </section>
+    </div><!-- /Panel 1 -->
+
+    <!-- ================= Panel 2: Projekt 2 (Serum) =================
+         Aufbau wie Projekt 1, aber ohne try-on-Abschnitt (kein Workflow
+         vorhanden). Der Avatar-Stack hat eine Spalte mit 6 Bildern. -->
+    <div class="track__panel track__panel--2" id="serum">
+
+      <!-- Projekt 2, Hero: das Kampagnenvideo, analog zu video-2 in Track 1.
+           Anders als der Hero ist das Quellmaterial hochkant (720x960),
+           deshalb wird es zentriert und vollstaendig gezeigt (contain)
+           statt formatfuellend beschnitten (cover). -->
+      <div class="hero-wrapper hero-wrapper--serum" id="serumHero">
+        <div class="hero-stage hero-stage--serum" id="serumHeroStage">
+          <video class="serum-video" id="serumVideo" src="media/projects/projekt-2/serum-campaign.mp4"
+                 muted playsinline preload="auto" loop
+                 aria-label="Serum-Kampagnenvideo"></video>
+
+          <button class="sound-toggle sound-toggle--serum" id="serumSoundToggle" type="button"
+                  aria-label="Stummschalten" aria-pressed="true">
+            <svg class="icon icon--muted" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+              <path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/>
+              <path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <svg class="icon icon--sound" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+              <path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/>
+              <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Projekt 2, Abschnitt 1: Avatar-/Bildwechsel (sticky) -->
+      <section class="project project--serum morph-reveal p2-stack" data-morph
+               aria-label="Projekt ai face serum">
+        <div class="project__stage morph-reveal__stage">
+          <div class="project__col project__col--text">
+            <h2 class="project__title reveal"><span class="reveal__inner">ai face serum</span></h2>
+            <p class="project__text fade-in">Konzeption und visuelle Entwicklung einer Skincare-Produktlinie sowie der zugehörigen Social-Media-Assets.</p>
+          </div>
+          <div class="project__col project__col--image avatar-stack">
+            <img class="avatar is-active" src="media/projects/projekt-2/ai-serum.avif" alt="Serum-Produktbild, Ansicht 1 von 6" width="566" height="916">
+            <img class="avatar" src="media/projects/projekt-2/ai-serum-1.avif" alt="Serum-Produktbild, Ansicht 2 von 6" width="566" height="916">
+            <img class="avatar" src="media/projects/projekt-2/ai-serum-2.avif" alt="Serum-Produktbild, Ansicht 3 von 6" width="566" height="916">
+            <img class="avatar" src="media/projects/projekt-2/ai-serum-3.avif" alt="Serum-Produktbild, Ansicht 4 von 6" width="566" height="916">
+            <img class="avatar" src="media/projects/projekt-2/ai-serum-skin.avif" alt="Serum-Anwendung auf der Haut, Ansicht 5 von 6" width="566" height="916">
+            <img class="avatar" src="media/projects/projekt-2/ai-aloevera.avif" alt="Aloe-Vera-Produktbild, Ansicht 6 von 6" width="566" height="916">
+          </div>
+        </div>
+      </section>
+
+      <!-- Projekt 2, Abschnitt 2: Mittelabschnitt; Aufbau wie #konsistenz,
+           die Liste traegt hier die Phasen statt Koerpermasse. -->
+      <section class="project project--serum-phases morph-reveal p2-phases" data-morph
+               aria-label="Serum Produktionsphasen">
+        <div class="project__stage morph-reveal__stage">
+          <div class="project__col project__col--text">
+            <h2 class="project__title reveal"><span class="reveal__inner">ai solution</span></h2>
+            <ul class="project__specs fade-in">
+              <li>Phase 1</li>
+              <li>Phase 2</li>
+              <li>Phase 3</li>
+              <li>Phase 4</li>
+              <li>Phase 5</li>
+              <li>Phase 6</li>
+            </ul>
+          </div>
+          <div class="project__col project__col--face">
+            <img class="face" src="media/projects/projekt-2/ai-serum-skin.avif" alt="Serum auf der Haut" width="566" height="916">
+          </div>
+          <div class="project__col project__col--body">
+            <img class="body-shot" src="media/projects/projekt-2/ai-serum-1.avif" alt="Serum-Flaschen als Ganzansicht" width="566" height="916">
+          </div>
+        </div>
+      </section>
+
+      <!-- Projekt 2, Abschluss: Vollbild -->
+      <section class="p2-fullscreen" aria-label="Serum Übersicht">
+        <img src="media/projects/projekt-2/ai-serum-4.avif" alt="Serum: Übersicht der Ergebnisse" width="1902" height="746">
+      </section>
+
+    </div><!-- /Panel 2 -->
+   </div><!-- /Track -->
   </main>
+
+  <!-- Schwenk-Pfeile: ausserhalb des Tracks, damit position:fixed nicht
+       am Track haengt. Erst am Ende der jeweiligen Ansicht sichtbar. -->
+  <button class="turn turn--next turn--on-dark" id="turnNext" type="button"
+          aria-label="Nächstes Projekt anzeigen" aria-hidden="true" tabindex="-1">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+  <button class="turn turn--back" id="turnPrev" type="button"
+          aria-label="Vorheriges Projekt anzeigen" aria-hidden="true" tabindex="-1">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
 
   <!-- Collage-Daten: 5 Slots mit ihren Videoketten. Reihenfolge = Abspielreihenfolge. -->
   <script type="application/json" id="collage-data">

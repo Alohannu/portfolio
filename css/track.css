@@ -1,0 +1,239 @@
+/* ==========================================================================
+   Projekt-Track + Schwenk-Pfeil
+
+   Die Seite besteht aus zwei Ansichten nebeneinander:
+
+     [ Panel 1: Hero, Projekt 1, Collage, Outtakes, Notizen ][ Panel 2: Projekt 2 ]
+
+   Der Track ist doppelt so breit wie der Viewport und wird per
+   transform: translateX() verschoben - ein Klick auf den Pfeil faehrt
+   eine Ansicht weiter, der Pfeil auf der Gegenseite faehrt zurueck.
+
+   Wichtig: Der Track darf KEINEN eigenen Containing Block fuer die
+   sticky-Pins erzeugen, solange das Verschieben nicht laeuft. Deshalb
+   setzt das JS transform erst beim Schwenk und raeumt es danach wieder
+   weg (translateX(0) wird zu "none").
+   ========================================================================== */
+
+.track {
+  position: relative;
+  /* Zwei Ansichten nebeneinander. Die Hoehe kommt aus dem Inhalt -
+     die Panels selbst sind nicht positioniert, damit die sticky-Pins
+     weiterhin am Viewport haengen. */
+  width: 200vw;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  will-change: transform;
+  transition: transform .8s cubic-bezier(.22, .61, .36, 1);
+}
+
+/* Waehrend des Schwenks laeuft die Fahrt; danach schaltet das JS die
+   Transition wieder ab, damit das Scrollen im Panel nicht mitschwingt. */
+.track.is-idle { transition: none; }
+
+.track__panel {
+  /* Jede Ansicht ist genau ein Viewport breit. overflow:hidden ist hier
+     NICHT erlaubt - es wuerde die sticky-Positionierung der Abschnitte
+     einsperren und den Pin ausschalten. */
+  position: relative;
+  flex: 0 0 100vw;
+  width: 100vw;
+  min-width: 0;
+  max-width: 100vw;
+}
+
+/* Beide Panels liegen im Track nebeneinander und ueberlappen sich
+   vertikal (Panel 1 ist deutlich hoeher als Panel 2). Damit nicht das
+   falsche Panel das sichtbare verdeckt, wird der z-index beim Schwenk
+   mitgesetzt: nur die aktive Ansicht liegt oben. */
+.track__panel { z-index: 1; }
+.track__panel.is-current { z-index: 2; }
+.track__panel--2 { background: #000; }
+
+/* ---------- Schwenk-Pfeil ---------- */
+
+.turn {
+  position: fixed;
+  top: 50%;
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin-top: -1.625rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #111;
+  cursor: pointer;
+  /* Dezent: erst am Seitenende eingeblendet, davor unsichtbar und
+     nicht anklickbar. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(8px);
+  transition: opacity .5s ease, transform .5s ease, visibility 0s linear .5s;
+}
+
+.turn.is-visible {
+  opacity: .55;
+  visibility: visible;
+  transform: none;
+  transition: opacity .5s ease, transform .5s ease, visibility 0s;
+}
+
+.turn.is-visible:hover,
+.turn.is-visible:focus-visible {
+  opacity: 1;
+  background: rgba(17, 17, 17, .06);
+}
+
+.turn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.turn svg {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+/* Auf dunklem Grund (Collage, Notizen) hell zeichnen. */
+.turn--on-dark { color: #fff; }
+.turn--on-dark.is-visible:hover,
+.turn--on-dark.is-visible:focus-visible { background: rgba(255, 255, 255, .12); }
+
+/* Rueckweg-Pfeil auf Panel 2: linke Seite, gespiegelt. */
+.turn--back {
+  right: auto;
+  left: max(1rem, env(safe-area-inset-left));
+  transform: translateX(-8px);
+}
+.turn--back.is-visible { transform: none; }
+
+@media (min-width: 768px) {
+  .turn { width: 3.75rem; height: 3.75rem; margin-top: -1.875rem; right: 2rem; }
+  .turn--back { right: auto; left: 2rem; }
+}
+
+/* ---------- Panel 2: Projekt 2 (Serum) ---------- */
+
+/* Hero von Projekt 2: ein einzelnes Kampagnenvideo, analog zu video-2
+   in Track 1 - es spielt von selbst, hat Ton und einen Mute-Button.
+
+   Unterschied: das Quellmaterial ist hochkant (720x960 = 3:4). Mit
+   object-fit:cover (wie im Track-1-Hero) wuerde ein 1440x900-Viewport
+   das Video auf 1440px Breite ziehen und dabei 1920px hoch machen -
+   oben und unten fehlten je ~510px. Deshalb contain: vollstaendig
+   sichtbar, zentriert, so gross wie die Viewport-Hoehe erlaubt. */
+.hero-wrapper--serum {
+  position: relative;
+  /* Kein Scrubbing: eine Viewport-Hoehe reicht, damit die Stage stehen
+     bleibt und das Video in Ruhe laufen kann. */
+  height: 100vh;
+}
+
+/* Kein sticky: eine sticky Stage orientiert sich am Scroll-Container und
+   wandert beim seitlichen Schwenk des Tracks NICHT mit - das Video
+   bliebe ausserhalb des Viewports stehen (gemessen: rect.left blieb
+   1440 statt 0). Der Serum-Hero ist nur eine Bildschirmhoehe hoch und
+   wird nicht gepinnt, deshalb reicht normale Positionierung. */
+.hero-stage--serum {
+  position: relative;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.serum-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Zentriert und unbeschnitten; schwarze Balken links/rechts nimmt der
+     schwarze Stage-Hintergrund auf. */
+  object-fit: contain;
+  object-position: center center;
+}
+
+/* Der Mute-Button sitzt wie im Hero unten rechts. */
+.sound-toggle--serum { z-index: 4; }
+
+/* Hoehen wie bei Projekt 1, damit der Morph-Fortschritt (Scrollstrecke
+   in Viewport-Hoehen) identisch laeuft:
+     Avatar-Stack   100vh Morph + 200vh Bildwechsel + 100vh Halten + 100vh Stage
+     Mittelabschnitt 100vh Morph + 100vh Halten + 100vh Stage
+   Ein eigener try-on-Abschnitt entfaellt bei Projekt 2.
+
+   WICHTIG: .project bringt aus style.css ein margin-top: -200vh mit.
+   Diese Ueberlappung ist fuer Track 1 gedacht - dort beginnt der Morph,
+   waehrend Video 2 noch gepinnt ist. In Panel 2 gibt es kein
+   Scrub-Video, auf das ueberlappt werden muesste; der negative Margin
+   zieht den Abschnitt dort nur aus dem Panel heraus (offsetTop -900)
+   und laesst die Panel-Hoehe schrumpfen. Deshalb hier aufheben. */
+.track__panel--2 .project { margin-top: 0; }
+
+.project--serum { height: 500vh; }
+.project--serum-phases { height: 300vh; }
+
+/* Der Avatar-Stack hat hier nur EINE Spalte; die Stage bleibt sonst
+   baugleich zu #projekte. */
+.p2-stack.project__stage {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+}
+
+.p2-stack .project__col--text { grid-column: 1 / -1; }
+
+/* Mittelabschnitt: Aufbau wie #konsistenz (Text links, zwei Bilder rechts,
+   Liste unter dem Titel) - die Liste traegt hier die Phasen. */
+.p2-phases .project__stage {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+}
+.p2-phases .project__col--text { grid-column: 1 / -1; }
+
+@media (min-width: 900px) {
+  .p2-stack.project__stage {
+    grid-template-columns: 1.1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 2rem;
+    padding: 3rem 5vw 3rem 8vw;
+  }
+  .p2-stack .project__col--text { grid-column: auto; align-self: center; }
+
+  .p2-phases .project__stage {
+    grid-template-columns: 1.1fr 1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 2rem;
+    padding: 3rem 5vw 3rem 8vw;
+  }
+  .p2-phases .project__col--text { grid-column: auto; align-self: center; }
+}
+
+/* Vollbild am Ende von Projekt 2. */
+.p2-fullscreen {
+  position: relative;
+  z-index: 8;
+  height: 100vh;
+  height: 100svh;
+  background: #fdfdfd;
+}
+.p2-fullscreen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track { transition: none; }
+  .turn { transition: opacity .01s; transform: none; }
+  .turn.is-visible { transform: none; }
+}
