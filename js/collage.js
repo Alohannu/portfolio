@@ -117,6 +117,9 @@
        Die Videos laufen unabhaengig voneinander, jedes in seinem Loop. */
     var playing = 0;
     function setActive(slot, on) {
+      /* Solange der Showroom offen ist, bleibt alles stehen. Sonst wuerde
+         der Beobachter die Videos hinter dem Overlay wieder starten. */
+      if (on && document.documentElement.classList.contains("is-locked")) return;
       if (on === !slot.video.paused) return;
       if (on) {
         slot.el.classList.add("is-active");

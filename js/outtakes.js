@@ -25,6 +25,8 @@
         ents.forEach(function (e) {
           if (e.isIntersecting) {
             tile.classList.add("is-in");
+            /* Showroom offen? Dann stehen die Videos still. */
+            if (document.documentElement.classList.contains("is-locked")) return;
             if (!reduceMotion) {
               var pr = video.play();
               if (pr && pr.catch) pr.catch(function () {});

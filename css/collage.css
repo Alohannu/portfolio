@@ -29,6 +29,20 @@
   flex: none;
 }
 
+/* Der Outtakes-Kopf steht OHNE .collage__stage direkt in der Sektion.
+   Normalerweise kommt der seitliche Einzug von der Buehne
+   (.collage__stage { padding: 0 5vw }); hier fehlt er sonst und die
+   Ueberschrift klebt am linken Rand (gemessen: left 0 statt 72 bei
+   1440px). Deshalb derselbe Einzug wie an der Buehne, plus die
+   Zentrierung des Rasters, damit Kopf und Kacheln auf einer Kante
+   stehen. */
+.collage--intro .collage__head {
+  padding: 0 5vw;
+  max-width: min(1500px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* Die Ueberschrift nutzt denselben Effekt wie "ComfyUI virtual try on":
    .reveal als Maske (overflow: hidden) und .reveal__inner, das von unten
    herauffaehrt. Die Styles dafuer stehen in style.css. Hier bewusst

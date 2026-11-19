@@ -9,11 +9,15 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/collage.css">
   <link rel="stylesheet" href="css/outtakes.css">
+  <link rel="stylesheet" href="css/showroom.css">
+  <link rel="stylesheet" href="css/track.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
 
   <main id="main">
+   <div class="track" id="track">
+    <div class="track__panel track__panel--1">
     <!-- Abschnitt 1 + 2: ein gemeinsamer, gepinnter Stage -->
     <div class="hero-wrapper" id="hero-wrapper">
       <div class="hero-stage" id="hero-stage">
@@ -405,6 +409,8 @@
   <script src="js/script.js"></script>
   <script src="js/collage.js"></script>
   <script src="js/outtakes.js"></script>
+  <script src="js/showroom.js"></script>
+  <script src="js/track.js"></script>
   <script>
     // ComfyUI-Node-Ansicht (virtual try-on) aus dem normalisierten JSON rendern.
     // Ersetzt das frühere statische comfyui.png in Abschnitt 5.
@@ -425,5 +431,41 @@
         .catch(function (e) { console.error("[comfyui] Ansicht konnte nicht geladen werden", e); });
     })();
   </script>
+
+  <!-- Showroom: Klick auf ein Video oeffnet es gross ueber der Seite.
+       Die Videos bleiben im Mosaik unveraendert; hier laeuft eine zweite
+       Instanz derselben Datei (liegt schon im Cache, kein zweiter Download).
+       Steuerung: ESC schliesst, Pfeiltasten blaettern, M schaltet Ton. -->
+  <div class="showroom" id="showroom" hidden>
+    <div class="showroom__backdrop" data-showroom-close></div>
+
+    <div class="showroom__panel" role="dialog" aria-modal="true" aria-label="Video-Ansicht">
+      <button class="showroom__close" type="button" data-showroom-close aria-label="Schliessen (ESC)">
+        <span aria-hidden="true">&#215;</span>
+      </button>
+
+      <div class="showroom__frame">
+        <video class="showroom__video" id="showroomVideo" playsinline preload="metadata"></video>
+
+        <button class="showroom__nav showroom__nav--prev" type="button" data-showroom-prev
+                aria-label="Vorheriges Video (Pfeil links)">
+          <span aria-hidden="true">&#8249;</span>
+        </button>
+        <button class="showroom__nav showroom__nav--next" type="button" data-showroom-next
+                aria-label="Naechstes Video (Pfeil rechts)">
+          <span aria-hidden="true">&#8250;</span>
+        </button>
+
+      </div>
+
+      <!-- Der Ton-Knopf liegt AUSSERHALB des Rahmens. Innerhalb wuerde er
+           auf dem Bild sitzen, weil der Rahmen genau das Video umschliesst. -->
+      <button class="showroom__sound" type="button" data-showroom-sound
+              aria-label="Ton einschalten" aria-pressed="false">
+        <span class="showroom__sound-icon" aria-hidden="true"></span>
+        <span class="showroom__sound-text" data-showroom-sound-text>stumm</span>
+      </button>
+    </div>
+  </div>
 </body>
 </html>
