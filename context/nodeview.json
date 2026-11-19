@@ -4,11 +4,11 @@
     "title": "virtual try-on",
     "subtitle": "ComfyUI Node Explorer",
     "source": "native ComfyUI export",
-    "note": "Aus context/comfyui_workflow.json konvertiert. Koordinaten bewusst NICHT normalisiert: der Graph ist 1242 x 4803 px und erzaehlt den Datenfluss vertikal."
+    "note": "Aus context/comfyui_workflow.json konvertiert. Koordinaten bewusst NICHT normalisiert: der Graph ist 1112 x 5414 px und erzaehlt den Datenfluss vertikal."
   },
   "canvas": {
-    "width": 1242,
-    "height": 4803,
+    "width": 1112,
+    "height": 5414,
     "initialZoom": 1.0,
     "minZoom": 0.15,
     "maxZoom": 3.0,
@@ -41,21 +41,21 @@
     },
     {
       "label": "Prompt",
-      "x": 256.8,
+      "x": 250.9,
       "y": 2258.0,
-      "w": 810.8,
+      "w": 797.9,
       "h": 664.0
     },
     {
       "label": "Load Image",
-      "x": 312.9,
+      "x": 305.6,
       "y": 24.0,
-      "w": 906.0,
+      "w": 783.1,
       "h": 754.2
     },
     {
       "label": "",
-      "x": 758.8,
+      "x": 740.2,
       "y": 2713.7,
       "w": 332.1,
       "h": 630.7
@@ -119,7 +119,7 @@
       "type": "TextEncodeQwenImageEditPlus",
       "title": "Text Encode Qwen Image Edit Plus",
       "accent": "#ff9f45",
-      "x": 272.8,
+      "x": 266.9,
       "y": 2653.9,
       "w": 419,
       "inputs": [
@@ -194,7 +194,7 @@
       "type": "TextEncodeQwenImageEditPlus",
       "title": "TextEncodeQwenImageEditPlus (Positive)",
       "accent": "#ff9f45",
-      "x": 272.8,
+      "x": 266.9,
       "y": 2332.9,
       "w": 420,
       "inputs": [
@@ -264,7 +264,7 @@
       "type": "FluxKontextMultiReferenceLatentMethod",
       "title": "Reference Latent Method",
       "accent": "#ff9f45",
-      "x": 774.8,
+      "x": 756.2,
       "y": 3089.1,
       "w": 299,
       "inputs": [
@@ -291,7 +291,7 @@
       "type": "CFGNorm",
       "title": "CFGNorm",
       "accent": "#b57bff",
-      "x": 782.6,
+      "x": 763.8,
       "y": 2940.1,
       "w": 269,
       "inputs": [
@@ -322,7 +322,7 @@
       "type": "ModelSamplingAuraFlow",
       "title": "Model Sampling Aura Flow",
       "accent": "#b57bff",
-      "x": 779.7,
+      "x": 761.0,
       "y": 2795.3,
       "w": 269,
       "inputs": [
@@ -349,7 +349,7 @@
       "type": "KSampler",
       "title": "KSampler",
       "accent": "#ff7bd5",
-      "x": 600.0,
+      "x": 585.8,
       "y": 3957.3,
       "w": 279,
       "inputs": [
@@ -412,9 +412,9 @@
       "type": "SaveImage",
       "title": "Save Image",
       "accent": "#6fb7ff",
-      "x": 404.1,
+      "x": 394.9,
       "y": 4683.2,
-      "w": 420,
+      "w": 463.0,
       "inputs": [
         {
           "name": "images",
@@ -427,14 +427,18 @@
           "k": "filename_prefix",
           "v": "Look/Jason"
         }
-      ]
+      ],
+      "image": "comfy-result.avif",
+      "imageW": 445,
+      "imageH": 589,
+      "caption": "445 × 589"
     },
     {
       "id": "8",
       "type": "VAEDecode",
       "title": "VAEDecode",
       "accent": "#6fb7ff",
-      "x": 260.0,
+      "x": 254.4,
       "y": 4338.7,
       "w": 240,
       "inputs": [
@@ -460,7 +464,7 @@
       "type": "FluxKontextMultiReferenceLatentMethod",
       "title": "Reference Latent Method",
       "accent": "#ff9f45",
-      "x": 775.9,
+      "x": 757.3,
       "y": 3231.3,
       "w": 299,
       "inputs": [
@@ -487,7 +491,7 @@
       "type": "VAEEncode",
       "title": "VAEEncode",
       "accent": "#ff7bd5",
-      "x": 845.1,
+      "x": 832.7,
       "y": 514.7,
       "w": 240,
       "inputs": [
@@ -513,7 +517,7 @@
       "type": "ImageScaleToTotalPixels",
       "title": "Scale To Total Pixels",
       "accent": "#6fb7ff",
-      "x": 532.1,
+      "x": 519.7,
       "y": 597.3,
       "w": 269,
       "inputs": [
@@ -548,9 +552,9 @@
       "type": "LoadImage",
       "title": "model",
       "accent": "#6fb7ff",
-      "x": 328.9,
+      "x": 321.6,
       "y": 114.7,
-      "w": 273,
+      "w": 216.0,
       "inputs": [],
       "outputs": [
         {
@@ -571,16 +575,20 @@
           "k": "upload",
           "v": "image"
         }
-      ]
+      ],
+      "image": "comfy-model.avif",
+      "imageW": 198,
+      "imageH": 248,
+      "caption": "198 × 248"
     },
     {
       "id": "87",
       "type": "LoadImage",
-      "title": "item 2",
+      "title": "pose",
       "accent": "#6fb7ff",
-      "x": 929.9,
+      "x": 795.6,
       "y": 114.7,
-      "w": 273,
+      "w": 208.0,
       "inputs": [],
       "outputs": [
         {
@@ -601,16 +609,20 @@
           "k": "upload",
           "v": "image"
         }
-      ]
+      ],
+      "image": "comfy-standing.avif",
+      "imageW": 190,
+      "imageH": 190,
+      "caption": "190 × 190"
     },
     {
       "id": "83",
       "type": "LoadImage",
-      "title": "item 1",
+      "title": "outfit",
       "accent": "#6fb7ff",
-      "x": 645.9,
+      "x": 581.6,
       "y": 111.2,
-      "w": 240,
+      "w": 170.0,
       "inputs": [],
       "outputs": [
         {
@@ -631,7 +643,11 @@
           "k": "upload",
           "v": "image"
         }
-      ]
+      ],
+      "image": "comfy-outfit.avif",
+      "imageW": 152,
+      "imageH": 272,
+      "caption": "152 × 272"
     }
   ],
   "links": [

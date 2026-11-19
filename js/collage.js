@@ -158,25 +158,47 @@
     document.addEventListener("visibilitychange", onVisibility);
 
     /* --- Ueberschrift beim Scrollen einblenden ---
-       Nur das ist noch an das Scrollen gekoppelt. */
-    var headBits = stageInner.querySelectorAll("[data-collage-reveal]");
+       Nur das ist noch an das Scrollen gekoppelt, und zwar wie bei
+       "ComfyUI virtual try on": die Ueberschrift faehrt aus einer Maske
+       herauf (.reveal / .reveal__inner), der Text folgt mit .fade-in.
+       Ausgeloest wird ueber den Scroll-Fortschritt des Abschnitts, nicht
+       ueber einen Beobachter - so sitzt der Moment reproduzierbar an
+       derselben Stelle. */
+    var titleEl = stageInner.querySelector(".reveal");
+    var fadeEl = stageInner.querySelector(".fade-in");
+
+    function setHead(show) {
+      if (titleEl) titleEl.classList.toggle("is-visible", show);
+      if (fadeEl) fadeEl.classList.toggle("is-visible", show);
+    }
+
+    var headTicking = false;
+    function updateHead() {
+      headTicking = false;
+      var r = wrap.getBoundingClientRect();
+      var dist = wrap.offsetHeight - window.innerHeight;
+      if (dist <= 0) { setHead(r.top <= 0); return; }
+      /* 0 = Abschnitt kommt ins Bild, 1 = komplett durchgescrollt.
+         Ab 15% ist die Ueberschrift da - frueh, aber nicht schon beim
+         ersten Pixel, sonst sieht man die Bewegung nicht. */
+      setHead(-r.top / dist >= 0.15);
+    }
+
+    function requestHead() {
+      if (!headTicking) { headTicking = true; requestAnimationFrame(updateHead); }
+    }
+
     if (reduceMotion) {
-      Array.prototype.forEach.call(headBits, function (el) { el.classList.add("is-in"); });
-    } else if ("IntersectionObserver" in window) {
-      var headIO = new IntersectionObserver(function (ents) {
-        ents.forEach(function (e) {
-          if (!e.isIntersecting) return;
-          e.target.classList.add("is-in");
-          headIO.unobserve(e.target);
-        });
-      }, { rootMargin: "0px 0px -12% 0px", threshold: 0.2 });
-      Array.prototype.forEach.call(headBits, function (el) { headIO.observe(el); });
+      setHead(true);
     } else {
-      Array.prototype.forEach.call(headBits, function (el) { el.classList.add("is-in"); });
+      window.addEventListener("scroll", requestHead, { passive: true });
+      window.addEventListener("resize", requestHead);
+      updateHead();
     }
 
     var inst = {
       root: root, wrap: wrap, stage: stage, grid: grid, slots: slots,
+      requestHead: requestHead, onVisibility: onVisibility,
       destroy: function () { destroyInstance(inst); }
     };
     instances.push(inst);
@@ -186,6 +208,8 @@
   function destroyInstance(inst) {
     if (!inst) return;
     document.removeEventListener("visibilitychange", inst.onVisibility);
+    window.removeEventListener("scroll", inst.requestHead);
+    window.removeEventListener("resize", inst.requestHead);
     inst.slots.forEach(function (s) {
       try { s.video.pause(); } catch (e) {}
     });
