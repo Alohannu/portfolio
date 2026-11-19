@@ -1,43 +1,35 @@
 /* ==========================================================================
-   Video-Collage: ein Video nach dem anderen, per Scrollen gescrubbt
+   Video-Collage
 
-   Aufbau (wie das Hero-Video oben):
-     .collage__scrub   hoher Wrapper = Scrollstrecke (JS setzt die Hoehe)
-     .collage__stage   position:sticky, steht still
-     Fortschritt p     -> video.currentTime
+   Alle Videos laufen von selbst und geloopt – kein Scroll-Scrubbing.
+   Gescrollt wird nur die Ueberschrift ("selected works"), die beim
+   Hereinkommen eingeblendet wird.
 
-   Wichtig: Es laeuft IMMER NUR EIN Video gleichzeitig. Genau ein Slot ist
-   aktiv und wird gescrubbt; alle anderen sind weisse Flaechen. Dadurch
-   arbeitet nur ein einziger Decoder, und das Scrollen bleibt fluessig
-   (vorher liefen bis zu sechs Videos parallel - das war das Ruckeln).
+   Aufbau:
+     .collage__scrub        Wrapper; die Hoehe kommt aus dem Inhalt,
+                            das Raster bleibt per sticky stehen
+     .collage__stage        position:sticky, steht still
+     .collage__stage-inner  Kopf + Raster zusammen, damit die Ueberschrift
+                            nicht wegscrollt, waehrend die Videos stehen
 
-   Ist ein Clip zu Ende, blendet der aktive Slot auf Schwarz, der naechste
-   Clip uebernimmt im selben Slot. Die Reihenfolge ist zufaellig.
+   Gespielt wird nur, was auch im Bild steht: sonst laufen alle Videos
+   gleichzeitig und das Scrollen ruckelt.
 
-   Oeffentliche API: window.Collage.mount(root, {clips, order, fadeMs})
+   Oeffentliche API: window.Collage.mount(root, {slots, only, shuffle})
    ========================================================================== */
 (function () {
   "use strict";
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* Blende am Uebergang, in Sekunden Clipmaterial (je halbe Dauer vor und
-     nach dem Wechsel). Die Kette ist mit ~67s deutlich laenger als ein
-     einzelner Clip; 2s Blende sind daher noetig, damit der Uebergang beim
-     Scrollen nicht uebersprungen wird. */
-  var BLEND = 2.0;
-  /* Scrollstrecke pro Sekunde Clipmaterial. 6vh/s ergibt bei ~67s Kette
-     rund 4000px – lang genug zum Scrubben, kurz genug zum Durchscrollen. */
-  var SCRUB_VH_PER_SEC = 6;
-
   var instances = [];
 
-  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
   function makeEl(tag, cls) {
     var el = document.createElement(tag);
     if (cls) el.className = cls;
     return el;
   }
+
   function shuffle(a) {
     for (var i = a.length - 1; i > 0; i--) {
       var j = Math.floor(Math.random() * (i + 1));
@@ -50,7 +42,7 @@
     if (!root) return null;
     opts = opts || {};
 
-    /* Alle Clips einsammeln (flach) und zufaellig mischen. */
+    /* Alle Clips einsammeln und mischen. */
     var clips = [];
     (opts.slots || []).forEach(function (slot) {
       (slot.clips || []).forEach(function (c) {
@@ -70,36 +62,47 @@
     /* --- Struktur --- */
     var wrap = makeEl("div", "collage__scrub");
     var stage = makeEl("div", "collage__stage");
+    var stageInner = makeEl("div", "collage__stage-inner");
     var grid = makeEl("div", "collage__grid");
 
-    /* Ein Slot je Video: das Raster bleibt als Mosaik sichtbar, und jedes
-       Video bekommt seinen Platz. Nur der aktive Slot zeigt Bewegung. */
+    /* Kopf mit in die Buehne holen (er ist ein Geschwister von root). */
+    /* Der Kopf ist ein Geschwister von root, nicht darin. Gesucht wird
+       deshalb im umgebenden Abschnitt – aber nur der Kopf DIESES
+       Abschnitts, sonst greift eine zweite Collage den Kopf der ersten. */
+    var scope = root.parentNode || document;
+    var head = null;
+    if (scope.querySelectorAll) {
+      var heads = scope.querySelectorAll("[data-collage-head]");
+      for (var hi = 0; hi < heads.length; hi++) {
+        /* Nur nehmen, wenn der Kopf nicht schon in einer anderen Buehne
+           steckt (die wurde beim ersten mount dorthin verschoben). */
+        if (!heads[hi].closest(".collage__stage")) { head = heads[hi]; break; }
+      }
+    }
+
+    /* --- Eine Kachel je Video --- */
     var slots = clips.map(function (clip, i) {
-      var size = (opts.sizes && opts.sizes[i]) || "m";
-      var el = makeEl("div", "collage__slot collage__slot--" + size);
-      el.dataset.shape = clip.dur > 0 ? "" : "";
+      var el = makeEl("div", "collage__slot collage__slot--m");
+      el.dataset.idx = String(i);
+
       var video = makeEl("video");
       video.muted = true;
       video.defaultMuted = true;
       video.playsInline = true;
       video.setAttribute("playsinline", "");
       video.setAttribute("webkit-playsinline", "");
+      video.loop = true;
       video.preload = "metadata";
+      video.src = clip.src;
       video.setAttribute("aria-label", clip.alt || "");
+
       el.appendChild(video);
+      el.title = clip.title || clip.alt || "";
       grid.appendChild(el);
-      return { el: el, video: video, clip: clip, active: false };
+
+      return { el: el, video: video, clip: clip };
     });
 
-    /* --- Kopf mit in die gepinnte Buehne ---
-       Steht der Kopf ausserhalb, scrollt er weg, waehrend das Raster
-       stehen bleibt. Er gehoert deshalb in dieselbe Buehne und bleibt
-       zusammen mit den Videos im Bild.
-       Der Kopf ist ein GESCHWISTER von root (nicht darin), deshalb wird
-       im umgebenden Abschnitt gesucht. */
-    var scope = root.parentNode || document;
-    var head = scope.querySelector("[data-collage-head]");
-    var stageInner = makeEl("div", "collage__stage-inner");
     if (head && !root.contains(head)) {
       head.parentNode.removeChild(head);
       stageInner.appendChild(head);
@@ -109,274 +112,88 @@
     wrap.appendChild(stage);
     root.appendChild(wrap);
 
-    /* --- Abspielreihenfolge ---
-       Die Kacheln behalten ihre Position im Raster, aber sie leuchten in
-       zufaelliger Reihenfolge auf. Ohne das laeuft die Kette immer von
-       links nach rechts (Kachel 0, 1, 2 ...), weil die Zeitachse sonst
-       schlicht der DOM-Reihenfolge folgt. */
-    var playOrder = slots.map(function (_, i) { return i; });
-    if (opts.shuffle !== false && playOrder.length > 1) {
-      playOrder = shuffle(playOrder);
-    }
-    /* playOrder[k] = welcher Slot an k-ter Stelle der Kette dran ist.
-       orderOf[i]   = an welcher Stelle Slot i steht (Umkehrung). */
-    var orderOf = [];
-    playOrder.forEach(function (slotIdx, k) { orderOf[slotIdx] = k; });
-
-    /* Zeitachse ueber alle Clips: Fortschritt 0..1 = gesamte Kette.
-       Aufgebaut in Abspielreihenfolge, nicht in DOM-Reihenfolge. */
-    var total = clips.reduce(function (a, c) { return a + (c.dur || 1); }, 0) || 1;
-    var spans = new Array(slots.length);
-    var acc = 0;
-    playOrder.forEach(function (slotIdx) {
-      var d = clips[slotIdx].dur || 1;
-      spans[orderOf[slotIdx]] = { i: slotIdx, start: acc, end: acc + d, dur: d };
-      acc += d;
-    });
-
-    var vhLen = Math.max(300, Math.round(total * SCRUB_VH_PER_SEC / 10) * 10);
-    wrap.style.height = vhLen + "vh";
-
-    var currentIdx = -1;      // welcher Clip gerade im aktiven Slot liegt
-    var lastSeek = -1;
-    var pendingTime = null;
-
-    function activeSlot() { return slots[currentIdx] || null; }
-
-    /* Clip in den aktiven Slot laden. Alle anderen bleiben weiss. */
-    function useClip(i, whenReady) {
-      var slot = slots[i];
-      if (!slot) return;
-      slots.forEach(function (s, k) {
-        var on = k === i;
-        s.el.classList.toggle("is-active", on);
-        s.el.classList.toggle("is-idle", !on);
-        /* Alten Clip freigeben: sonst bleibt in jedem schon benutzten Slot
-           eine geladene Datei im Speicher liegen. */
-        if (!on && s.video.getAttribute("src")) {
-          try { s.video.pause(); } catch (e) {}
-          s.video.removeAttribute("src");
-          s.video.load();
+    /* --- Abspielen: nur was im Bild steht ---
+       Ein Beobachter je Kachel. Sichtbar -> play(), sonst pause().
+       Die Videos laufen unabhaengig voneinander, jedes in seinem Loop. */
+    var playing = 0;
+    function setActive(slot, on) {
+      if (on === !slot.video.paused) return;
+      if (on) {
+        slot.el.classList.add("is-active");
+        playing++;
+        if (!reduceMotion) {
+          var pr = slot.video.play();
+          if (pr && pr.catch) pr.catch(function () {});
         }
-      });
-      currentIdx = i;
-      lastSeek = -1;
-      pendingTime = null;
-      var video = slot.video;
-
-      var finish = function () {
-        video.removeEventListener("loadeddata", finish);
-        video.removeEventListener("canplay", finish);
-        if (whenReady) whenReady();
-      };
-      video.addEventListener("loadeddata", finish);
-      video.addEventListener("canplay", finish);
-      setTimeout(finish, 900);
-
-      if (video.getAttribute("src") !== slot.clip.src) {
-        video.src = slot.clip.src;
-        video.load();
       } else {
-        finish();
+        slot.el.classList.remove("is-active");
+        playing = Math.max(0, playing - 1);
+        if (!slot.video.paused) slot.video.pause();
       }
-      slot.el.title = slot.clip.title || slot.clip.alt || "";
     }
 
-    function seekTo(t) {
-      var slot = activeSlot();
-      if (!slot) return;
-      var video = slot.video;
-      var d = video.duration;
-      if (!d || !isFinite(d)) { pendingTime = t; return; }
-      var tt = clamp(t, 0, Math.max(0, d - 0.05));
-      if (Math.abs(tt - lastSeek) < 0.012) return;
-      lastSeek = tt;
-      try { video.currentTime = tt; } catch (e) {}
-    }
-
-    /* Fortschritt auf die Kette abbilden. */
-    function resolve(p) {
-      var t = clamp(p, 0, 1) * total;
-      var span = spans[spans.length - 1];
-      for (var k = 0; k < spans.length; k++) {
-        if (t < spans[k].end || k === spans.length - 1) { span = spans[k]; break; }
-      }
-      var local = clamp(t - span.start, 0, span.dur);
-      var op = 0;
-      if (span.i > 0 && local < BLEND) op = 1 - local / BLEND;
-      else if (span.i < spans.length - 1 && local > span.dur - BLEND) op = 1 - (span.dur - local) / BLEND;
-      return { idx: span.i, time: local, fade: clamp(op, 0, 1) };
-    }
-
-    /* Aktuellen Fortschritt anwenden. */
-    function apply(p) {
-      var r = resolve(p);
-      if (r.idx !== currentIdx) {
-        useClip(r.idx, function () { seekTo(r.time); });
-      } else {
-        seekTo(r.time);
-      }
-      /* Blende als Overlay ueber dem aktiven Slot. */
-      slots.forEach(function (s, k) {
-        if (k !== r.idx) return;
-        var f = s.el.querySelector(".collage__fade");
-        if (!f) {
-          f = makeEl("div", "collage__fade");
-          s.el.appendChild(f);
-        }
-        var others = s.el.querySelectorAll(".collage__fade");
-        for (var n = 0; n < others.length; n++) if (others[n] !== f) others[n].remove();
-        f.style.opacity = String(r.fade);
-      });
-    }
-
-    function progress() {
-      var top = wrap.getBoundingClientRect().top;
-      var dist = wrap.offsetHeight - window.innerHeight;
-      if (dist <= 0) return top <= 0 ? 1 : 0;
-      return clamp(-top / dist, 0, 1);
-    }
-
-    /* ticking MUSS pro Collage gefuehrt werden. Waere es modulweit, wuerde
-       die erste Collage es beim Scrollen auf true setzen und die zweite
-       ihr Update komplett ueberspringen - sie bliebe auf dem ersten Bild
-       stehen und wuerde nie weiterschalten. */
-    var ticking = false;
-    var lastProgress = 0;
-
-    function update() {
-      ticking = false;
-      var p = progress();
-      lastProgress = p;
-      if (reduceMotion) { if (currentIdx !== 0) apply(0.0001); return; }
-      apply(p);
-    }
-
-    function requestUpdate() {
-      if (!ticking) { ticking = true; requestAnimationFrame(update); }
-    }
-
-    /* --- Einblenden der Kacheln und der Kopfzeile ---
-       Ohne das bleiben die Slots auf opacity:0 und man sieht nur Schwarz.
-       Beobachtet wird die ganze Sektion, nicht jede Kachel einzeln: die
-       Slots liegen in einer sticky Buehne und wuerden bei einem
-       Beobachter mit negativem rootMargin nie als sichtbar gelten. */
-    var headEls = root.parentNode
-      ? Array.prototype.slice.call(root.parentNode.querySelectorAll("[data-collage-reveal]"))
-      : [];
-    function revealAll() {
-      slots.forEach(function (s, i) {
-        s.el.style.transitionDelay = (i * 60) + "ms";
-        s.el.classList.add("is-in");
-      });
-      headEls.forEach(function (h) { h.classList.add("is-in"); });
-    }
-    if ("IntersectionObserver" in window && !reduceMotion) {
-      var revealIO = new IntersectionObserver(function (ents) {
-        ents.forEach(function (e) {
-          if (!e.isIntersecting) return;
-          revealAll();
-          revealIO.disconnect();
-        });
-      }, { threshold: 0, rootMargin: "0px 0px -8% 0px" });
-      /* Nicht die Buehne beobachten: die ist auf schmalen Viewports hoeher
-         als das Fenster, dann greift keine Schwelle. Stattdessen die erste
-         Kachel – die ist immer kleiner als der Viewport. */
-      revealIO.observe(slots[0].el);
-    } else {
-      revealAll();
-    }
-
-    /* --- Sichtbarkeit: ausserhalb des Bildes wird nichts geladen --- */
     var io = null;
     if ("IntersectionObserver" in window) {
       io = new IntersectionObserver(function (ents) {
         ents.forEach(function (e) {
+          var slot = slots.filter(function (s) { return s.el === e.target; })[0];
+          if (!slot) return;
           if (e.isIntersecting) {
-            if (currentIdx === -1) requestUpdate();
+            slot.el.classList.add("is-in");
+            setActive(slot, true);
           } else {
-            var slot = activeSlot();
-            if (slot && !slot.video.paused) slot.video.pause();
+            setActive(slot, false);
           }
         });
-      }, { threshold: [0, 0.2, 0.6] });
-      io.observe(wrap);
+      }, { threshold: [0, 0.25, 0.6] });
+      slots.forEach(function (s) { io.observe(s.el); });
+    } else {
+      slots.forEach(function (s) { s.el.classList.add("is-in"); setActive(s, true); });
     }
 
-    window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
-
-    /* Seeking liefert erst Frames, wenn einmal angespielt wurde. */
-    var primed = false;
-    function prime() {
-      if (primed) return;
-      var slot = activeSlot();
-      if (!slot) { requestUpdate(); return; }
-      var pr = slot.video.play();
-      if (pr && pr.then) {
-        pr.then(function () {
-          slot.video.pause();
-          primed = true;
-          lastSeek = -1;
-          requestUpdate();
-        }).catch(function () {});
-      }
+    /* Dokument im Hintergrund: alles anhalten. */
+    function onVisibility() {
+      if (document.hidden) slots.forEach(function (s) { setActive(s, false); });
     }
-    window.addEventListener("pointerdown", prime, { passive: true, once: true });
-    window.addEventListener("wheel", prime, { passive: true, once: true });
-    window.addEventListener("keydown", prime, { once: true });
-    window.addEventListener("touchstart", prime, { passive: true, once: true });
+    document.addEventListener("visibilitychange", onVisibility);
 
-    /* Metadaten nachreichen: Dauer korrigieren und Position nachziehen.
-       Achtung: spans liegt in ABSPIELREIHENFOLGE, nicht in Slot-Reihenfolge.
-       Der Eintrag fuer Slot i steht daher an der Stelle orderOf[i]. */
-    slots.forEach(function (s, i) {
-      s.video.addEventListener("loadedmetadata", function () {
-        var at = orderOf[i];
-        if (s.video.duration && isFinite(s.video.duration) && spans[at]) {
-          var alt = spans[at].dur;
-          spans[at].dur = s.video.duration;
-          var delta = s.video.duration - alt;
-          if (delta) {
-            total += delta;
-            for (var k = at; k < spans.length; k++) {
-              spans[k].start += delta;
-              spans[k].end += delta;
-            }
-          }
-        }
-        if (i === currentIdx) {
-          lastSeek = -1;
-          if (pendingTime != null) { var t = pendingTime; pendingTime = null; seekTo(t); }
-          else requestUpdate();
-        }
-      });
-    });
+    /* --- Ueberschrift beim Scrollen einblenden ---
+       Nur das ist noch an das Scrollen gekoppelt. */
+    var headBits = stageInner.querySelectorAll("[data-collage-reveal]");
+    if (reduceMotion) {
+      Array.prototype.forEach.call(headBits, function (el) { el.classList.add("is-in"); });
+    } else if ("IntersectionObserver" in window) {
+      var headIO = new IntersectionObserver(function (ents) {
+        ents.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          e.target.classList.add("is-in");
+          headIO.unobserve(e.target);
+        });
+      }, { rootMargin: "0px 0px -12% 0px", threshold: 0.2 });
+      Array.prototype.forEach.call(headBits, function (el) { headIO.observe(el); });
+    } else {
+      Array.prototype.forEach.call(headBits, function (el) { el.classList.add("is-in"); });
+    }
 
-    var inst = { root: root, wrap: wrap, stage: stage, grid: grid, slots: slots,
-                 requestUpdate: requestUpdate, io: io, destroy: destroyInstance };
+    var inst = {
+      root: root, wrap: wrap, stage: stage, grid: grid, slots: slots,
+      destroy: function () { destroyInstance(inst); }
+    };
     instances.push(inst);
-    useClip(0, function () { requestUpdate(); });
-    requestUpdate();
     return inst;
   }
 
-  /* Eine einzelne Collage wieder abbauen. */
   function destroyInstance(inst) {
     if (!inst) return;
-    window.removeEventListener("scroll", inst.requestUpdate);
-    window.removeEventListener("resize", inst.requestUpdate);
-    if (inst.io) inst.io.disconnect();
+    document.removeEventListener("visibilitychange", inst.onVisibility);
     inst.slots.forEach(function (s) {
       try { s.video.pause(); } catch (e) {}
-      s.video.removeAttribute("src");
     });
     if (inst.wrap.parentNode) inst.wrap.parentNode.removeChild(inst.wrap);
     var at = instances.indexOf(inst);
     if (at !== -1) instances.splice(at, 1);
   }
 
-  /* Alle Collagen der Seite abbauen. */
   function destroy() {
     instances.slice().forEach(destroyInstance);
   }
@@ -386,21 +203,14 @@
     if (!roots.length) return;
 
     /* Die Startseite spielt nur diese Videos; fehlt "only" im JSON,
-       gilt diese Liste. Die Outtakes stehen weiter unten auf derselben
-       Seite und bringen ihre eigene Liste im JSON mit. */
+       gilt diese Liste. */
     var defaultOnly = ["e-commerce", "ucg-outfit1", "ucg-outfit2", "fashion",
-                       "hero-video", "eggo-aleph-seedance"];
+                       "hero-video"];
 
     Array.prototype.forEach.call(roots, function (root) {
-      /* Welcher Datenblock gehoert zu dieser Collage?
-         data-collage="outtakes" -> #collage-data-outtakes
-         data-collage (leer)     -> #collage-data            */
       var key = root.getAttribute("data-collage");
       var dataEl = document.getElementById(key ? "collage-data-" + key : "collage-data");
-      if (!dataEl) {
-        console.warn("[collage] Kein Datenblock fuer", key || "(Standard)");
-        return;
-      }
+      if (!dataEl) return;
       var data;
       try { data = JSON.parse(dataEl.textContent); }
       catch (e) { console.error("[collage] Daten konnten nicht gelesen werden", e); return; }
@@ -408,8 +218,7 @@
       mount(root, {
         slots: data.slots,
         only: data.only !== undefined ? data.only : defaultOnly,
-        shuffle: data.shuffle !== false,   // Standard: mischen
-        fadeMs: data.fadeMs
+        shuffle: data.shuffle !== false
       });
     });
   }
