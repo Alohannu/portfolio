@@ -1,0 +1,2610 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grain &amp; Curve Studio</title>
+  <style>
+    /* =========================================================================
+       Design Tokens: Midnight Blue & Neon / Slate-Dark Studio Theme
+       ========================================================================= */
+    :root {
+      --bg-void: #050811;
+      --bg-panel: rgba(9, 15, 30, 0.84);
+      --bg-panel-solid: #0c1428;
+      --bg-control: rgba(15, 25, 48, 0.78);
+      --bg-control-hover: rgba(24, 39, 74, 0.92);
+      --border-subtle: rgba(125, 211, 252, 0.14);
+      --border-strong: rgba(56, 189, 248, 0.36);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-cyan: #38bdf8;
+      --accent-indigo: #818cf8;
+      --accent-glow: rgba(56, 189, 248, 0.28);
+      --success: #34d399;
+      --danger: #f87171;
+      --radius-lg: 16px;
+      --radius-md: 11px;
+      --radius-sm: 8px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-void);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .app-shell {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(circle at 20% 20%, #0b1329 0%, #050811 100%);
+    }
+
+    /* Haupt-Canvas für Verlauf & Filmkorn */
+    #gradientCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Interaktives Overlay-Canvas für Bézier-Handles & Freihand-Kurve */
+    #overlayCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 10;
+      cursor: grab;
+    }
+
+    #overlayCanvas.mode-draw {
+      cursor: crosshair;
+    }
+
+    #overlayCanvas.is-dragging {
+      cursor: grabbing;
+    }
+
+    /* Untere Status- und Hinweis-Leiste */
+    .status-dock {
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: min(460px, calc(100vw - 32px));
+      pointer-events: none;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--text-primary);
+      pointer-events: auto;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    .status-dot.busy {
+      background: var(--accent-indigo);
+      box-shadow: 0 0 10px var(--accent-indigo);
+    }
+
+    .status-dot.success {
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+
+    .status-dot.error {
+      background: var(--danger);
+      box-shadow: 0 0 10px var(--danger);
+    }
+
+    .hint-text {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      padding: 0 6px;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+    }
+
+    /* Fallback-Link Box, falls ein Sandbox-Iframe direkten Download blockiert */
+    .fallback-box {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 13px;
+      border-radius: var(--radius-md);
+      background: var(--bg-panel-solid);
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65);
+      font-size: 12px;
+      pointer-events: auto;
+    }
+
+    .fallback-box.visible {
+      display: flex;
+    }
+
+    .fallback-link {
+      color: var(--accent-cyan);
+      font-weight: 600;
+      text-decoration: underline;
+      white-space: nowrap;
+    }
+
+    /* Studio Control Panel (Rechts oben) */
+    .studio-panel {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 25;
+      width: min(352px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius-lg);
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.68), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.08), rgba(129, 140, 248, 0.05));
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #ffffff 0%, #64748b 52%, #090d16 100%);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      box-shadow: 0 0 14px var(--accent-glow);
+    }
+
+    .brand-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text-primary);
+    }
+
+    .brand-sub {
+      display: block;
+      font-size: 10px;
+      color: var(--accent-cyan);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      padding: 6px 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-control-hover);
+      border-color: var(--border-subtle);
+    }
+
+    .panel-body {
+      padding: 14px 16px 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-body.collapsed {
+      display: none;
+    }
+
+    .panel-body::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .panel-body::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 999px;
+    }
+
+    .section-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    /* Segmented Controls */
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      padding: 3px;
+      border-radius: var(--radius-md);
+      background: rgba(4, 8, 18, 0.72);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .seg-btn {
+      padding: 7px 10px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .seg-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .seg-btn.active {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));
+      color: #040814;
+      box-shadow: 0 2px 12px rgba(56, 189, 248, 0.35);
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .secondary-btn {
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-control);
+      color: var(--text-primary);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .secondary-btn:hover {
+      background: var(--bg-control-hover);
+      border-color: var(--border-strong);
+    }
+
+    .secondary-btn.is-active {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25) inset;
+    }
+
+    /* Slider Controls */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+
+    .control-name {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .control-val {
+      color: var(--accent-cyan);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      font-size: 11.5px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.22);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+      cursor: pointer;
+    }
+
+    /* Export Sektion */
+    .export-section {
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .field-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    select.studio-select {
+      background: var(--bg-panel-solid);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select.studio-select:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .format-seg {
+      width: 156px;
+    }
+
+    .webp-quality-box {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      padding: 9px 11px;
+      border-radius: var(--radius-md);
+      background: rgba(56, 189, 248, 0.06);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    .webp-quality-box.visible {
+      display: flex;
+    }
+
+    .export-btn {
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+      color: #040814;
+      font-size: 12.5px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(56, 189, 248, 0.32);
+      transition: transform 0.14s ease, filter 0.14s ease, opacity 0.14s ease;
+    }
+
+    .export-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    .export-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .export-btn:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    /* Vorschau-Qualität */
+    .preview-section {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 11px 12px;
+      border-radius: var(--radius-md);
+      background: rgba(4, 8, 18, 0.55);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .preview-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 10.5px;
+      line-height: 1.45;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .preview-badge {
+      flex-shrink: 0;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: rgba(148, 163, 184, 0.18);
+      color: var(--text-secondary);
+    }
+
+    .preview-badge.is-sharp {
+      background: rgba(52, 211, 153, 0.16);
+      color: var(--success);
+    }
+
+    /* Duotone-Farbwahl */
+    .duotone-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .preset-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .preset-btn {
+      position: relative;
+      height: 36px;
+      padding: 0;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+    }
+
+    .preset-btn:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-strong);
+    }
+
+    .preset-btn.active {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45) inset, 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .preset-name {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 2px 3px;
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      text-align: center;
+      color: #f8fafc;
+      background: rgba(5, 8, 17, 0.62);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    }
+
+    .color-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .color-row input[type="color"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 38px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: var(--bg-control);
+      cursor: pointer;
+    }
+
+    .color-row input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 3px;
+    }
+
+    .color-row input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 5px;
+    }
+
+    .color-row input[type="color"]::-moz-color-swatch {
+      border: none;
+      border-radius: 5px;
+    }
+
+    .color-name {
+      font-size: 12px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .hex-input {
+      width: 86px;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-control);
+      color: var(--text-primary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11.5px;
+      font-variant-numeric: tabular-nums;
+      outline: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .hex-input:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .hex-input.invalid {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .ramp-preview {
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: linear-gradient(90deg, #000000 0%, #ffffff 100%);
+    }
+
+    @media (max-width: 640px) {
+      .studio-panel {
+        top: 10px;
+        right: 10px;
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 110px);
+      }
+
+      .status-dock {
+        left: 10px;
+        bottom: 10px;
+        max-width: calc(100vw - 20px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Haupt-Canvas für den mehrschichtigen Verlauf & das Filmkorn -->
+    <canvas id="gradientCanvas"></canvas>
+
+    <!-- Overlay-Canvas für Bézier-Kontrollpunkte & Freihand-Zeichnen -->
+    <canvas id="overlayCanvas"></canvas>
+
+    <!-- Live-Statusanzeige & Sandbox-Fallback -->
+    <div class="status-dock">
+      <div id="fallbackBox" class="fallback-box">
+        <span id="fallbackMsg">Direkter Download blockiert?</span>
+        <a id="fallbackLink" class="fallback-link" href="#" target="_blank" rel="noopener">Datei öffnen / speichern</a>
+      </div>
+      <div class="status-pill">
+        <span id="statusDot" class="status-dot"></span>
+        <span id="statusText">Bereit · Kubische Bézier-SDF + Film-Grain</span>
+      </div>
+      <div id="hintText" class="hint-text">
+        Tipp: P0–P3 verschieben oder direkt auf die Kurve ziehen, um sie organisch zu biegen.
+      </div>
+    </div>
+
+    <!-- Rechtes Studio-Bedienfeld -->
+    <aside class="studio-panel" aria-label="Studio Einstellungen">
+      <div class="panel-header">
+        <div class="brand-group">
+          <div class="brand-badge" aria-hidden="true"></div>
+          <div>
+            <span class="brand-sub">Midnight Studio</span>
+            <h1 class="brand-title">Grain &amp; Curve Studio</h1>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="resetBtn" type="button" class="icon-btn" title="Auf Standardwerte zurücksetzen">Reset</button>
+          <button id="collapseBtn" type="button" class="icon-btn" title="Panel ein-/ausklappen" aria-expanded="true">▲</button>
+        </div>
+      </div>
+
+      <div id="panelBody" class="panel-body">
+        <!-- Kurven-Werkzeug -->
+        <div>
+          <span class="section-label">Maussteuerung</span>
+          <div class="segmented" role="group" aria-label="Kurvenmodus">
+            <button id="modeDragBtn" type="button" class="seg-btn active">Punkte ziehen</button>
+            <button id="modeDrawBtn" type="button" class="seg-btn">Kurve zeichnen</button>
+          </div>
+        </div>
+
+        <!-- Handles & Kurvenaktionen -->
+        <div class="btn-row">
+          <button id="toggleHandlesBtn" type="button" class="secondary-btn is-active">
+            <span>Handles: An</span>
+          </button>
+          <button id="invertBtn" type="button" class="secondary-btn">
+            <span>Hell / Dunkel</span>
+          </button>
+        </div>
+
+        <div class="btn-row">
+          <button id="randomBtn" type="button" class="secondary-btn">
+            <span>Zufallskurve</span>
+          </button>
+          <button id="reseedBtn" type="button" class="secondary-btn">
+            <span>Neues Korn</span>
+          </button>
+        </div>
+
+        <!-- Vorschau-Qualität: billiger Entwurf vs. exakter Stand -->
+        <div class="preview-section">
+          <span class="section-label">Vorschau</span>
+          <div class="preview-status">
+            <span id="previewBadge" class="preview-badge">Entwurf</span>
+            <span id="previewText">wird berechnet …</span>
+          </div>
+          <button id="sharpBtn" type="button" class="secondary-btn">
+            <span>Scharf rechnen</span>
+          </button>
+        </div>
+
+        <!-- Verlaufsparameter -->
+        <div class="control-group">
+          <div class="control-top">
+            <label for="spreadSlider" class="control-name">Übergangsbreite (SDF)</label>
+            <span id="spreadVal" class="control-val">68%</span>
+          </div>
+          <input id="spreadSlider" type="range" min="12" max="100" value="68" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-top">
+            <label for="layerSlider" class="control-name">Zweitschicht (Tiefe)</label>
+            <span id="layerVal" class="control-val">54%</span>
+          </div>
+          <input id="layerSlider" type="range" min="0" max="100" value="54" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-top">
+            <label for="contrastSlider" class="control-name">Kontrast</label>
+            <span id="contrastVal" class="control-val">56%</span>
+          </div>
+          <input id="contrastSlider" type="range" min="0" max="100" value="56" />
+        </div>
+
+        <!-- Duotone: Farbwahl für Licht- und Schattenseite -->
+        <div class="duotone-section">
+          <span class="section-label">Duotone</span>
+
+          <div id="presetRow" class="preset-row" role="group" aria-label="Duotone-Voreinstellungen"></div>
+
+          <div class="color-row">
+            <input id="lightColorInput" type="color" value="#ffffff" aria-label="Farbe der Lichtseite" />
+            <label for="lightHexInput" class="color-name">Lichtseite</label>
+            <input id="lightHexInput" class="hex-input" type="text" value="#ffffff" maxlength="7"
+                   spellcheck="false" autocomplete="off" aria-label="Hex-Wert der Lichtseite" />
+          </div>
+
+          <div class="color-row">
+            <input id="darkColorInput" type="color" value="#000000" aria-label="Farbe der Schattenseite" />
+            <label for="darkHexInput" class="color-name">Schattenseite</label>
+            <input id="darkHexInput" class="hex-input" type="text" value="#000000" maxlength="7"
+                   spellcheck="false" autocomplete="off" aria-label="Hex-Wert der Schattenseite" />
+          </div>
+
+          <div id="rampPreview" class="ramp-preview" aria-hidden="true"></div>
+        </div>
+
+        <!-- Filmkorn-Parameter -->
+        <div class="control-group">
+          <div class="control-top">
+            <label for="grainStrengthSlider" class="control-name">Kornstärke</label>
+            <span id="grainStrengthVal" class="control-val">36%</span>
+          </div>
+          <input id="grainStrengthSlider" type="range" min="0" max="100" value="36" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-top">
+            <label for="grainSizeSlider" class="control-name">Korngröße</label>
+            <span id="grainSizeVal" class="control-val">1.00 px</span>
+          </div>
+          <input id="grainSizeSlider" type="range" min="100" max="260" value="100" />
+        </div>
+
+        <!-- Export-Bereich -->
+        <div class="export-section">
+          <span class="section-label">HD &amp; 4K Export</span>
+
+          <div class="field-row">
+            <label for="resolutionSelect" class="field-label">Auflösung</label>
+            <select id="resolutionSelect" class="studio-select">
+              <option value="1920x1080">1920 × 1080 (Full HD)</option>
+              <option value="2560x1440" selected>2560 × 1440 (QHD)</option>
+              <option value="3840x2160">3840 × 2160 (4K UHD)</option>
+            </select>
+          </div>
+
+          <div class="field-row">
+            <span class="field-label">Format</span>
+            <div class="segmented format-seg" role="group" aria-label="Exportformat">
+              <button id="fmtPngBtn" type="button" class="seg-btn active">PNG</button>
+              <button id="fmtWebpBtn" type="button" class="seg-btn">WebP</button>
+            </div>
+          </div>
+
+          <div id="webpQualityBox" class="webp-quality-box">
+            <div class="control-top">
+              <label for="webpQualitySlider" class="control-name">WebP-Qualität</label>
+              <span id="webpQualityVal" class="control-val">0.95</span>
+            </div>
+            <input id="webpQualitySlider" type="range" min="10" max="100" value="95" />
+          </div>
+
+          <button id="exportBtn" type="button" class="export-btn">
+            PNG herunterladen
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * GRAIN & CURVE STUDIO — Vollständige Rendering-, Interaktions- & Export-Engine
+     * =========================================================================
+     */
+
+    // Standard-Konfiguration im normalisierten Koordinatenraum [0..1] x [0..1]
+    const DEFAULT_CONFIG = {
+      p0: { x: 0.05, y: 0.74 },
+      p1: { x: 0.34, y: 0.56 },
+      p2: { x: 0.66, y: 0.34 },
+      p3: { x: 0.95, y: 0.16 },
+      spread: 68,          // 12..100: Übergangsbreite um die SDF-Kurve
+      layering: 54,        // 0..100: Mehrstufige zweite weiche Tiefenschicht
+      contrast: 56,        // 0..100: S-Kurven-Kontrast & Endpunkt-Spreizung
+      grainStrength: 36,   // 0..100: Stärke des Gauß-ähnlichen Filmkorns
+      grainSize: 100,      // 100..260 -> 1.00..2.60 px Blockgröße
+      invert: false,       // Vertauscht Hell- und Dunkel-Seite
+      showHandles: true,   // Zeigt Kontrollpunkte und Kurven-Handles im Overlay
+      mode: 'drag',        // 'drag' | 'draw'
+      format: 'png',       // 'png' | 'webp'
+      webpQuality: 95,     // 10..100 -> 0.10..1.00
+      resolution: '2560x1440',
+      seed: 48271,
+      colorDark: '#000000',  // Schattenseite (Luminanz 0) — neutral = exakte S/W-Parität
+      colorLight: '#ffffff', // Lichtseite (Luminanz 1)
+      preset: 'sw'           // Aktives Duotone-Preset, 'custom' bei eigener Farbe
+    };
+
+    /**
+     * Kuratierte Duotone-Paare. "sw" ist das neutrale Standardpaar und liefert
+     * per Konstruktion exakt die Ausgabe des früheren Schwarzweiß-Renderers.
+     */
+    const DUOTONE_PRESETS = [
+      { id: 'sw',         name: 'S/W',          dark: '#000000', light: '#ffffff' },
+      { id: 'midnight',   name: 'Mitternacht',  dark: '#050811', light: '#fdfdfd' },
+      { id: 'sepia',      name: 'Sepia',        dark: '#2b1d12', light: '#f4e8d0' },
+      { id: 'cyanotype',  name: 'Cyanotypie',   dark: '#0a1a2f', light: '#cfe6f5' },
+      { id: 'sand',       name: 'Sand',         dark: '#1c1c1e', light: '#e8d9b8' },
+      { id: 'loud',       name: 'Laut',         dark: '#1b0033', light: '#ffd400' }
+    ];
+
+    // Ziel-Pixelmenge der Entwurfsvorschau. Die SDF-Abfrage kostet pro Pixel
+    // ~180 Segmenttests, deshalb wird die Vorschau klein gerechnet und weich
+    // hochskaliert: ~130 000 px bedeuten gemessen ~90 ms pro Bild, während das
+    // native Canvas mit 2880×1800 über 4 Sekunden braucht.
+    const PREVIEW_TARGET_PIXELS = 130000;
+    const PREVIEW_MIN_EDGE = 64;
+    // Budget pro Animationsframe für streifenweises Rendern (Vorschau & Export).
+    // Gemessen: ein Band dieser Größe kostet unter Last ~40–90 ms Pixelarbeit,
+    // der Frame-Deckel verhindert, dass daraus ein Hänger wird. Kleinere Bänder
+    // kosten mehr Frames (jeder Frame kostet allein ~17 ms Takt), größere Bänder
+    // machen die Oberfläche träger.
+    const BAND_FRAME_BUDGET_MS = 40;
+    const BAND_TARGET_PIXELS = 60000;
+    const STORAGE_KEY = 'grain-curve-studio:v1';
+
+    const state = {
+      ...DEFAULT_CONFIG,
+      p0: { ...DEFAULT_CONFIG.p0 },
+      p1: { ...DEFAULT_CONFIG.p1 },
+      p2: { ...DEFAULT_CONFIG.p2 },
+      p3: { ...DEFAULT_CONFIG.p3 }
+    };
+
+    // DOM-Referenzen
+    const gradientCanvas = document.getElementById('gradientCanvas');
+    const gradientCtx = gradientCanvas.getContext('2d', { alpha: false });
+    const overlayCanvas = document.getElementById('overlayCanvas');
+    const overlayCtx = overlayCanvas.getContext('2d');
+
+    const ui = {
+      statusDot: document.getElementById('statusDot'),
+      statusText: document.getElementById('statusText'),
+      hintText: document.getElementById('hintText'),
+      fallbackBox: document.getElementById('fallbackBox'),
+      fallbackMsg: document.getElementById('fallbackMsg'),
+      fallbackLink: document.getElementById('fallbackLink'),
+      resetBtn: document.getElementById('resetBtn'),
+      collapseBtn: document.getElementById('collapseBtn'),
+      panelBody: document.getElementById('panelBody'),
+      modeDragBtn: document.getElementById('modeDragBtn'),
+      modeDrawBtn: document.getElementById('modeDrawBtn'),
+      toggleHandlesBtn: document.getElementById('toggleHandlesBtn'),
+      invertBtn: document.getElementById('invertBtn'),
+      randomBtn: document.getElementById('randomBtn'),
+      reseedBtn: document.getElementById('reseedBtn'),
+      spreadSlider: document.getElementById('spreadSlider'),
+      spreadVal: document.getElementById('spreadVal'),
+      layerSlider: document.getElementById('layerSlider'),
+      layerVal: document.getElementById('layerVal'),
+      contrastSlider: document.getElementById('contrastSlider'),
+      contrastVal: document.getElementById('contrastVal'),
+      grainStrengthSlider: document.getElementById('grainStrengthSlider'),
+      grainStrengthVal: document.getElementById('grainStrengthVal'),
+      grainSizeSlider: document.getElementById('grainSizeSlider'),
+      grainSizeVal: document.getElementById('grainSizeVal'),
+      resolutionSelect: document.getElementById('resolutionSelect'),
+      fmtPngBtn: document.getElementById('fmtPngBtn'),
+      fmtWebpBtn: document.getElementById('fmtWebpBtn'),
+      webpQualityBox: document.getElementById('webpQualityBox'),
+      webpQualitySlider: document.getElementById('webpQualitySlider'),
+      webpQualityVal: document.getElementById('webpQualityVal'),
+      exportBtn: document.getElementById('exportBtn'),
+      presetRow: document.getElementById('presetRow'),
+      lightColorInput: document.getElementById('lightColorInput'),
+      lightHexInput: document.getElementById('lightHexInput'),
+      darkColorInput: document.getElementById('darkColorInput'),
+      darkHexInput: document.getElementById('darkHexInput'),
+      rampPreview: document.getElementById('rampPreview'),
+      sharpBtn: document.getElementById('sharpBtn'),
+      previewBadge: document.getElementById('previewBadge'),
+      previewText: document.getElementById('previewText')
+    };
+
+    // Interaktionszustand für Maus & Touch
+    const interaction = {
+      activeHandle: null,      // 'p0' | 'p1' | 'p2' | 'p3' | 'curve' | null
+      hoveredHandle: null,     // Hover-Status für Cursor-Feedback
+      curveDragOffsetY: 0,     // Vertikaler Versatz beim Ziehen direkt auf der Kurve
+      curveDragT: 0.5,         // Parameter t [0..1] auf der Kurve beim Ziehen
+      isDrawingFreehand: false,// Aktives Zeichnen im Modus "Kurve zeichnen"
+      freehandPoints: [],      // Gesammelte Punkte in normalisierten Koordinaten [0..1]
+      isInteracting: false     // True während aktiver Maus-/Touch-Bewegung
+    };
+
+    let renderFrameId = null;
+    let pendingFastRender = false;
+    let pendingFullDraft = false;
+    let currentFallbackObjectUrl = null;
+
+    // Offscreen-Canvas für die billige Entwurfsvorschau
+    const previewCanvas = document.createElement('canvas');
+    const previewCtx = previewCanvas.getContext('2d', { alpha: false });
+
+    // Zustand der Vorschau: 'draft-fast' (während des Ziehens) | 'draft' | 'sharp'
+    let previewQuality = 'draft';
+    let lastDraftMs = null;
+    let sharpJob = null;      // Laufender streifenweiser Scharf-Render
+    let exportJob = null;     // Laufender streifenweiser Export-Render
+    let saveTimer = null;
+    // Nach "Reset" ist der gespeicherte Stand bewusst gelöscht. Der Autosave
+    // bleibt aus, bis der Nutzer wieder etwas ändert — sonst würde der
+    // pagehide-Save beim Entladen die Defaults zurückschreiben.
+    let autosaveEnabled = true;
+
+    function setStatus(message, type = 'normal') {
+      ui.statusText.textContent = message;
+      ui.statusDot.className = 'status-dot';
+      if (type === 'busy') ui.statusDot.classList.add('busy');
+      if (type === 'success') ui.statusDot.classList.add('success');
+      if (type === 'error') ui.statusDot.classList.add('error');
+    }
+
+    function clamp(val, min, max) {
+      return val < min ? min : (val > max ? max : val);
+    }
+
+    function smoothstep(edge0, edge1, x) {
+      const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
+    /**
+     * =========================================================================
+     * Duotone-Farbmathematik
+     * =========================================================================
+     */
+
+    /** Akzeptiert "#rrggbb" und "rrggbb" (jede Schreibweise), liefert "#rrggbb" oder null. */
+    function normalizeHex(value) {
+      if (typeof value !== 'string') return null;
+      const raw = value.trim().replace(/^#/, '');
+      if (!/^[0-9a-fA-F]{6}$/.test(raw)) return null;
+      return '#' + raw.toLowerCase();
+    }
+
+    function hexToRgb(hex) {
+      const normalized = normalizeHex(hex);
+      if (!normalized) return null;
+      return [
+        parseInt(normalized.slice(1, 3), 16),
+        parseInt(normalized.slice(3, 5), 16),
+        parseInt(normalized.slice(5, 7), 16)
+      ];
+    }
+
+    function srgbToLinear(channel) {
+      const v = channel / 255;
+      return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    }
+
+    function linearToSrgb(value) {
+      const v = value <= 0.0031308 ? value * 12.92 : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
+      return clamp(v, 0, 1) * 255;
+    }
+
+    /** sRGB -> Oklab (Ottosson), damit die Rampe perzeptuell gleichmäßig verläuft. */
+    function rgbToOklab(rgb) {
+      const r = srgbToLinear(rgb[0]);
+      const g = srgbToLinear(rgb[1]);
+      const b = srgbToLinear(rgb[2]);
+
+      const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+      const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+      const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+
+      return [
+        0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+      ];
+    }
+
+    function oklabToRgb(lab) {
+      const L = lab[0];
+      const A = lab[1];
+      const B = lab[2];
+
+      const l_ = L + 0.3963377774 * A + 0.2158037573 * B;
+      const m_ = L - 0.1055613458 * A - 0.0638541728 * B;
+      const s_ = L - 0.0894841775 * A - 1.2914855480 * B;
+
+      const l = l_ * l_ * l_;
+      const m = m_ * m_ * m_;
+      const s = s_ * s_ * s_;
+
+      return [
+        linearToSrgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+        linearToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+        linearToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+      ];
+    }
+
+    /**
+     * Baut die 256-stufige Duotone-LUT, indiziert mit dem bereits quantisierten
+     * Luminanzbyte.
+     *
+     * Nur für das exakte Standardpaar #000000/#ffffff wird die Rampe analytisch
+     * als Identität gebaut: das garantiert Byte-Parität zum früheren
+     * Schwarzweiß-Renderer, unabhängig von der Genauigkeit des Oklab-Roundtrips.
+     * Alle anderen Paare — auch selbst gewählte Grautöne — laufen über Oklab,
+     * damit ihre Pegel eingehalten werden (#404040/#c0c0c0 -> 64..192).
+     */
+    function buildDuotoneLut(darkHex, lightHex) {
+      const dark = hexToRgb(darkHex) || [0, 0, 0];
+      const light = hexToRgb(lightHex) || [255, 255, 255];
+      const lut = new Uint8ClampedArray(256 * 3);
+
+      const isPureMonochrome = dark[0] === 0 && dark[1] === 0 && dark[2] === 0
+        && light[0] === 255 && light[1] === 255 && light[2] === 255;
+
+      if (isPureMonochrome) {
+        for (let k = 0; k < 256; k++) {
+          lut[k * 3] = k;
+          lut[k * 3 + 1] = k;
+          lut[k * 3 + 2] = k;
+        }
+        return lut;
+      }
+
+      const a = rgbToOklab(dark);
+      const b = rgbToOklab(light);
+
+      for (let k = 0; k < 256; k++) {
+        const t = k / 255;
+        const rgb = oklabToRgb([
+          a[0] + (b[0] - a[0]) * t,
+          a[1] + (b[1] - a[1]) * t,
+          a[2] + (b[2] - a[2]) * t
+        ]);
+        lut[k * 3] = Math.round(rgb[0]);
+        lut[k * 3 + 1] = Math.round(rgb[1]);
+        lut[k * 3 + 2] = Math.round(rgb[2]);
+      }
+
+      return lut;
+    }
+
+    function cssRamp(darkHex, lightHex) {
+      return `linear-gradient(90deg, ${darkHex} 0%, ${lightHex} 100%)`;
+    }
+
+    /** Findet das Preset zu einem Farbpaar oder 'custom'. */
+    function matchPreset(darkHex, lightHex) {
+      const found = DUOTONE_PRESETS.find((p) => p.dark === darkHex && p.light === lightHex);
+      return found ? found.id : 'custom';
+    }
+
+    /**
+     * Evaluiert einen Punkt auf der kubischen Bézier-Kurve für Parameter t in [0..1].
+     */
+    function evalCubicBezier(p0, p1, p2, p3, t) {
+      const u = 1 - t;
+      const tt = t * t;
+      const uu = u * u;
+      const uuu = uu * u;
+      const ttt = tt * t;
+
+      return {
+        x: uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x,
+        y: uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y
+      };
+    }
+
+    /**
+     * Erzeugt eine fein abgetastete Polylinie entlang der kubischen Bézier-Kurve.
+     */
+    function sampleBezierPolyline(cfg, steps = 160) {
+      const pts = new Array(steps + 1);
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        pts[i] = evalCubicBezier(cfg.p0, cfg.p1, cfg.p2, cfg.p3, t);
+      }
+      return pts;
+    }
+
+    /**
+     * Berechnet den vorzeichenbehafteten Abstand (Signed Distance Function) eines Punktes (px, py)
+     * in Seitenverhältnis-korrigierten Koordinaten zur kubischen Bézier-Kurve.
+     * Positiv = unterhalb/rechts der Kurve, Negativ = oberhalb/links der Kurve.
+     */
+    function computeSignedDistanceToCurve(px, py, polyline, aspectRatio) {
+      const sx = px * aspectRatio;
+      const sy = py;
+
+      let minDistSq = Infinity;
+      let signedDist = 0;
+
+      for (let i = 0; i < polyline.length - 1; i++) {
+        const ax = polyline[i].x * aspectRatio;
+        const ay = polyline[i].y;
+        const bx = polyline[i + 1].x * aspectRatio;
+        const by = polyline[i + 1].y;
+
+        const abx = bx - ax;
+        const aby = by - ay;
+        const abLenSq = abx * abx + aby * aby;
+
+        let proj = 0;
+        if (abLenSq > 1e-10) {
+          proj = clamp(((sx - ax) * abx + (sy - ay) * aby) / abLenSq, 0, 1);
+        }
+
+        const cx = ax + abx * proj;
+        const cy = ay + aby * proj;
+        const dx = sx - cx;
+        const dy = sy - cy;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < minDistSq) {
+          minDistSq = distSq;
+          const dist = Math.sqrt(distSq);
+          // Vorzeichen aus Kreuzprodukt von Kurvenrichtung und Vektor zum Punkt
+          const cross = abx * (sy - ay) - aby * (sx - ax);
+          const sign = cross >= 0 ? 1 : -1;
+          signedDist = sign * dist;
+        }
+      }
+
+      return signedDist;
+    }
+
+    /**
+     * Schneller 32-Bit Integer-Hash für deterministisches, fleckenfreies Per-Pixel-Rauschen.
+     */
+    function hash32(x, y, seed) {
+      let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(seed | 0, 1442695041);
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+    }
+
+    /**
+     * Erzeugt ein glockenförmiges (Gauß-ähnliches) Rauschen in [-1..1] durch
+     * Summation von drei unabhängigen Uniform-Samples (Irwin-Hall-Annäherung).
+     * Vermeidet harte Ausreißer und sorgt für edles analoges Filmkorn.
+     */
+    function gaussianGrain(gx, gy, seed) {
+      const n1 = hash32(gx, gy, seed);
+      const n2 = hash32(gx + 1013, gy - 709, seed ^ 0x9e3779b9);
+      const n3 = hash32(gx - 2027, gy + 1423, seed ^ 0x85ebca6b);
+      // (n1 + n2 + n3) liegt in [0..3] mit Mittelwert 1.5; normiert auf ca. [-1..1]
+      return ((n1 + n2 + n3) - 1.5) * (2 / 1.5);
+    }
+
+    /**
+     * Erstellt den Renderplan: alle vom Pixel unabhängigen Größen plus die
+     * Ziel-ImageData. Ein Plan kann am Stück (synchron), streifenweise über
+     * requestAnimationFrame oder für den Export abgearbeitet werden — die
+     * Pixelmathematik ist in allen drei Fällen identisch.
+     */
+    function createScenePlan(ctx, width, height, cfg, fastPreview = false) {
+      const aspectRatio = width / height;
+      const polylineSteps = fastPreview ? 72 : 180;
+      const polyline = sampleBezierPolyline(cfg, polylineSteps);
+
+      return {
+        width,
+        height,
+        aspectRatio,
+        polyline,
+        // Basis-Übergangsbreite aus Slider (12..100 -> ca. 0.14..1.15 in normalisierten Einheiten)
+        spreadNorm: 0.14 + (cfg.spread / 100) * 1.02,
+        layerAmount: cfg.layering / 100,
+        grainAmount: cfg.grainStrength / 100,
+        grainBlockSize: fastPreview
+          ? Math.max(1.5, (cfg.grainSize / 100) * 1.5)
+          : (cfg.grainSize / 100),
+        // Endpunkt-Spreizung (Schwarz- und Weißpunkt leicht anziehen bei höherem Kontrast)
+        blackFloor: 0.03 + (cfg.contrast / 100) * 0.06,
+        whiteCeiling: 0.98 - (cfg.contrast / 100) * 0.03,
+        // S-Kurven-Schärfe für den Kontrastregler
+        sCurvePower: 0.72 + (cfg.contrast / 100) * 1.35,
+        invert: !!cfg.invert,
+        seed: cfg.seed,
+        // Bei Fast-Preview ggf. 2x2-Blöcke mitteln für flüssiges Dragging
+        step: (fastPreview && width * height > 1200000) ? 2 : 1,
+        lut: buildDuotoneLut(cfg.colorDark, cfg.colorLight),
+        imgData: ctx.createImageData(width, height),
+        nextY: 0
+      };
+    }
+
+    /**
+     * Rendert die Zeilen [yStart, yEnd) des Plans in dessen ImageData.
+     * yStart wird auf ein Vielfaches von plan.step ausgerichtet, damit
+     * 2x2-Blöcke an Streifengrenzen nicht auseinandergerissen werden.
+     */
+    function paintSceneRows(plan, yStart, yEnd) {
+      const width = plan.width;
+      const height = plan.height;
+      const aspectRatio = plan.aspectRatio;
+      const polyline = plan.polyline;
+      const spreadNorm = plan.spreadNorm;
+      const layerAmount = plan.layerAmount;
+      const grainAmount = plan.grainAmount;
+      const grainBlockSize = plan.grainBlockSize;
+      const blackFloor = plan.blackFloor;
+      const whiteCeiling = plan.whiteCeiling;
+      const sCurvePower = plan.sCurvePower;
+      const invert = plan.invert;
+      const seed = plan.seed;
+      const step = plan.step;
+      const lut = plan.lut;
+      const data = plan.imgData.data;
+
+      const startY = Math.max(0, yStart - (yStart % step));
+      const endY = Math.min(height, yEnd);
+
+      for (let y = startY; y < endY; y += step) {
+        const ny = (y + 0.5) / height;
+
+        for (let x = 0; x < width; x += step) {
+          const nx = (x + 0.5) / width;
+
+          // 1. Primäre SDF-Distanz zur Bézier-Kurve
+          const sd = computeSignedDistanceToCurve(nx, ny, polyline, aspectRatio);
+
+          // Weicher Grundverlauf entlang der SDF (oben/links hell -> unten/rechts dunkel)
+          let primaryT = smoothstep(-spreadNorm, spreadNorm, sd);
+
+          // Kontrast-Shaping auf den Grundverlauf anwenden
+          if (Math.abs(sCurvePower - 1.0) > 0.01) {
+            primaryT = Math.pow(clamp(primaryT, 0, 1), sCurvePower);
+          }
+
+          // 2. Mehrstufige Zweitschicht: breitere, weiche Tiefenwelle parallel zur Kurve
+          // Verhindert flache oder "patchy" Übergänge durch sanfte Mehrschichtigkeit
+          const secondarySpread = spreadNorm * 1.65 + 0.18;
+          const secondaryShift = 0.08 * aspectRatio * 0.35;
+          const secondaryT = smoothstep(-secondarySpread, secondarySpread, sd + secondaryShift);
+
+          // Sanfte Kombination aus Primärschicht und zweiter weicher Schicht
+          let lum = primaryT * (1 - layerAmount * 0.42) + secondaryT * (layerAmount * 0.42);
+
+          // Auf Weiß-/Schwarzpunkt abbilden (hell = 1.0, dunkel = 0.0 vor Invertierung)
+          lum = whiteCeiling - lum * (whiteCeiling - blackFloor);
+
+          if (invert) {
+            lum = 1.0 - lum;
+          }
+
+          lum = clamp(lum, 0, 1);
+
+          // 3. Pixelgenaues, glockenförmiges Filmkorn mit Luminanz-Gewichtung
+          // (In extremen Schatten und Lichtern etwas dezenter, in Mitten besonders authentisch)
+          const midtoneMask = 0.45 + 0.55 * (1.0 - Math.pow(2.0 * lum - 1.0, 2.0));
+          const gx = Math.floor(x / grainBlockSize);
+          const gy = Math.floor(y / grainBlockSize);
+          const grainSample = gaussianGrain(gx, gy, seed);
+          const grainDelta = grainSample * (grainAmount * 0.24) * midtoneMask;
+
+          const finalVal = clamp((lum + grainDelta) * 255, 0, 255);
+          const byteVal = Math.round(finalVal);
+
+          // 4. Luminanz über die Duotone-LUT auf Farbe abbilden.
+          //    Bei neutralen Stops gilt lut[k] = (k, k, k), also exakt die
+          //    Ausgabe des früheren Schwarzweiß-Renderers.
+          const lutIndex = byteVal * 3;
+          const outR = lut[lutIndex];
+          const outG = lut[lutIndex + 1];
+          const outB = lut[lutIndex + 2];
+
+          // Pixel (und ggf. 2x2-Vorschau-Block) schreiben
+          for (let dy = 0; dy < step && y + dy < height; dy++) {
+            for (let dx = 0; dx < step && x + dx < width; dx++) {
+              const idx = ((y + dy) * width + (x + dx)) * 4;
+              data[idx] = outR;
+              data[idx + 1] = outG;
+              data[idx + 2] = outB;
+              data[idx + 3] = 255;
+            }
+          }
+        }
+      }
+    }
+
+    /** Schreibt die Zeilen [yStart, yEnd) des Plans auf das Ziel-Canvas. */
+    function commitSceneRows(plan, ctx, yStart, yEnd) {
+      const startY = Math.max(0, yStart - (yStart % plan.step));
+      const endY = Math.min(plan.height, yEnd);
+      if (endY <= startY) return;
+      ctx.putImageData(plan.imgData, 0, 0, 0, startY, plan.width, endY - startY);
+    }
+
+    /**
+     * Synchroner Komplett-Render (Vorschau-Offscreen und Rückfallpfad).
+     * Für die hochauflösende Vorschau und den Export wird stattdessen
+     * runProgressiveRender() genutzt, damit die Oberfläche bedienbar bleibt.
+     */
+    function renderGradientScene(ctx, width, height, cfg, fastPreview = false) {
+      if (width <= 0 || height <= 0) return;
+      const plan = createScenePlan(ctx, width, height, cfg, fastPreview);
+      paintSceneRows(plan, 0, height);
+      commitSceneRows(plan, ctx, 0, height);
+    }
+
+    /**
+     * Rendert einen Plan streifenweise über requestAnimationFrame, mit einem
+     * Zeitbudget pro Frame. Liefert ein Handle mit cancel(); der Rückgabewert
+     * von onProgress ist der Fortschritt in [0..1].
+     */
+    function runProgressiveRender(plan, ctx, options = {}) {
+      const height = plan.height;
+      const bandHeight = Math.max(plan.step, options.bandHeight || Math.floor(BAND_TARGET_PIXELS / Math.max(1, plan.width)));
+      const onProgress = options.onProgress || function () {};
+      const onDone = options.onDone || function () {};
+
+      const job = {
+        cancelled: false,
+        finished: false,
+        rafId: null,
+        plan,
+        cancel() {
+          if (job.finished || job.cancelled) return;
+          job.cancelled = true;
+          if (job.rafId !== null) cancelAnimationFrame(job.rafId);
+          job.rafId = null;
+          if (typeof options.onCancel === 'function') options.onCancel();
+        }
+      };
+
+      const paintFrame = () => {
+        job.rafId = null;
+        if (job.cancelled) return;
+
+        const frameStart = performance.now();
+        let painted = 0;
+
+        while (plan.nextY < height) {
+          if (painted > 0 && performance.now() - frameStart >= BAND_FRAME_BUDGET_MS) break;
+          const yEnd = Math.min(height, plan.nextY + bandHeight);
+          paintSceneRows(plan, plan.nextY, yEnd);
+          commitSceneRows(plan, ctx, plan.nextY, yEnd);
+          plan.nextY = yEnd;
+          painted++;
+        }
+
+        onProgress(plan.nextY / height);
+
+        if (plan.nextY < height) {
+          job.rafId = requestAnimationFrame(paintFrame);
+        } else {
+          job.finished = true;
+          onDone();
+        }
+      };
+
+      job.rafId = requestAnimationFrame(paintFrame);
+      return job;
+    }
+
+    /**
+     * Größe der Entwurfsvorschau: auf PREVIEW_TARGET_PIXELS normiert, damit die
+     * Bildzeit unabhängig von Fenster- und DPR-Größe konstant bleibt.
+     */
+    function previewSizeFor(width, height) {
+      const total = Math.max(1, width * height);
+      const scale = Math.min(1, Math.sqrt(PREVIEW_TARGET_PIXELS / total));
+      return {
+        width: Math.max(PREVIEW_MIN_EDGE, Math.round(width * scale)),
+        height: Math.max(PREVIEW_MIN_EDGE, Math.round(height * scale))
+      };
+    }
+
+    /**
+     * Rechnet die billige Entwurfsvorschau in ein Offscreen-Canvas und skaliert
+     * sie weich auf das sichtbare Canvas. Die SDF kommt damit auf ~130 000 statt
+     * mehrerer Millionen Pixel — der Unterschied zwischen ~40 ms und 4 Sekunden.
+     */
+    function renderDraftPreview(fastPreview) {
+      const target = previewSizeFor(gradientCanvas.width, gradientCanvas.height);
+
+      if (previewCanvas.width !== target.width || previewCanvas.height !== target.height) {
+        previewCanvas.width = target.width;
+        previewCanvas.height = target.height;
+      }
+
+      const started = performance.now();
+      renderGradientScene(previewCtx, target.width, target.height, state, fastPreview);
+      lastDraftMs = performance.now() - started;
+
+      gradientCtx.imageSmoothingEnabled = true;
+      if ('imageSmoothingQuality' in gradientCtx) {
+        gradientCtx.imageSmoothingQuality = 'high';
+      }
+      gradientCtx.drawImage(
+        previewCanvas,
+        0, 0, target.width, target.height,
+        0, 0, gradientCanvas.width, gradientCanvas.height
+      );
+
+      previewQuality = fastPreview ? 'draft-fast' : 'draft';
+      updatePreviewNote();
+    }
+
+    /**
+     * Zeichnet die interaktiven Bézier-Kontrollpunkte, Tangenten und Freihand-Linie
+     * auf das Overlay-Canvas (wird beim Export niemals mitgerendert).
+     */
+    function renderOverlay(width, height) {
+      overlayCtx.clearRect(0, 0, width, height);
+
+      // Aktive Freihand-Skizze anzeigen, falls der Nutzer gerade zeichnet
+      if (interaction.isDrawingFreehand && interaction.freehandPoints.length > 1) {
+        overlayCtx.save();
+        overlayCtx.beginPath();
+        const pts = interaction.freehandPoints;
+        overlayCtx.moveTo(pts[0].x * width, pts[0].y * height);
+        for (let i = 1; i < pts.length; i++) {
+          overlayCtx.lineTo(pts[i].x * width, pts[i].y * height);
+        }
+        overlayCtx.strokeStyle = '#38bdf8';
+        overlayCtx.lineWidth = 2.5;
+        overlayCtx.setLineDash([6, 4]);
+        overlayCtx.stroke();
+        overlayCtx.restore();
+      }
+
+      if (!state.showHandles) return;
+
+      const p0 = { x: state.p0.x * width, y: state.p0.y * height };
+      const p1 = { x: state.p1.x * width, y: state.p1.y * height };
+      const p2 = { x: state.p2.x * width, y: state.p2.y * height };
+      const p3 = { x: state.p3.x * width, y: state.p3.y * height };
+
+      overlayCtx.save();
+
+      // Kontroll-Linien (P0 -> P1 und P3 -> P2)
+      overlayCtx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+      overlayCtx.lineWidth = 1.25;
+      overlayCtx.setLineDash([5, 5]);
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(p0.x, p0.y);
+      overlayCtx.lineTo(p1.x, p1.y);
+      overlayCtx.moveTo(p3.x, p3.y);
+      overlayCtx.lineTo(p2.x, p2.y);
+      overlayCtx.stroke();
+      overlayCtx.setLineDash([]);
+
+      // Hauptkurve hervorheben
+      const isCurveHovered = interaction.hoveredHandle === 'curve' || interaction.activeHandle === 'curve';
+      overlayCtx.strokeStyle = isCurveHovered ? 'rgba(56, 189, 248, 0.92)' : 'rgba(56, 189, 248, 0.58)';
+      overlayCtx.lineWidth = isCurveHovered ? 2.5 : 1.75;
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(p0.x, p0.y);
+      overlayCtx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+      overlayCtx.stroke();
+
+      // Kontrollpunkte P0, P1, P2, P3 zeichnen
+      const handles = [
+        { id: 'p0', label: 'P0', pt: p0, isAnchor: true },
+        { id: 'p1', label: 'P1', pt: p1, isAnchor: false },
+        { id: 'p2', label: 'P2', pt: p2, isAnchor: false },
+        { id: 'p3', label: 'P3', pt: p3, isAnchor: true }
+      ];
+
+      for (const h of handles) {
+        const active = interaction.activeHandle === h.id || interaction.hoveredHandle === h.id;
+        const radius = active ? 8.5 : (h.isAnchor ? 7 : 6.5);
+
+        // Äußerer Glow
+        overlayCtx.beginPath();
+        overlayCtx.arc(h.pt.x, h.pt.y, radius + 4, 0, Math.PI * 2);
+        overlayCtx.fillStyle = active ? 'rgba(56, 189, 248, 0.28)' : 'rgba(9, 15, 30, 0.55)';
+        overlayCtx.fill();
+
+        // Punkt-Füllung
+        overlayCtx.beginPath();
+        overlayCtx.arc(h.pt.x, h.pt.y, radius, 0, Math.PI * 2);
+        overlayCtx.fillStyle = h.isAnchor ? '#ffffff' : '#38bdf8';
+        overlayCtx.fill();
+        overlayCtx.lineWidth = 2;
+        overlayCtx.strokeStyle = '#050811';
+        overlayCtx.stroke();
+
+        // Label
+        overlayCtx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        overlayCtx.fillStyle = '#f8fafc';
+        overlayCtx.fillText(h.label, h.pt.x + 11, h.pt.y - 8);
+      }
+
+      overlayCtx.restore();
+    }
+
+    /**
+     * Passt die Canvas-Größen an den Viewport an und plant ein Neuzeichnen.
+     */
+    function resizeCanvases() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(1, Math.floor(window.innerWidth * dpr));
+      const height = Math.max(1, Math.floor(window.innerHeight * dpr));
+
+      if (gradientCanvas.width !== width || gradientCanvas.height !== height) {
+        gradientCanvas.width = width;
+        gradientCanvas.height = height;
+      }
+
+      if (overlayCanvas.width !== width || overlayCanvas.height !== height) {
+        overlayCanvas.width = width;
+        overlayCanvas.height = height;
+      }
+    }
+
+    function scheduleRender(fastPreview = false) {
+      // Jede Zustandsänderung macht einen laufenden Scharf-Render ungültig:
+      // er gehört zu einem Stand, den es nicht mehr gibt. Der Abbruch wird
+      // gemeldet, damit kein veralteter Fortschritt im Status stehen bleibt.
+      if (cancelSharpRender()) {
+        setStatus('Scharf-Render verworfen – Entwurfsvorschau aktiv', 'normal');
+      }
+
+      // Zwei getrennte Merker, weil beide Anfragen im selben Frame eintreffen
+      // können (z. B. Tippen im Hex-Feld = schnell, blur = scharf). Dann gewinnt
+      // die scharfe Anfrage, sonst bliebe die Vorschau auf dem Fast-Pfad stehen.
+      if (fastPreview) {
+        pendingFastRender = true;
+      } else {
+        pendingFullDraft = true;
+      }
+      if (renderFrameId !== null) return;
+
+      renderFrameId = requestAnimationFrame(() => {
+        renderFrameId = null;
+        resizeCanvases();
+        const useFast = pendingFastRender && !pendingFullDraft;
+        pendingFastRender = false;
+        pendingFullDraft = false;
+
+        // Ein Render pro Frame; der scharfe Entwurf folgt über das jeweilige
+        // Abschlussereignis: pointerup beim Ziehen, 'change' beim Regler und
+        // beim System-Farbwähler, blur beim Hex-Feld.
+        renderDraftPreview(useFast);
+        renderOverlay(overlayCanvas.width, overlayCanvas.height);
+      });
+    }
+
+    /**
+     * =========================================================================
+     * Streifenweiser Scharf-Render & Vorschau-Status
+     * =========================================================================
+     */
+
+    function updatePreviewNote() {
+      const isSharp = previewQuality === 'sharp';
+      ui.previewBadge.textContent = isSharp ? 'Scharf' : (previewQuality === 'draft-fast' ? 'Entwurf live' : 'Entwurf');
+      ui.previewBadge.classList.toggle('is-sharp', isSharp);
+
+      if (isSharp) {
+        ui.previewText.textContent = `${gradientCanvas.width}×${gradientCanvas.height} exakt gerendert`;
+        return;
+      }
+
+      const target = previewSizeFor(gradientCanvas.width, gradientCanvas.height);
+      const timing = lastDraftMs === null ? '' : ` · ${Math.round(lastDraftMs)} ms`;
+      ui.previewText.textContent = `${target.width}×${target.height} weich skaliert${timing}`;
+    }
+
+    function setSharpButtonRunning(running, progressPercent = null) {
+      const span = ui.sharpBtn.querySelector('span');
+      span.textContent = running
+        ? (progressPercent === null ? 'Abbrechen' : `Abbrechen (${progressPercent}%)`)
+        : 'Scharf rechnen';
+      ui.sharpBtn.classList.toggle('is-active', running);
+    }
+
+    function cancelSharpRender(message = null) {
+      if (!sharpJob) return false;
+      sharpJob.cancel();
+      sharpJob = null;
+      setSharpButtonRunning(false);
+
+      // Ein abgebrochener Lauf hat bereits Streifen exakt gestempelt. Ohne
+      // Neuzeichnen bliebe die Fläche halb scharf, während der Status
+      // "Entwurfsvorschau aktiv" behauptet — also den Entwurf neu aufbauen.
+      previewQuality = 'draft';
+      scheduleRender(false);
+
+      if (message) setStatus(message, 'normal');
+      return true;
+    }
+
+    function startSharpRender() {
+      resizeCanvases();
+      const width = gradientCanvas.width;
+      const height = gradientCanvas.height;
+
+      const plan = createScenePlan(gradientCtx, width, height, state, false);
+      setSharpButtonRunning(true, 0);
+      setStatus(`Scharf rechnen ${width}×${height} … 0%`, 'busy');
+
+      sharpJob = runProgressiveRender(plan, gradientCtx, {
+        bandHeight: Math.max(1, Math.floor(BAND_TARGET_PIXELS / Math.max(1, width))),
+        onProgress: (progress) => {
+          const pct = Math.round(progress * 100);
+          setStatus(`Scharf rechnen ${width}×${height} … ${pct}%`, 'busy');
+          setSharpButtonRunning(true, pct);
+        },
+        onDone: () => {
+          sharpJob = null;
+          previewQuality = 'sharp';
+          setSharpButtonRunning(false);
+          updatePreviewNote();
+          renderOverlay(overlayCanvas.width, overlayCanvas.height);
+          setStatus(`Scharfe Vorschau bereit (${width}×${height})`, 'success');
+        }
+      });
+    }
+
+    ui.sharpBtn.addEventListener('click', () => {
+      if (sharpJob) {
+        cancelSharpRender('Scharf-Render abgebrochen – Entwurfsvorschau aktiv');
+        return;
+      }
+      startSharpRender();
+    });
+
+    /**
+     * =========================================================================
+     * Interaktive Maus- & Touch-Steuerung auf dem Canvas
+     * =========================================================================
+     */
+
+    function getNormalizedPointer(evt) {
+      const rect = overlayCanvas.getBoundingClientRect();
+      const x = clamp((evt.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+      const y = clamp((evt.clientY - rect.top) / Math.max(1, rect.height), 0, 1);
+      return { x, y };
+    }
+
+    /**
+     * Sucht den nächsten Kontrollpunkt (P0..P3) oder prüft, ob der Zeiger nahe der Kurve liegt.
+     */
+    function hitTestCurveAndHandles(nx, ny) {
+      const rect = overlayCanvas.getBoundingClientRect();
+      const aspect = rect.width / Math.max(1, rect.height);
+      const px = nx * rect.width;
+      const py = ny * rect.height;
+
+      const handleKeys = ['p0', 'p1', 'p2', 'p3'];
+      const hitRadiusPx = 18;
+
+      if (state.showHandles) {
+        for (const key of handleKeys) {
+          const hx = state[key].x * rect.width;
+          const hy = state[key].y * rect.height;
+          const dist = Math.hypot(px - hx, py - hy);
+          if (dist <= hitRadiusPx) {
+            return { type: key, t: 0.5 };
+          }
+        }
+      }
+
+      // Prüfen, ob direkt auf die Kurve geklickt/gezogen wird
+      let bestT = 0.5;
+      let bestDistPx = Infinity;
+      const samples = 100;
+
+      for (let i = 0; i <= samples; i++) {
+        const t = i / samples;
+        const pt = evalCubicBezier(state.p0, state.p1, state.p2, state.p3, t);
+        const sx = pt.x * rect.width;
+        const sy = pt.y * rect.height;
+        const d = Math.hypot(px - sx, py - sy);
+        if (d < bestDistPx) {
+          bestDistPx = d;
+          bestT = t;
+        }
+      }
+
+      // Etwas großzügigerer Trefferbereich für organisches Biegen direkt auf der Kurve
+      if (bestDistPx <= 22 / Math.max(0.7, Math.min(1.4, aspect * 0.6))) {
+        return { type: 'curve', t: bestT };
+      }
+
+      return null;
+    }
+
+    /**
+     * Wandelt eine gezeichnete Freihand-Punktkette in eine glatte kubische Bézier-Kurve um.
+     */
+    function fitFreehandToCubicBezier(rawPoints) {
+      if (!rawPoints || rawPoints.length < 2) return null;
+
+      // Glättung der Rohpunkte mit gleitendem Fenster
+      const smoothed = rawPoints.map((pt, idx) => {
+        const start = Math.max(0, idx - 2);
+        const end = Math.min(rawPoints.length - 1, idx + 2);
+        let sumX = 0;
+        let sumY = 0;
+        let count = 0;
+        for (let i = start; i <= end; i++) {
+          sumX += rawPoints[i].x;
+          sumY += rawPoints[i].y;
+          count++;
+        }
+        return { x: sumX / count, y: sumY / count };
+      });
+
+      const first = smoothed[0];
+      const last = smoothed[smoothed.length - 1];
+
+      // Punkte bei t ≈ 1/3 und t ≈ 2/3 entlang der Pfadlänge abgreifen
+      const idxThird = Math.max(1, Math.floor((smoothed.length - 1) * 0.33));
+      const idxTwoThirds = Math.min(smoothed.length - 2, Math.floor((smoothed.length - 1) * 0.67));
+
+      const q1 = smoothed[idxThird];
+      const q2 = smoothed[idxTwoThirds];
+
+      // Inverse kubische Bézier-Interpolation für P1 und P2 bei t = 1/3 und t = 2/3:
+      // B(1/3) = (8/27)*P0 + (12/27)*P1 + (6/27)*P2 + (1/27)*P3
+      // B(2/3) = (1/27)*P0 + (6/27)*P1 + (12/27)*P2 + (8/27)*P3
+      const rhs1X = q1.x - (8 / 27) * first.x - (1 / 27) * last.x;
+      const rhs1Y = q1.y - (8 / 27) * first.y - (1 / 27) * last.y;
+      const rhs2X = q2.x - (1 / 27) * first.x - (8 / 27) * last.x;
+      const rhs2Y = q2.y - (1 / 27) * first.y - (8 / 27) * last.y;
+
+      // System 12*P1 + 6*P2 = 27*rhs1  und  6*P1 + 12*P2 = 27*rhs2 lösen
+      const p1x = clamp((2 * 27 * rhs1X - 27 * rhs2X) / 18, 0, 1);
+      const p1y = clamp((2 * 27 * rhs1Y - 27 * rhs2Y) / 18, 0, 1);
+      const p2x = clamp((2 * 27 * rhs2X - 27 * rhs1X) / 18, 0, 1);
+      const p2y = clamp((2 * 27 * rhs2Y - 27 * rhs1Y) / 18, 0, 1);
+
+      return {
+        p0: { x: clamp(first.x, 0, 1), y: clamp(first.y, 0, 1) },
+        p1: { x: p1x, y: p1y },
+        p2: { x: p2x, y: p2y },
+        p3: { x: clamp(last.x, 0, 1), y: clamp(last.y, 0, 1) }
+      };
+    }
+
+    overlayCanvas.addEventListener('pointerdown', (evt) => {
+      if (evt.button !== 0 && evt.pointerType === 'mouse') return;
+      overlayCanvas.setPointerCapture(evt.pointerId);
+
+      const pt = getNormalizedPointer(evt);
+      interaction.isInteracting = true;
+
+      if (state.mode === 'draw') {
+        interaction.isDrawingFreehand = true;
+        interaction.freehandPoints = [pt];
+        overlayCanvas.classList.add('is-dragging');
+        setStatus('Zeichne Kurve – zum Übernehmen loslassen', 'busy');
+        scheduleRender(true);
+        return;
+      }
+
+      const hit = hitTestCurveAndHandles(pt.x, pt.y);
+      if (hit) {
+        interaction.activeHandle = hit.type;
+        overlayCanvas.classList.add('is-dragging');
+
+        if (hit.type === 'curve') {
+          interaction.curveDragT = hit.t;
+          const curvePt = evalCubicBezier(state.p0, state.p1, state.p2, state.p3, hit.t);
+          interaction.curveDragOffsetY = pt.y - curvePt.y;
+          setStatus('Biege Kurve organisch...', 'busy');
+        } else {
+          setStatus(`Verschiebe Kontrollpunkt ${hit.type.toUpperCase()}...`, 'busy');
+        }
+        scheduleRender(true);
+      }
+    });
+
+    overlayCanvas.addEventListener('pointermove', (evt) => {
+      const pt = getNormalizedPointer(evt);
+
+      if (interaction.isDrawingFreehand) {
+        const lastPt = interaction.freehandPoints[interaction.freehandPoints.length - 1];
+        if (!lastPt || Math.hypot(pt.x - lastPt.x, pt.y - lastPt.y) > 0.004) {
+          interaction.freehandPoints.push(pt);
+          scheduleRender(true);
+        }
+        return;
+      }
+
+      if (interaction.activeHandle) {
+        if (interaction.activeHandle === 'curve') {
+          // Gewünschte Y-Position auf der Kurve an Position curveDragT
+          const desiredY = clamp(pt.y - interaction.curveDragOffsetY, 0.02, 0.98);
+          const currentPt = evalCubicBezier(state.p0, state.p1, state.p2, state.p3, interaction.curveDragT);
+          const deltaY = desiredY - currentPt.y;
+
+          // Gewichteter Einfluss auf P1 und P2 für geschmeidiges Biegen der Kurve
+          const t = interaction.curveDragT;
+          const w1 = (1 - t) * 1.45 + 0.35;
+          const w2 = t * 1.45 + 0.35;
+
+          state.p1.y = clamp(state.p1.y + deltaY * w1, 0, 1);
+          state.p2.y = clamp(state.p2.y + deltaY * w2, 0, 1);
+          state.p1.x = clamp(state.p1.x + (pt.x - currentPt.x) * 0.25, 0, 1);
+          state.p2.x = clamp(state.p2.x + (pt.x - currentPt.x) * 0.25, 0, 1);
+        } else {
+          state[interaction.activeHandle].x = pt.x;
+          state[interaction.activeHandle].y = pt.y;
+        }
+        scheduleRender(true);
+        return;
+      }
+
+      // Hover-Erkennung im Drag-Modus
+      if (state.mode === 'drag') {
+        const hit = hitTestCurveAndHandles(pt.x, pt.y);
+        const nextHover = hit ? hit.type : null;
+        if (nextHover !== interaction.hoveredHandle) {
+          interaction.hoveredHandle = nextHover;
+          overlayCanvas.style.cursor = nextHover ? 'grab' : 'default';
+          renderOverlay(overlayCanvas.width, overlayCanvas.height);
+        }
+      }
+    });
+
+    function finishPointerInteraction(evt) {
+      if (evt && overlayCanvas.hasPointerCapture(evt.pointerId)) {
+        overlayCanvas.releasePointerCapture(evt.pointerId);
+      }
+
+      if (interaction.isDrawingFreehand) {
+        interaction.isDrawingFreehand = false;
+        const fitted = fitFreehandToCubicBezier(interaction.freehandPoints);
+        interaction.freehandPoints = [];
+
+        if (fitted) {
+          state.p0 = fitted.p0;
+          state.p1 = fitted.p1;
+          state.p2 = fitted.p2;
+          state.p3 = fitted.p3;
+          setStatus('Freihandkurve in glatte Bézier-Kurve umgewandelt', 'success');
+        } else {
+          setStatus('Bereit · Kubische Bézier-SDF + Film-Grain', 'normal');
+        }
+      } else if (interaction.activeHandle) {
+        setStatus('Kurve aktualisiert', 'normal');
+      }
+
+      interaction.activeHandle = null;
+      interaction.isInteracting = false;
+      overlayCanvas.classList.remove('is-dragging');
+      scheduleRender(false);
+      saveStateSoon();
+    }
+
+    overlayCanvas.addEventListener('pointerup', finishPointerInteraction);
+    overlayCanvas.addEventListener('pointercancel', finishPointerInteraction);
+
+    /**
+     * =========================================================================
+     * UI-Synchronisation & Controls
+     * =========================================================================
+     */
+
+    function syncUI() {
+      ui.spreadSlider.value = state.spread;
+      ui.spreadVal.textContent = `${state.spread}%`;
+
+      ui.layerSlider.value = state.layering;
+      ui.layerVal.textContent = `${state.layering}%`;
+
+      ui.contrastSlider.value = state.contrast;
+      ui.contrastVal.textContent = `${state.contrast}%`;
+
+      ui.grainStrengthSlider.value = state.grainStrength;
+      ui.grainStrengthVal.textContent = `${state.grainStrength}%`;
+
+      const grainPx = (state.grainSize / 100).toFixed(2);
+      ui.grainSizeSlider.value = state.grainSize;
+      ui.grainSizeVal.textContent = `${grainPx} px`;
+
+      if (state.mode === 'drag') {
+        ui.modeDragBtn.classList.add('active');
+        ui.modeDrawBtn.classList.remove('active');
+        overlayCanvas.classList.remove('mode-draw');
+        ui.hintText.textContent = 'Tipp: P0–P3 verschieben oder direkt auf die Kurve ziehen, um sie organisch zu biegen.';
+      } else {
+        ui.modeDrawBtn.classList.add('active');
+        ui.modeDragBtn.classList.remove('active');
+        overlayCanvas.classList.add('mode-draw');
+        ui.hintText.textContent = 'Zeichenmodus: Mit gedrückter Maustaste eine Kurve zeichnen und loslassen.';
+      }
+
+      ui.toggleHandlesBtn.classList.toggle('is-active', state.showHandles);
+      ui.toggleHandlesBtn.querySelector('span').textContent = state.showHandles ? 'Handles: An' : 'Handles: Aus';
+
+      ui.invertBtn.classList.toggle('is-active', state.invert);
+
+      const isWebp = state.format === 'webp';
+      ui.fmtPngBtn.classList.toggle('active', !isWebp);
+      ui.fmtWebpBtn.classList.toggle('active', isWebp);
+      ui.fmtPngBtn.classList.toggle('active', !isWebp);
+      if (!isWebp) {
+        ui.fmtPngBtn.classList.add('active');
+        ui.fmtWebpBtn.classList.remove('active');
+      } else {
+        ui.fmtWebpBtn.classList.add('active');
+        ui.fmtPngBtn.classList.remove('active');
+      }
+
+      ui.webpQualityBox.classList.toggle('visible', isWebp);
+      const qFloat = (state.webpQuality / 100).toFixed(2);
+      ui.webpQualitySlider.value = state.webpQuality;
+      ui.webpQualityVal.textContent = qFloat;
+
+      ui.resolutionSelect.value = state.resolution;
+
+      // Während eines laufenden Exports zeigt der Knopf Fortschritt/Abbruch.
+      if (!exportJob) {
+        ui.exportBtn.textContent = isWebp
+          ? `WebP herunterladen (${qFloat})`
+          : 'PNG herunterladen';
+      }
+
+      syncDuotoneUI();
+    }
+
+    function bindSlider(slider, key, transformFn = null) {
+      slider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        state[key] = transformFn ? transformFn(val) : val;
+        syncUI();
+        scheduleRender(true);
+        saveStateSoon();
+      });
+      slider.addEventListener('change', () => {
+        scheduleRender(false);
+        saveStateSoon();
+      });
+    }
+
+    /**
+     * =========================================================================
+     * Duotone: Presets, Swatches, Hex-Felder
+     * =========================================================================
+     */
+
+    function buildPresetButtons() {
+      ui.presetRow.innerHTML = '';
+
+      for (const preset of DUOTONE_PRESETS) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'preset-btn';
+        btn.dataset.preset = preset.id;
+        btn.title = `${preset.name} · Schatten ${preset.dark} · Licht ${preset.light}`;
+        btn.setAttribute('aria-label', `Duotone-Preset ${preset.name}`);
+        btn.setAttribute('aria-pressed', 'false');
+        btn.style.background = cssRamp(preset.dark, preset.light);
+
+        const label = document.createElement('span');
+        label.className = 'preset-name';
+        label.textContent = preset.name;
+        btn.appendChild(label);
+
+        btn.addEventListener('click', () => applyPreset(preset.id));
+        ui.presetRow.appendChild(btn);
+      }
+    }
+
+    function applyPreset(id) {
+      const preset = DUOTONE_PRESETS.find((p) => p.id === id);
+      if (!preset) return;
+
+      state.colorDark = preset.dark;
+      state.colorLight = preset.light;
+      state.preset = preset.id;
+      syncUI();
+      scheduleRender(false);
+      saveStateSoon();
+      setStatus(`Duotone-Preset: ${preset.name}`, 'normal');
+    }
+
+    /**
+     * Setzt eine Duotone-Farbe. fast=true nutzt den billigen Pfad (z. B. während
+     * der System-Farbwähler offen ist), der anschließende change/blur schärft nach.
+     */
+    function setDuotoneColor(key, hex, fast = false) {
+      const normalized = normalizeHex(hex);
+      if (!normalized) return false;
+      if (state[key] === normalized) return true;
+
+      state[key] = normalized;
+      state.preset = matchPreset(state.colorDark, state.colorLight);
+      syncUI();
+      scheduleRender(fast);
+      saveStateSoon();
+      return true;
+    }
+
+    /** Spiegelt die Stops in Swatches, Hex-Felder, Preset-Markierung und Rampe. */
+    function syncDuotoneUI() {
+      ui.rampPreview.style.background = cssRamp(state.colorDark, state.colorLight);
+
+      // Ein fokussiertes Hex-Feld nicht überschreiben, sonst springt der Cursor.
+      if (document.activeElement !== ui.lightHexInput) ui.lightHexInput.value = state.colorLight;
+      if (document.activeElement !== ui.darkHexInput) ui.darkHexInput.value = state.colorDark;
+
+      ui.lightColorInput.value = state.colorLight;
+      ui.darkColorInput.value = state.colorDark;
+
+      for (const btn of ui.presetRow.querySelectorAll('.preset-btn')) {
+        const isActive = btn.dataset.preset === state.preset;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', String(isActive));
+      }
+    }
+
+    function bindHexField(input, key) {
+      input.addEventListener('input', () => {
+        const normalized = normalizeHex(input.value);
+
+        if (!normalized) {
+          // Ungültige Eingabe wird markiert, aber nie übernommen: der bisherige
+          // Zustand bleibt gültig, beim Verlassen wird der Text zurückgesetzt.
+          input.classList.add('invalid');
+          return;
+        }
+
+        input.classList.remove('invalid');
+        setDuotoneColor(key, normalized, true);
+      });
+
+      input.addEventListener('blur', () => {
+        input.classList.remove('invalid');
+        input.value = state[key];
+        scheduleRender(false);
+      });
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          input.blur();
+        }
+      });
+    }
+
+    ui.lightColorInput.addEventListener('input', () => setDuotoneColor('colorLight', ui.lightColorInput.value, true));
+    ui.lightColorInput.addEventListener('change', () => {
+      setDuotoneColor('colorLight', ui.lightColorInput.value);
+      setStatus(`Lichtseite: ${state.colorLight}`, 'normal');
+    });
+
+    ui.darkColorInput.addEventListener('input', () => setDuotoneColor('colorDark', ui.darkColorInput.value, true));
+    ui.darkColorInput.addEventListener('change', () => {
+      setDuotoneColor('colorDark', ui.darkColorInput.value);
+      setStatus(`Schattenseite: ${state.colorDark}`, 'normal');
+    });
+
+    bindHexField(ui.lightHexInput, 'colorLight');
+    bindHexField(ui.darkHexInput, 'colorDark');
+
+    /**
+     * =========================================================================
+     * Persistenz des letzten Stands (localStorage)
+     * =========================================================================
+     */
+
+    function collectState() {
+      return {
+        p0: { ...state.p0 },
+        p1: { ...state.p1 },
+        p2: { ...state.p2 },
+        p3: { ...state.p3 },
+        spread: state.spread,
+        layering: state.layering,
+        contrast: state.contrast,
+        grainStrength: state.grainStrength,
+        grainSize: state.grainSize,
+        invert: state.invert,
+        showHandles: state.showHandles,
+        mode: state.mode,
+        format: state.format,
+        webpQuality: state.webpQuality,
+        resolution: state.resolution,
+        seed: state.seed,
+        colorDark: state.colorDark,
+        colorLight: state.colorLight
+      };
+    }
+
+    function saveStateNow() {
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      if (!autosaveEnabled) return;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, state: collectState() }));
+      } catch (_) {
+        // Privater Modus oder voller Speicher: Persistenz ist optional, das
+        // Studio läuft ohne sie unverändert weiter.
+      }
+    }
+
+    function saveStateSoon() {
+      autosaveEnabled = true;
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveStateNow, 180);
+    }
+
+    function clearSavedState() {
+      autosaveEnabled = false;
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (_) {
+        // Siehe saveStateNow()
+      }
+    }
+
+    /**
+     * Lädt den letzten Stand. Jeder fehlende, falsche oder beschädigte Wert
+     * fällt einzeln auf seinen Default zurück statt den Start zu verhindern.
+     */
+    function loadSavedState() {
+      let saved = null;
+
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        saved = parsed && typeof parsed === 'object' ? parsed.state : null;
+      } catch (_) {
+        return false;
+      }
+
+      if (!saved || typeof saved !== 'object') return false;
+
+      const num = (value, min, max, fallback) =>
+        (typeof value === 'number' && isFinite(value)) ? clamp(value, min, max) : fallback;
+
+      const point = (value, fallback) =>
+        (value && typeof value.x === 'number' && typeof value.y === 'number'
+          && isFinite(value.x) && isFinite(value.y))
+          ? { x: clamp(value.x, 0, 1), y: clamp(value.y, 0, 1) }
+          : { ...fallback };
+
+      state.p0 = point(saved.p0, DEFAULT_CONFIG.p0);
+      state.p1 = point(saved.p1, DEFAULT_CONFIG.p1);
+      state.p2 = point(saved.p2, DEFAULT_CONFIG.p2);
+      state.p3 = point(saved.p3, DEFAULT_CONFIG.p3);
+
+      state.spread = Math.round(num(saved.spread, 12, 100, DEFAULT_CONFIG.spread));
+      state.layering = Math.round(num(saved.layering, 0, 100, DEFAULT_CONFIG.layering));
+      state.contrast = Math.round(num(saved.contrast, 0, 100, DEFAULT_CONFIG.contrast));
+      state.grainStrength = Math.round(num(saved.grainStrength, 0, 100, DEFAULT_CONFIG.grainStrength));
+      state.grainSize = Math.round(num(saved.grainSize, 100, 260, DEFAULT_CONFIG.grainSize));
+      state.webpQuality = Math.round(num(saved.webpQuality, 10, 100, DEFAULT_CONFIG.webpQuality));
+      state.seed = num(saved.seed, 0, 4294967295, DEFAULT_CONFIG.seed) >>> 0;
+
+      state.invert = saved.invert === true;
+      state.showHandles = saved.showHandles !== false;
+      state.mode = saved.mode === 'draw' ? 'draw' : 'drag';
+      state.format = saved.format === 'webp' ? 'webp' : 'png';
+      state.resolution = /^\d{3,5}x\d{3,5}$/.test(saved.resolution)
+        ? saved.resolution
+        : DEFAULT_CONFIG.resolution;
+
+      state.colorDark = normalizeHex(saved.colorDark) || DEFAULT_CONFIG.colorDark;
+      state.colorLight = normalizeHex(saved.colorLight) || DEFAULT_CONFIG.colorLight;
+      // Preset immer aus den geladenen Farben ableiten, nicht aus der Datei übernehmen.
+      state.preset = matchPreset(state.colorDark, state.colorLight);
+
+      return true;
+    }
+
+    bindSlider(ui.spreadSlider, 'spread');
+    bindSlider(ui.layerSlider, 'layering');
+    bindSlider(ui.contrastSlider, 'contrast');
+    bindSlider(ui.grainStrengthSlider, 'grainStrength');
+    bindSlider(ui.grainSizeSlider, 'grainSize');
+    bindSlider(ui.webpQualitySlider, 'webpQuality');
+
+    ui.modeDragBtn.addEventListener('click', () => {
+      state.mode = 'drag';
+      syncUI();
+      renderOverlay(overlayCanvas.width, overlayCanvas.height);
+      saveStateSoon();
+    });
+
+    ui.modeDrawBtn.addEventListener('click', () => {
+      state.mode = 'draw';
+      syncUI();
+      renderOverlay(overlayCanvas.width, overlayCanvas.height);
+      saveStateSoon();
+    });
+
+    ui.toggleHandlesBtn.addEventListener('click', () => {
+      state.showHandles = !state.showHandles;
+      syncUI();
+      renderOverlay(overlayCanvas.width, overlayCanvas.height);
+      saveStateSoon();
+    });
+
+    ui.invertBtn.addEventListener('click', () => {
+      state.invert = !state.invert;
+      syncUI();
+      scheduleRender(false);
+      saveStateSoon();
+      setStatus(state.invert ? 'Hell/Dunkel invertiert' : 'Standard-Hell/Dunkel aktiv', 'normal');
+    });
+
+    ui.randomBtn.addEventListener('click', () => {
+      const rand = (min, max) => min + Math.random() * (max - min);
+      state.p0 = { x: rand(0.02, 0.14), y: rand(0.55, 0.88) };
+      state.p1 = { x: rand(0.22, 0.45), y: rand(0.15, 0.85) };
+      state.p2 = { x: rand(0.55, 0.78), y: rand(0.15, 0.85) };
+      state.p3 = { x: rand(0.86, 0.98), y: rand(0.12, 0.48) };
+      syncUI();
+      scheduleRender(false);
+      saveStateSoon();
+      setStatus('Neue zufällige Bézier-Kurve erzeugt', 'success');
+    });
+
+    ui.reseedBtn.addEventListener('click', () => {
+      state.seed = ((state.seed + Math.floor(1000 + Math.random() * 8999)) ^ 0x5bd1e995) >>> 0;
+      scheduleRender(false);
+      saveStateSoon();
+      setStatus(`Neuer Filmkorn-Seed (#${state.seed}) gerendert`, 'success');
+    });
+
+    ui.resetBtn.addEventListener('click', () => {
+      Object.assign(state, {
+        ...DEFAULT_CONFIG,
+        p0: { ...DEFAULT_CONFIG.p0 },
+        p1: { ...DEFAULT_CONFIG.p1 },
+        p2: { ...DEFAULT_CONFIG.p2 },
+        p3: { ...DEFAULT_CONFIG.p3 }
+      });
+      clearSavedState();
+      syncUI();
+      scheduleRender(false);
+      setStatus('Alle Werte auf Standard zurückgesetzt (gespeicherter Stand gelöscht)', 'normal');
+    });
+
+    ui.collapseBtn.addEventListener('click', () => {
+      const isCollapsed = ui.panelBody.classList.toggle('collapsed');
+      ui.collapseBtn.textContent = isCollapsed ? '▼' : '▲';
+      ui.collapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+    });
+
+    ui.fmtPngBtn.addEventListener('click', () => {
+      state.format = 'png';
+      ui.fallbackBox.classList.remove('visible');
+      syncUI();
+      saveStateSoon();
+    });
+
+    ui.fmtWebpBtn.addEventListener('click', () => {
+      state.format = 'webp';
+      ui.fallbackBox.classList.remove('visible');
+      syncUI();
+      saveStateSoon();
+    });
+
+    ui.resolutionSelect.addEventListener('change', () => {
+      state.resolution = ui.resolutionSelect.value;
+      syncUI();
+      saveStateSoon();
+    });
+
+    /**
+     * =========================================================================
+     * Robuster Export-Mechanismus (PNG & WebP in FHD / QHD / 4K mit Fallbacks)
+     * =========================================================================
+     */
+
+    function clearFallbackUrl() {
+      if (currentFallbackObjectUrl) {
+        URL.revokeObjectURL(currentFallbackObjectUrl);
+        currentFallbackObjectUrl = null;
+      }
+    }
+
+    function showSandboxFallback(blob, filename, mimeType) {
+      clearFallbackUrl();
+      try {
+        currentFallbackObjectUrl = URL.createObjectURL(blob);
+        ui.fallbackLink.href = currentFallbackObjectUrl;
+        ui.fallbackLink.download = filename;
+      } catch (_) {
+        // Falls Blob-URLs nicht erlaubt sind, Data-URL als letzten Fallback nutzen
+        try {
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = 4;
+          tempCanvas.height = 4;
+          ui.fallbackLink.href = tempCanvas.toDataURL(mimeType);
+          ui.fallbackLink.download = filename;
+        } catch (__) {
+          // Kein Link möglich
+        }
+      }
+      ui.fallbackMsg.textContent = `Download durch Umgebung blockiert (${filename}):`;
+      ui.fallbackBox.classList.add('visible');
+    }
+
+    function triggerBlobDownload(blob, filename, mimeType) {
+      let objectUrl = null;
+      try {
+        objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.style.display = 'none';
+        anchor.href = objectUrl;
+        anchor.download = filename;
+        anchor.rel = 'noopener';
+
+        document.body.appendChild(anchor);
+        anchor.click();
+
+        // Nach kurzer Verzögerung aufräumen
+        setTimeout(() => {
+          if (anchor.parentNode) {
+            anchor.parentNode.removeChild(anchor);
+          }
+          if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+          }
+        }, 2500);
+
+        ui.fallbackBox.classList.remove('visible');
+        setStatus(`Exportiert: ${filename}`, 'success');
+      } catch (err) {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+        showSandboxFallback(blob, filename, mimeType);
+        setStatus('Automatischer Download blockiert – nutze den Fallback-Link', 'error');
+      }
+    }
+
+    function canvasToBlobAsync(canvas, mimeType, quality) {
+      return new Promise((resolve, reject) => {
+        try {
+          canvas.toBlob((blob) => {
+            if (blob && blob.size > 0) {
+              resolve(blob);
+              return;
+            }
+
+            // Fallback über toDataURL -> Blob, falls toBlob null liefert
+            try {
+              const dataUrl = typeof quality === 'number'
+                ? canvas.toDataURL(mimeType, quality)
+                : canvas.toDataURL(mimeType);
+
+              const parts = dataUrl.split(',');
+              if (parts.length !== 2) {
+                reject(new Error('Ungültige Data-URL erzeugt.'));
+                return;
+              }
+              const meta = parts[0];
+              const base64 = parts[1];
+              const actualMime = (meta.match(/data:([^;]+)/) || [])[1] || mimeType;
+              const byteString = atob(base64);
+              const ab = new ArrayBuffer(byteString.length);
+              const ia = new Uint8Array(ab);
+              for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+              }
+              resolve(new Blob([ab], { type: actualMime }));
+            } catch (fallbackErr) {
+              reject(fallbackErr);
+            }
+          }, mimeType, quality);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    function setExportButtonRunning(running, progressPercent = null) {
+      if (!running) return syncUI();
+
+      ui.exportBtn.textContent = progressPercent === null
+        ? 'Export abbrechen'
+        : `Export abbrechen (${progressPercent}%)`;
+    }
+
+    /**
+     * Rendert die Exportauflösung streifenweise über rAF. Der Plan friert alle
+     * Parameter (inklusive LUT) beim Start ein, ein Reglerwechsel während des
+     * Exports ändert das Ergebnis also nicht mehr.
+     */
+    function renderOffscreenProgressively(offCtx, width, height, onProgress) {
+      return new Promise((resolve) => {
+        const plan = createScenePlan(offCtx, width, height, state, false);
+
+        exportJob = runProgressiveRender(plan, offCtx, {
+          bandHeight: Math.max(1, Math.floor(BAND_TARGET_PIXELS / Math.max(1, width))),
+          onProgress,
+          onDone: () => {
+            exportJob = null;
+            resolve(true);
+          },
+          onCancel: () => {
+            exportJob = null;
+            resolve(false);
+          }
+        });
+      });
+    }
+
+    async function handleExport() {
+      // Zweiter Klick während eines Laufs bricht ab.
+      if (exportJob) {
+        exportJob.cancel();
+        setStatus('Export abgebrochen', 'normal');
+        return;
+      }
+
+      const [wStr, hStr] = ui.resolutionSelect.value.split('x');
+      const targetW = parseInt(wStr, 10) || 2560;
+      const targetH = parseInt(hStr, 10) || 1440;
+
+      const isWebp = state.format === 'webp';
+      const mimeType = isWebp ? 'image/webp' : 'image/png';
+      const ext = isWebp ? 'webp' : 'png';
+      const quality = isWebp ? clamp(state.webpQuality / 100, 0.1, 1.0) : undefined;
+      const filename = `grain-curve-${targetW}x${targetH}.${ext}`;
+
+      ui.fallbackBox.classList.remove('visible');
+      setExportButtonRunning(true, 0);
+      setStatus(`Rendere ${targetW}×${targetH} als ${ext.toUpperCase()} … 0%`, 'busy');
+
+      // Kurz Yield geben, damit UI-Status sofort sichtbar wird
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      try {
+        const offscreen = document.createElement('canvas');
+        offscreen.width = targetW;
+        offscreen.height = targetH;
+        const offCtx = offscreen.getContext('2d', { alpha: false });
+
+        if (!offCtx) {
+          throw new Error('Offscreen 2D-Kontext konnte nicht initialisiert werden.');
+        }
+
+        // Volle Qualität ohne Overlay-Handles rendern, bedienbar und abbrechbar
+        const completed = await renderOffscreenProgressively(offCtx, targetW, targetH, (progress) => {
+          const pct = Math.round(progress * 100);
+          setExportButtonRunning(true, pct);
+          setStatus(`Rendere ${targetW}×${targetH} als ${ext.toUpperCase()} … ${pct}%`, 'busy');
+        });
+
+        if (!completed) {
+          setStatus('Export abgebrochen', 'normal');
+          return;
+        }
+
+        setStatus(`Kodiere ${ext.toUpperCase()} (${targetW}×${targetH}) …`, 'busy');
+
+        let blob = await canvasToBlobAsync(offscreen, mimeType, quality);
+
+        // Falls ein älterer Browser WebP-Encoding verweigert, sauber auf PNG zurückfallen
+        let finalFilename = filename;
+        let finalMime = mimeType;
+        if (isWebp && blob.type !== 'image/webp') {
+          blob = await canvasToBlobAsync(offscreen, 'image/png', undefined);
+          finalFilename = `grain-curve-${targetW}x${targetH}.png`;
+          finalMime = 'image/png';
+          setStatus('WebP nicht unterstützt – Fallback auf PNG...', 'busy');
+        }
+
+        triggerBlobDownload(blob, finalFilename, finalMime);
+      } catch (err) {
+        console.error('Exportfehler:', err);
+        setStatus(`Exportfehler: ${err && err.message ? err.message : 'Unbekannter Fehler'}`, 'error');
+      } finally {
+        exportJob = null;
+        syncUI();
+      }
+    }
+
+    ui.exportBtn.addEventListener('click', handleExport);
+
+    // Fenstergrößenänderung überwachen (bricht auch einen laufenden Scharf-Render ab,
+    // weil dessen Plan an die alte Canvas-Größe gebunden ist)
+    window.addEventListener('resize', () => {
+      scheduleRender(false);
+    });
+
+    // Letzten Stand beim Verlassen sofort sichern, ohne auf das Debounce zu warten
+    window.addEventListener('pagehide', saveStateNow);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveStateNow();
+    });
+
+    // Initiales Rendering nach Laden des Dokuments starten
+    window.addEventListener('DOMContentLoaded', () => {
+      const restored = loadSavedState();
+
+      buildPresetButtons();
+      syncUI();
+      resizeCanvases();
+
+      // Start immer als billiger Entwurf: vorher kostete allein das erste Bild
+      // auf einem 2880×1800-Canvas über 4 Sekunden.
+      renderDraftPreview(false);
+      renderOverlay(overlayCanvas.width, overlayCanvas.height);
+
+      const target = previewSizeFor(gradientCanvas.width, gradientCanvas.height);
+      setStatus(
+        restored
+          ? `Letzten Stand geladen · Entwurf ${target.width}×${target.height}`
+          : 'Bereit · Kubische Bézier-SDF + Film-Grain',
+        restored ? 'success' : 'normal'
+      );
+      updatePreviewNote();
+    });
+  </script>
+</body>
+</html>
