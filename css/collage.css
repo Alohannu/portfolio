@@ -137,6 +137,29 @@
   min-height: 24vh;
 }
 
+/* ---------- Ansicht 3 (eggo): dieselbe Collage mit nur drei Clips ----------
+   Die drei Quellvideos sind hochkant (eggo-story 720x1280, eggo-campaign-1/2
+   720x904). Im 5er-Mosaik oben belegten sie nur Slot 1, 2 und 3 - die
+   untere rechte Rasterhaelfte bliebe schwarz. Sie stehen deshalb in EINER
+   Reihe zu dritt, je zwei der sechs Spalten breit: drei gleich grosse,
+   leicht hochkante Kacheln in derselben Buehne und Hoehe wie in Ansicht 1.
+   Nur ab 900px Breite - darunter stapelt die Regel aus dem Media-Query
+   unten die Kacheln ohnehin untereinander.
+   Die Grenze ist bewusst 900px und nicht 901px: der Media-Query unten
+   heisst (max-width: 900px), die beiden Bedingungen ueberlappen sich also
+   in genau einem Punkt statt eine Luecke zu lassen. Mit 901px faellt jede
+   gebrochene Breite dazwischen (z.B. 900.5px durch Browser-Zoom) durch
+   BEIDE Regeln und die drei Kacheln landen wieder im 5er-Mosaik mit
+   leerer unterer Rasterhaelfte. Bei genau 900px gewinnen unten die
+   !important-Regeln (grid-column/grid-row) und stapeln weiter. */
+@media (min-width: 900px) {
+  .collage--trio .collage__grid { grid-template-rows: 1fr; }
+  .collage--trio .collage__grid > .collage__slot:nth-child(n) {
+    grid-column: span 2;
+    grid-row: 1;
+  }
+}
+
 /* Jeder Slot ist eine Kachel im Raster. Es spielt immer nur EINER –
    alle anderen bleiben weiss. Dadurch laeuft nur ein Decoder. */
 .collage__slot {
@@ -244,4 +267,113 @@
 .collage__more-link:focus-visible {
   border-color: rgba(255, 255, 255, .7);
   background: rgba(255, 255, 255, .08);
+}
+
+/* ==========================================================================
+   Ansicht 3 (eggo): klickbare Bild-Collage
+
+   Dieselbe Machart wie die "selected works"-Abschnitte (schwarzer Grund,
+   Kopfzeile, abgerundete Kacheln in einer Reihe), aber die Kacheln sind
+   Bilder: ein Klick oeffnet sie in der Bild-Ansicht (js/imageviewer.js,
+   Vertrag: data-viewer-src am <button>; der Klick wird auf document
+   delegiert, hier ist deshalb kein eigenes Skript noetig).
+
+   WARUM die Kacheln unterschiedlich breit sind: die fuenf eggo-Motive sind
+   hochkant (703x1260, 703x1004, 704x882, 703x1004, 703x1004). In gleich
+   breiten Kacheln muesste "object-fit: cover" die Koepfe anschneiden. Die
+   Breite waechst deshalb im Verhaeltnis des Motivs: flex-grow je Kachel
+   = Breite/Hoehe (558 : 700 : 798 : 700 : 700). Bei einer Kachelreihe von
+   rund 1240 px und 40 vh Hoehe weicht das Verhaeltnis nur um rund ein
+   Prozent ab - der Rest wird von "cover" aufgefangen, ohne dass ein Motiv
+   sichtbar beschnitten wird.
+   ========================================================================== */
+.collage--bilder {
+  /* Anders als die gepinnten Collagen steht dieser Abschnitt normal im
+     Fluss (kein .collage__scrub) - er braucht deshalb auch unten Luft. */
+  padding: 12vh 0 12vh;
+}
+
+/* Kopf wie .collage--intro: der seitliche Einzug sitzt am Kopf, nicht am
+   zentrierten Kasten - sonst addieren sich beide bei breiten Fenstern
+   (gemessen dort: 306 statt 210 px bei 1920 px). */
+.collage--bilder .collage__head {
+  padding: 0 5vw;
+  max-width: min(1500px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: content-box;
+}
+
+.imgcollage {
+  display: flex;
+  gap: clamp(8px, 1.1vw, 20px);
+  /* KEIN width: 100%: mit box-sizing: content-box wuerde die Breite sonst
+     ZUSAETZLICH zum seitlichen Padding gelten und die Reihe um 2 x 5vw
+     ueber den Rand laufen (gemessen: Kachelreihe 1440 statt 1296 px breit,
+     die Kacheln dadurch rund 10 % breiter als ihre Motive). */
+  max-width: min(1500px, 100%);
+  margin: 0 auto;
+  padding: 0 5vw;
+  box-sizing: content-box;
+  /* Derselbe Radius wie im Raster der Video-Collage. */
+  --radius: clamp(8px, 1vw, 18px);
+}
+
+.imgcollage__tile {
+  /* Grundwert 700 (das Verhaeltnis von eggo-2/4/5); die Kacheln mit
+     anderem Seitenverhaeltnis ueberschreiben flex-grow weiter unten. */
+  flex: 700 1 0;
+  height: clamp(200px, 40vh, 440px);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #000;
+  border-radius: var(--radius, 14px);
+  overflow: hidden;
+  position: relative;
+  display: block;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.imgcollage__tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  transition: transform .5s cubic-bezier(.22, .61, .36, 1);
+}
+
+/* Klickbare Kachel: die Vergroesserung zeigt, dass hier etwas aufgeht. */
+.imgcollage__tile:hover img { transform: scale(1.03); }
+.imgcollage__tile:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+/* Kachelbreite = Seitenverhaeltnis des Motivs (Breite/Hoehe, x1000):
+   eggo-1 703/1260, eggo-2 703/1004, eggo-3 704/882, eggo-4 703/1004,
+   eggo-5 703/1004. */
+.imgcollage__tile:nth-child(1) { flex-grow: 558; }
+.imgcollage__tile:nth-child(2) { flex-grow: 700; }
+.imgcollage__tile:nth-child(3) { flex-grow: 798; }
+.imgcollage__tile:nth-child(4) { flex-grow: 700; }
+.imgcollage__tile:nth-child(5) { flex-grow: 700; }
+
+/* Schmal: eine Spalte mit natuerlichen Hoehen - wie die uebrigen Collagen.
+   flex: none ist noetig, weil flex-basis 0 in einer Spalte die Hoehe auf 0
+   setzen wuerde. */
+@media (max-width: 900px) {
+  .collage--bilder { padding: 10vh 0 12vh; }
+  .imgcollage { flex-direction: column; }
+  .imgcollage__tile { flex: none; height: auto; }
+  .imgcollage__tile img { height: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imgcollage__tile img { transition: none; }
+  .imgcollage__tile:hover img { transform: none; }
 }

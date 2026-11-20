@@ -1,0 +1,78 @@
+/* ==========================================================================
+   Ansicht 3: Vorhang - eggo, AI Sunglass Brand
+
+   Uebernommen aus dem Referenzstand (portfolio-yytrieu, css/style.css,
+   Abschnitt "Vorhang-Effekt"). Dort hingen die Regeln an der Klasse .js,
+   weil der Referenzstand auch ohne JavaScript lesbar sein soll (Fallback:
+   drei Bilder untereinander). Diese Fassung hier ist ohnehin die
+   JS-getriebene Track-Variante, deshalb gelten die Regeln immer.
+
+   Effekt: Der Abschnitt ist 300vh hoch, die Buehne klebt oben. Bild 2 und
+   Bild 3 wachsen per clip-path von unten ueber Bild 1 - der Fortschritt
+   kommt 1:1 aus der Scrollposition (js/curtain.js), ohne Easing und
+   umkehrbar.
+
+   Im Track kommt die Ansicht per Schwenk von rechts herein. Waehrend
+   dieses Schwenks steht Bild 1 still: js/curtain.js zieht die
+   Schwenkstrecke (window.TurnTrack.pan) vom Scrollfortschritt ab - genau
+   wie js/script.js es beim Serum-Hero macht. Sonst waere Bild 2 beim
+   Ankommen bereits hochgefahren.
+   ========================================================================== */
+
+.curtain {
+  position: relative;
+  z-index: 9;
+  background: #d6d8d5;
+  /* Vier Bildschirmhoehen. Der Referenzstand hatte 300vh (Buehne + zwei
+     Steigungen). Hier kommt eine dazu, weil der Schwenk - genau wie beim
+     Serum-Hero - schon eine Bildschirmhoehe der Ansicht verbraucht, bevor
+     der Vorhang ueberhaupt anfaengt:
+       100vh Buehne (stehend)
+     + 100vh Schwenk  (js/track.js zieht die Ansicht um pan px hoch)
+     + 200vh Vorhang  (Bild 2, dann Bild 3)
+     Ohne die vierte Hoehe waere am Dokumentende erst Bild 2 oben. */
+  height: 400vh;
+}
+
+.curtain__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  /* Die hochfahrenden Bilder sind am Rand abgeschnitten - ohne das wuerden
+     sie beim Hochfahren ueber die Buehne hinausragen. */
+  overflow: hidden;
+  background: #d6d8d5;
+}
+
+.curtain__img {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Reihenfolge im Stapel: Bild 1 unten, darueber der Titel, darueber die
+   beiden hereinwachsenden Bilder. */
+.curtain__img--1 { z-index: 1; }
+
+.curtain__overlay {
+  /* .stage__overlay bringt Position, Zentrierung und Abdunklung mit. */
+  z-index: 2;
+  height: 100%;
+  will-change: opacity;
+}
+
+.curtain__img--2 {
+  z-index: 3;
+  clip-path: inset(100% 0 0 0);
+  will-change: clip-path;
+}
+
+.curtain__img--3 {
+  z-index: 4;
+  clip-path: inset(100% 0 0 0);
+  will-change: clip-path;
+}

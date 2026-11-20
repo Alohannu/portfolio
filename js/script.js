@@ -158,17 +158,87 @@
 
   update();
 
-  /* ---------- Projekt 2: Kampagnenvideo (verhaelt sich wie video-2) ----------
-     Es spielt, sobald es im Bild steht, pausiert beim Verlassen und hat
-     einen eigenen Mute-Button. Damit nie zwei Videos gleichzeitig Ton
-     machen, schaltet der Schwenk das jeweils andere stumm (siehe
-     track.js -> window.SerumVideo.setAudible). */
+  /* ---------- Projekt 2: Kampagnenvideo (Scrubbing wie im Hero) ----------
+     Ablauf:
+       1. Waehrend des Schwenks (track.js schiebt die Buehne herein) steht
+          das erste Bild still, die Ueberschrift liegt darueber.
+       2. Sobald die Ansicht angekommen ist, laeuft das Video mit Ton von
+          vorn - nicht erst beim Scrollen. Es laeuft weiter, auch wenn das
+          Scrollen anhaelt ("Ton ist einfach an").
+          Beim Vorwaerts-Scrollen durch die Strecke wird die Abspielzeit am
+          Scrollfortschritt gehalten, aber nur bei groesserer Abweichung
+          (0,8 s) nachgezogen - staendiges Seeking wuerde den Ton abreissen
+          lassen (wie im Original "Ton laeuft mit").
+          Rueckwaerts bleibt es still und das Bild folgt dem Scroll.
+       3. Am Ende der Strecke laeuft das Video mit Ton weiter - nur wenn
+          der Scrub es nicht bis dorthin mitgenommen hat, von vorn.
+
+     Unterschied zum Hero: dort sind es zwei Videos (intro.mp4 wird
+     gescrubbt, intro-video.mp4 spielt danach). Hier gibt es nur ein
+     Kampagnenvideo; es wird gescrubbt und danach abgespielt.
+
+     Damit nie zwei Videos gleichzeitig Ton machen, schaltet der Schwenk
+     das jeweils andere stumm (siehe track.js -> window.SerumVideo).
+
+     WARUM der Ton nicht mehr am Scrollen haengt: der Browser erlaubt Ton
+     ohne Nutzergeste gar nicht (Autoplay-Politik). Haengt er zusaetzlich
+     am Scrollen, ist er praktisch "durchgehend aus" - vor allem, wenn die
+     erste Geste verbraucht ist, bevor diese Ansicht im Bild steht. */
+  var serumHero = document.getElementById("serumHero");
+  var serumOverlay = document.getElementById("serumOverlay");
   var serumVideo = document.getElementById("serumVideo");
   var serumToggle = document.getElementById("serumSoundToggle");
 
   if (serumVideo) {
-    var serumVisible = false;
+    /* Scrollstrecke des Scrubbings in Viewport-Hoehen - wie SCRUB_VH des
+       Heros oben. Muss zur Hoehe von .hero-wrapper--serum passen
+       (css/track.css: 500vh = 200vh Scrubbing + Halten). */
+    var SERUM_SCRUB_VH = 2;
+
+    var serumProgress = 0;         // 0 = Stillstand, 1 = durchgescrubbt
+    var serumPanelActive = false;  // Ansicht 2 ist eingeschwenkt (track.js)
+    var serumInView = false;       // Hero liegt im Viewport
+    var serumArrived = false;      // Schwenk vorbei: die Ansicht steht still
+    var serumPlaying = false;      // Play-Phase nach dem Scrubbing laeuft
+    var serumLastTime = -1;        // zuletzt gesetzte Scrub-Zeit
+    var serumTicking = false;
     var serumUserChoseMute = false;
+    var serumDir = 0;              // Scrollrichtung: 0 = noch kein Scroll-Event
+    var serumLastY = window.pageYOffset;
+    var serumDirTimer = 0;         // setzt die Richtung nach dem Scrollen zurueck
+    var serumScrubCarried = false; // der Vorwaerts-Scrub hat das Video mitgenommen
+
+    /* So lange nach dem letzten Scroll-Event gilt die Richtung noch. Danach
+       ist sie wieder 0 und das Video laeuft weiter mit Ton - auch wenn
+       zuletzt rueckwaerts gescrollt wurde. */
+    var SERUM_DIR_IDLE_MS = 300;
+
+    /* Hat der Browser schon eine echte Nutzergeste gesehen? Nur dann darf
+       ein play() mit Ton ueberhaupt gelingen - ohne Geste lehnt der Browser
+       es ab. Ohne diese Abfrage wuerde jedes Scroll-Event unnoetig ein
+       stummes play() versuchen und gleich wieder stumm schalten. */
+    var serumActivated = false;
+
+    function serumUserActivated() {
+      if (serumActivated) return true;
+      var ua = navigator.userActivation;
+      if (ua && ua.hasBeenActive) { serumActivated = true; return true; }
+      return false;
+    }
+
+    /* Ton nachholen, wenn er nur wegen der Autoplay-Politik aus ist (der
+       Nutzer hat ihn nie selbst abgeschaltet). WARUM nicht nur einmal beim
+       ersten Klick: der stumme Rueckfall in serumPlay() kann eintreten,
+       BEVOR diese Ansicht aktiv ist - dann war die erste Geste schon
+       verbraucht und der Ton blieb fuer den Rest des Besuchs aus
+       ("das Video laeuft, der Ton geht nicht los"). */
+    function serumTryUnmute() {
+      if (serumUserChoseMute || !serumVideo.muted) return false;
+      if (!serumUserActivated()) return false;
+      serumVideo.muted = false;
+      serumSyncToggle();
+      return true;
+    }
 
     function serumSyncToggle() {
       if (serumToggle) {
@@ -176,10 +246,18 @@
       }
     }
 
+    /* Stumm schalten darf nur ein echtes Autoplay-Verbot (NotAllowedError).
+       Ein AbortError dagegen heisst: das eigene pause() hat den play()-
+       Versuch unterbrochen (der Scrub pausiert bei jedem Rueckwaerts-Schritt
+       und beim Scrollstopp). Wird auch das als Autoplay-Verbot gewertet,
+       bleibt das Video dauerhaft stumm - auf 390x844 war der Ton am
+       Streckenende genau deshalb aus, obwohl das Video lief und im Bild
+       stand. */
     function serumPlay() {
       var pr = serumVideo.play();
       if (pr && pr.catch) {
-        pr.catch(function () {
+        pr.catch(function (e) {
+          if (e && e.name && e.name !== "NotAllowedError") return;
           if (!serumVideo.muted) {
             serumVideo.muted = true;
             serumSyncToggle();
@@ -189,73 +267,194 @@
       }
     }
 
-    /* Sichtbarkeit wird NICHT per IntersectionObserver auf dem Video
-       ermittelt: beim seitlichen Schwenk aendert sich die Position im
-       Viewport, ohne dass die Seite scrollt - der Observer meldete das
-       Video dann nicht zuverlaessig als sichtbar und der erste Frame
-       blieb stehen. Stattdessen sagt der Schwenk selbst Bescheid
-       (siehe setActive unten, aufgerufen von track.js). Der Observer
-       bleibt nur als Absicherung fuer den Fall, dass das Video anders
-       in den Blick kommt (z.B. Hash-Sprung beim Laden). */
-    /* setActive(true) startet die Wiedergabe und pausiert NICHT.
-       Die vorige Fassung pausierte bei document.hidden - dadurch blieb
-       das Video stehen, wenn die Seite (oder ein Headless-Browser) sich
-       als nicht sichtbar meldete. Ist der Tab wirklich im Hintergrund,
-       blockiert der Browser das Abspielen ohnehin; der
-       visibilitychange-Handler weiter unten startet es dann nach. */
-    function setActive(on) {
-      serumVisible = !!on;
-      if (on) {
-        if (!document.hidden) serumPlay();
+    /* Vorwaerts mitten in der Scrub-Strecke: die Abspielzeit wird hier am
+       Scrollfortschritt gehalten (Ton laeuft dabei weiter). */
+    function serumScrubbing() {
+      return serumDir > 0 && serumProgress > 0 && serumProgress < 1;
+    }
+
+    /* Ton und Bild laufen, sobald die Ansicht angekommen ist - auch ohne
+       Scrollen und auch nach einem Scrollstopp ("Ton ist einfach an").
+       Waehrend des Schwenks (noch nicht angekommen) und beim Rueckwaerts-
+       Scrollen bleibt das Bild stehen bzw. folgt still dem Scroll. */
+    function serumShouldPlay() {
+      if (!serumPanelActive || !serumInView || document.hidden) return false;
+      if (!serumArrived) return false;
+      return serumDir >= 0;
+    }
+
+    function serumSyncPlayback() {
+      if (serumShouldPlay()) {
+        serumTryUnmute();
+        if (serumVideo.paused) serumPlay();
       } else if (!serumVideo.paused) {
         serumVideo.pause();
       }
     }
 
-    if ("IntersectionObserver" in window) {
-      new IntersectionObserver(function (entries) {
-        var vis = entries[entries.length - 1].isIntersecting;
-        /* Nur uebernehmen, wenn er wirklich etwas sieht - sonst wuerde
-           ein spaetes "nicht sichtbar" das Video wieder anhalten. */
-        if (vis) setActive(true);
-      }, { threshold: 0.25 }).observe(serumVideo);
+    function serumUpdate() {
+      serumTicking = false;
+
+      /* Eine Layout-Abfrage fuer alles: Fortschritt und Sichtbarkeit. */
+      var rect = serumHero ? serumHero.getBoundingClientRect() : null;
+      var top = rect ? rect.top : 0;
+      if (reduceMotion) {
+        serumProgress = top <= -1 ? 1 : 0;
+        serumArrived = top <= -1;
+      } else {
+        /* Der Schwenk (js/track.js) schiebt die Buehne schon eine
+           Schwenkstrecke weit nach oben, waehrend sie noch seitlich
+           hereinkommt. Diese Strecke darf das Video nicht mit-scrubben:
+           sonst waere das Titelbild beim Ankommen der Ansicht bereits zur
+           Haelfte ausgeblendet. Die ersten `pan` Pixel halten deshalb das
+           erste Bild - erst danach ist die Ansicht "angekommen" und das
+           Video startet mit Ton. */
+        var panHold = window.TurnTrack && typeof window.TurnTrack.pan === "number"
+          ? window.TurnTrack.pan
+          : 0;
+        var travelled = -top - panHold;
+        serumArrived = travelled >= -4;
+        serumProgress = clamp(travelled / (window.innerHeight * SERUM_SCRUB_VH), 0, 1);
+      }
+      serumInView = !!rect && rect.bottom > 0 && top < window.innerHeight;
+
+      /* Ueberschrift wie im Hero ueber die ersten 60 % des Weges ausblenden */
+      if (serumOverlay) {
+        serumOverlay.style.opacity = reduceMotion
+          ? (serumProgress >= 1 ? "0" : "1")
+          : String(1 - clamp(serumProgress / FADE_END, 0, 1));
+      }
+
+      if (serumProgress >= 1) {
+        if (!serumPlaying) {
+          /* Scrub-Weg zu Ende: das Video laeuft mit Ton weiter. Nur wenn es
+             noch steht (Sprung, Deep-Link oder rueckwaerts gescrollt),
+             beginnt es von vorn - laeuft es schon, waere der Sprung auf 0
+             ein hoerbarer Aussetzer. */
+          serumPlaying = true;
+          if (!serumScrubCarried && serumVideo.paused) {
+            serumLastTime = -1;
+            try { serumVideo.currentTime = 0; } catch (e) {}
+          }
+          serumScrubCarried = false;
+        }
+      } else {
+        serumPlaying = false;
+        var d = serumVideo.duration;
+        if (d && isFinite(d)) {
+          var t = serumProgress * d;
+          if (serumScrubbing()) {
+            /* Vorwaerts: Ton laeuft mit. Die Abspielzeit folgt dem Scroll
+               nur bei groesserer Abweichung - staendiges Seeking wuerde den
+               Ton abreissen lassen (wie im Original: erst ab 0,8 s). */
+            serumScrubCarried = true;
+            if (Math.abs(t - serumVideo.currentTime) > 0.8) {
+              serumVideo.currentTime = t;
+            }
+            serumLastTime = t;
+          } else if (serumDir < 0) {
+            /* Rueckwaerts: kein Ton, das Bild folgt dem Scroll Frame fuer
+               Frame (wie bisher). Steht der Scroll wieder (serumDir 0),
+               laeuft das Video an dieser Stelle weiter - mit Ton. */
+            if (!serumVideo.paused) serumVideo.pause();
+            if (Math.abs(t - serumLastTime) > 0.01) {
+              serumVideo.currentTime = t;
+              serumLastTime = t;
+            }
+          }
+        } else if (!serumVideo.paused) {
+          serumVideo.pause();
+        }
+      }
+      serumSyncPlayback();
+    }
+
+    function serumRequestUpdate() {
+      if (!serumTicking) {
+        serumTicking = true;
+        requestAnimationFrame(serumUpdate);
+      }
+    }
+
+    /* Scrollrichtung merken: vorwaerts haelt die Abspielzeit am Scroll,
+       rueckwaerts folgt das Bild still dem Scroll. Ohne Scroll-Event bleibt
+       serumDir 0 - dann laeuft das Video trotzdem, sobald die Ansicht
+       angekommen ist ("Ton ist einfach an"). */
+    function serumOnScroll() {
+      var y = window.pageYOffset;
+      if (y !== serumLastY) {
+        serumDir = y > serumLastY ? 1 : -1;
+        serumLastY = y;
+      }
+      /* Richtung nach dem Scrollen zuruecksetzen: sonst bliebe der Ton aus,
+         nur weil zuletzt rueckwaerts gescrollt wurde - die Ansicht steht
+         dann sichtbar da und das Video waere still. */
+      clearTimeout(serumDirTimer);
+      serumDirTimer = setTimeout(function () {
+        serumDir = 0;
+        serumRequestUpdate();
+      }, SERUM_DIR_IDLE_MS);
+      serumRequestUpdate();
+    }
+
+    window.addEventListener("scroll", serumOnScroll, { passive: true });
+    window.addEventListener("resize", serumRequestUpdate);
+    serumVideo.addEventListener("loadedmetadata", serumRequestUpdate);
+
+    /* iOS liefert beim currentTime-Seeking erst Frames, wenn das Video
+       einmal angespielt wurde - wie beim Hero-Video. */
+    if (!reduceMotion) {
+      window.addEventListener("touchstart", function () {
+        var pr = serumVideo.play();
+        if (pr && pr.then) {
+          pr.then(function () { serumVideo.pause(); serumRequestUpdate(); }).catch(function () {});
+        }
+      }, { passive: true, once: true });
     }
 
     if (serumToggle) {
       serumToggle.addEventListener("click", function () {
-        serumUserChoseMute = true;
         serumVideo.muted = !serumVideo.muted;
+        /* "selbst stumm geschaltet" gilt nur, wenn der Klick wirklich stumm
+           macht. Dreht der Klick den Ton ein, bleibt das automatische
+           Einschalten scharf - sonst waere der Ton nach einem Klick, der
+           ihn einschalten sollte, fuer den Rest des Besuchs aus. */
+        serumUserChoseMute = serumVideo.muted;
         serumSyncToggle();
       });
     }
 
-    /* Ton ist Standard; blockiert der Browser das, wird beim ersten
-       Nutzerkontakt eingeschaltet - wie beim Hero. */
+    /* Ton ist Standard - genau wie beim Hero-Video in Track 1: das Video
+       wird sofort auf muted = false gesetzt und nicht erst beim Einschwenken
+       der Ansicht. Blockiert der Browser Ton ohne Nutzergeste, laeuft es
+       stumm und wird beim ersten Klick/Tastendruck/Touch eingeschaltet. */
+    serumVideo.muted = false;
+    serumSyncToggle();
+
+    /* Wie in Track 1, aber nicht nur beim allerersten Mal: der Ton wird bei
+       JEDER Geste nachgeholt. Sonst blieb er stumm, wenn die erste Geste
+       verbraucht war, bevor diese Ansicht im Bild stand. */
     ["pointerdown", "keydown", "touchend"].forEach(function (evt) {
       window.addEventListener(evt, function serumEnableSound(e) {
+        serumActivated = true;
         if (serumToggle && serumToggle.contains(e.target)) return;
-        window.removeEventListener(evt, serumEnableSound);
-        if (!serumUserChoseMute && serumVideo.muted && serumVisible) {
-          serumVideo.muted = false;
-          serumSyncToggle();
-        }
+        serumTryUnmute();
       }, { passive: true });
     });
 
-    document.addEventListener("visibilitychange", function () {
-      if (document.hidden) {
-        if (!serumVideo.paused) serumVideo.pause();
-      } else if (serumVisible) {
-        serumPlay();
-      }
-    });
+    document.addEventListener("visibilitychange", serumSyncPlayback);
 
     serumSyncToggle();
 
-    /* Von track.js aufgerufen, wenn die Ansicht gewechselt wird: das
-       sichtbare Video spielt und darf Ton haben, das andere nicht. */
+    /* Von track.js aufgerufen, wenn die Ansicht gewechselt wird: die
+       sichtbare Ansicht darf spielen und Ton haben, die andere nicht. */
     window.SerumVideo = {
-      setActive: setActive,
+      setActive: function (on) {
+        serumPanelActive = !!on;
+        /* Position sofort neu messen: der Schwenk setzt scrollY auf 0,
+           serumProgress stammte aber noch von der alten Scrollposition. */
+        serumUpdate();
+      },
       setAudible: function (on) {
         if (!on && !serumVideo.muted) {
           serumVideo.muted = true;
@@ -266,6 +465,8 @@
         }
       }
     };
+
+    serumUpdate();
   }
 
   /* ---------- Morph-Reveal (wiedervereinbar, Initialisierung über [data-morph]) ---------- */
@@ -417,8 +618,6 @@
      fuer #projekte: Projekt 1 hat zwei Spalten mit je 5 Bildern, Projekt 2
      eine Spalte mit 6. Jeder Abschnitt wird eigenstaendig aus seiner
      eigenen Scroll-Position gesteuert. */
-  var project = document.getElementById("projekte");
-
   function makeAvatarSwitcher(section) {
     var stacks = Array.prototype.slice.call(section.querySelectorAll(".avatar-stack")).map(function (el) {
       return Array.prototype.slice.call(el.querySelectorAll(".avatar"));
@@ -464,22 +663,147 @@
     if (section.querySelector(".avatar-stack")) makeAvatarSwitcher(section);
   });
 
-  /* ---------- Gesichtsbild: nicht mehr nötig ----------
-     Die frühere Animation schob das Gesicht in einen leeren Bildslot im
-     statischen comfyui.png. Abschnitt 5 zeigt jetzt den Vollbild-Graphen
-     ohne Bildslots; die Animation entfällt. Die Aufräumlogik in
-     faceFlight() bleibt als No-Op erhalten, damit der Morph-Aufruf nicht
-     bricht, falls die Elemente fehlen. */
+  /* ---------- Gesichtsbild: von Abschnitt 4 in den Node-Graph (Abschnitt 5) ----------
+     Das Porträt aus #konsistenz wandert als Klon (#faceFly) skaliert zum
+     Bild-Node "model" des Graphen. Dort geht es in das Node-Bild über:
+     media/projects/projekt-1/model.webp ist dieselbe Datei wie
+     media/projects/projekt-1/avatar-jason-face.webp, deshalb
+     ist die Übergabe am Ende ohne Kante. Eine CSS-Änderung braucht es nicht –
+     .face-fly ist position:fixed mit transform-origin 0 0, wir rechnen also
+     durchgehend in Viewport-Koordinaten (kein Stage-Ursprung).
+
+     Start- und Zielrechteck werden bei jedem Aufruf frisch gemessen, weil sich
+     beide mit dem Scrollen verschieben. */
   var faceOrig = document.querySelector("#konsistenz .face");
   var faceFly = document.getElementById("faceFly");
   var comfy = document.getElementById("comfy");
-  var faceFinal = comfy && comfy.querySelector(".comfy__face");
-  var stage4 = document.querySelector("#konsistenz .morph-reveal__stage");
-  var stage5 = document.querySelector("#tryon .morph-reveal__stage");
+
+  var faceTarget = null;  // Bild-Node des Graphen, entsteht erst nach dem Rendern
+  var faceBaseW = -1;     // zuletzt gesetzte Elementgröße des Klons
+  var faceBaseH = -1;
+
+  // Ziel-Node lazy auflösen: NodeView rendert den Graphen erst nach diesem Skript.
+  function findFaceTarget() {
+    if (faceTarget && faceTarget.isConnected) return faceTarget;
+    faceTarget = document.querySelector('#comfy-slot .nv-node[data-node="41"] .nv-img');
+    return faceTarget;
+  }
+
+  // Sichtbarer Inhalt eines object-fit:contain-Bildes. Bewusst NICHT die
+  // Elementbox: die ist bei contain größer als das Bild (383×547 statt 383×479),
+  // ein Start von der Elementbox aus springt beim ersten Frame.
+  function faceVisibleRect(img) {
+    var r = img.getBoundingClientRect();
+    var nw = img.naturalWidth, nh = img.naturalHeight;
+    if (!r.width || !r.height || !nw || !nh) return null;
+    var s = Math.min(r.width / nw, r.height / nh);
+    var w = nw * s, h = nh * s;
+    return { x: r.left + (r.width - w) / 2, y: r.top + (r.height - h) / 2, w: w, h: h };
+  }
+
+  // Liegt der Ziel-Node überwiegend im sichtbaren Canvas? Wurde vorher im
+  // Graphen nach unten gescrollt, steht er außerhalb; dann darf der Klon nicht
+  // fliegen – er liegt mit z-index 30 über allem und landete sonst über
+  // fremdem Seiteninhalt.
+  function faceTargetInCanvas(rect) {
+    var canvas = document.querySelector("#comfy-slot .nv-canvas");
+    if (!canvas || !canvas.isConnected) return false;
+    var c = canvas.getBoundingClientRect();
+    var ox = Math.min(rect.x + rect.w, c.right) - Math.max(rect.x, c.left);
+    var oy = Math.min(rect.y + rect.h, c.bottom) - Math.max(rect.y, c.top);
+    if (ox <= 0 || oy <= 0) return false;
+    return (ox * oy) / (rect.w * rect.h) >= 0.5;
+  }
+
+  // Der Model-Node ist während des Flugs schwarz verdeckt: die Kachel fliegt auf
+  // die schwarze Fläche, danach verschwinden Kachel und Schwärze und man sieht
+  // das echte Bild im Graphen. brightness(0) schwärzt genau die Bildfläche –
+  // kein zusätzliches Element, keine Layoutänderung, Node-Radius und -Kante
+  // bleiben. Die Fläche liegt im Graphen und wird so von der Morph-Maske
+  // mitgeclippt und wandert bei Pan/Zoom mit.
+  function faceMat(target, black) {
+    if (!target) return;
+    if (black) {
+      target.style.transition = "filter 180ms linear";
+      target.style.filter = "brightness(0)";
+    } else if (target.style.filter) {
+      target.style.filter = ""; // Übergang blendet das echte Bild zurück
+    }
+  }
+
+  // Ruhezustand: Klon weg, Original sichtbar. Jeder Zweifelsfall landet hier,
+  // damit nie ein Klon ohne gültiges Ziel stehen bleibt.
+  function faceRest() {
+    if (faceFly) faceFly.style.visibility = "hidden";
+    if (faceOrig) faceOrig.classList.remove("is-away");
+    faceMat(faceTarget, false);
+  }
+
+  // Deckt die Tryon-Bühne das Porträt wirklich zu? Nur dann darf das Original
+  // verschwinden. Unter prefers-reduced-motion ruft der Morph onProgress immer
+  // mit 1 auf, auch wenn #tryon noch weit unterhalb des Viewports steht
+  // (IntersectionObserver-Rand 100px); ohne diese Prüfung wäre das Porträt
+  // dauerhaft ausgeblendet – auch beim Zurückscrollen in Abschnitt 4.
+  function faceStageCovers() {
+    var stage = document.querySelector("#tryon .morph-reveal__stage");
+    var start = faceOrig && faceVisibleRect(faceOrig);
+    if (!stage || !start) return false;
+    var s = stage.getBoundingClientRect();
+    var ox = Math.min(start.x + start.w, s.right) - Math.max(start.x, s.left);
+    var oy = Math.min(start.y + start.h, s.bottom) - Math.max(start.y, s.top);
+    if (ox <= 0 || oy <= 0) return false;
+    return (ox * oy) / (start.w * start.h) >= 0.5;
+  }
 
   function faceFlight(raw) {
-    // Ohne comfy__face gibt es nichts zu animieren (Vollbild-Graph).
-    if (!comfy || !faceFinal || !faceOrig || !faceFly) return;
+    if (!faceOrig || !faceFly) return;
+
+    // Ende der Landung: das Node-Bild selbst ist das Ziel, der Klon hätte dort
+    // nur eine Doppelkante. Das Original verschwindet nur, wenn die Bühne es
+    // tatsächlich verdeckt – sonst bliebe das Porträt unerreichbar versteckt.
+    if (raw >= 1) {
+      faceFly.style.visibility = "hidden";
+      // Erst die Kachel, dann die Schwärze: das echte Bild blendet zurück.
+      faceMat(findFaceTarget(), false);
+      faceOrig.classList.toggle("is-away", faceStageCovers());
+      return;
+    }
+    if (raw <= 0) { faceRest(); return; }
+
+    var target = findFaceTarget();
+    var start = faceVisibleRect(faceOrig);
+    if (!target || !start) { faceRest(); return; }
+    var r = target.getBoundingClientRect();
+    if (!r.width || !r.height) { faceRest(); return; }
+    var dest = { x: r.left, y: r.top, w: r.width, h: r.height };
+    if (!faceTargetInCanvas(dest)) { faceRest(); return; }
+
+    // Model-Node schwarz legen, solange die Kachel unterwegs ist.
+    faceMat(target, true);
+
+    // Elementgröße nur bei echter Änderung setzen (Resize): die Transform-Basis
+    // bleibt über alle Frames gleich, sonst zappelt die Skalierung.
+    if (faceBaseW !== start.w || faceBaseH !== start.h) {
+      faceBaseW = start.w;
+      faceBaseH = start.h;
+      faceFly.style.width = start.w + "px";
+      faceFly.style.height = start.h + "px";
+    }
+
+    var t = easeOutCubic(clamp(raw, 0, 1));
+    var x = start.x + (dest.x - start.x) * t;
+    var y = start.y + (dest.y - start.y) * t;
+    // Uniform skalieren: Start- und Zielbild haben dasselbe Seitenverhältnis,
+    // die Breite gibt den Faktor vor.
+    var k = 1 + (dest.w / start.w - 1) * t;
+    faceFly.style.transform = "translate(" + x.toFixed(2) + "px, " + y.toFixed(2) +
+      "px) scale(" + k.toFixed(4) + ")";
+    // Ecken mitziehen, sonst stoßen am Ende runde Klon-Ecken auf eckige Node-Ecken.
+    var radius = parseFloat(getComputedStyle(target).borderTopLeftRadius);
+    faceFly.style.borderRadius = (isFinite(radius) ? radius * t : 0).toFixed(2) + "px";
+
+    faceFly.style.visibility = "visible";
+    faceOrig.classList.add("is-away");
   }
 
   // Morph-Reveal für alle [data-morph]-Wrapper; Headline-Reveal, sobald die Maske (fast) offen ist
@@ -492,7 +816,15 @@
       onProgress: function (raw) {
         title.classList.toggle("is-visible", raw >= 0.9);
         if (el.id === "tryon") faceFlight(raw);
-        if (el !== project) fade.classList.toggle("is-visible", raw >= 1); // Abschnitt 3 steuert den Text über den Bildwechsel
+        // Abschnitte mit .avatar-stack steuern ihren Text selbst über den
+        // Bildwechsel (makeAvatarSwitcher, Kriterium idx >= 1). Ohne diese
+        // Ausnahme setzen zwei Handler dieselbe Klasse mit widersprechender
+        // Bedingung: im Fenster raw = 1.0 bis 1.333 machte der Morph .fade-in
+        // schon sichtbar, waehrend der Bildwechsel es wieder ausblendete -
+        // sichtbar als kurzes Aufblitzen des Projekttextes beim Uebergang.
+        // Vorher stand hier "el !== project": das traf nur #projekte und liess
+        // den Serum-Abschnitt (ebenfalls mit .avatar-stack) aussen vor.
+        if (!el.querySelector(".avatar-stack")) fade.classList.toggle("is-visible", raw >= 1);
       }
     });
   });
@@ -566,8 +898,101 @@
   var flipInner = document.getElementById("flipInner");
   var flipFront = flip && flip.querySelector(".flip__front");
   var flipBack = flip && flip.querySelector(".flip__back");
-  var flipP = 0;            // 0 = Graph, 1 = Screenshot
+  var flipP = 0;            // 0 = Graph, 1 = Live-Anwendung
   var flipApplied = -1;
+
+  /* ---------- Rueckseite: AI Photo Studio live ---------------------------------
+     Die Rueckseite zeigt nicht mehr den Screenshot, sondern die echte
+     Anwendung (iframe, URL steht als data-src im Markup). Zwei Dinge regelt
+     dieser Block:
+
+     1. Geladen wird erst, wenn die Rueckseite zum ersten Mal sichtbar wird.
+        Sonst zoege jeder Seitenaufruf ~0.5 MB Fremd-HTML mit, die niemand
+        sieht, bevor er bis zum Graphen-Ende gescrollt hat.
+     2. Bedient wird erst nach einem Klick ("Hier ausprobieren"). Eine
+        eingebettete Seite bekommt Mausrad und Tasten selbst; waere sie von
+        Anfang an scharf, bliebe das Scrollen der Portfolio-Seite ueber dem
+        Rahmen stehen. "Bedienung beenden" (oder Esc, solange der Fokus im
+        Dokument liegt) gibt das Scrollen wieder frei.                 ---------- */
+  var liveStudio = document.getElementById("liveStudio");
+  var liveFrame = document.getElementById("liveFrame");
+  var liveStart = document.getElementById("liveStart");
+  var liveExit = document.getElementById("liveExit");
+  var liveFull = document.getElementById("liveFull");
+  var liveHint = document.getElementById("liveHint");
+  var liveMode = false;     // Bedienmodus: Klick/Tasten gehen an die Einbettung
+
+  function liveLoad() {
+    if (!liveFrame || !liveStudio || liveFrame.getAttribute("src")) return;
+    var src = liveStudio.getAttribute("data-src");
+    if (!src) return;
+    liveFrame.setAttribute("src", src);
+  }
+
+  function liveSetMode(on) {
+    if (!liveStudio || liveMode === on) return;
+    liveMode = on;
+    liveStudio.classList.toggle("is-live", on);
+    // tabindex -1: der Rahmen liegt nicht im Tab-Fokus, solange er nicht
+    // bedient werden darf (sonst springt der Fokus in eine ausgeblendete
+    // Flaeche). Im Bedienmodus ist er erreichbar.
+    if (liveFrame) liveFrame.setAttribute("tabindex", on ? "0" : "-1");
+    if (on) {
+      // Fokus auf den Ausstieg statt in den Rahmen: so bleibt Esc im
+      // Eltern-Dokument und schliesst den Bedienmodus.
+      if (liveExit) liveExit.focus({ preventScroll: true });
+    } else if (liveStart && !liveStart.disabled) {
+      liveStart.focus({ preventScroll: true });
+    }
+  }
+
+  if (liveFrame) {
+    // Der Rahmen wird erst beim ersten Sichtbarwerden der Rueckseite geladen;
+    // in der Zwischenzeit zeigt die Abdeckung "wird geladen ...".
+    liveFrame.addEventListener("load", function () {
+      if (!liveFrame.getAttribute("src")) return;
+      if (liveStart) liveStart.disabled = false;
+      if (liveHint) liveHint.textContent = "Läuft direkt hier – Model wählen, Item hochladen, generieren.";
+    });
+    liveFrame.addEventListener("error", function () {
+      if (liveHint) liveHint.textContent = "Die Live-Ansicht ließ sich hier nicht laden – bitte im neuen Tab öffnen.";
+    });
+  }
+
+  if (liveStart) {
+    liveStart.addEventListener("click", function () { liveSetMode(true); });
+  }
+  if (liveExit) {
+    liveExit.addEventListener("click", function () { liveSetMode(false); });
+  }
+  if (liveFull) {
+    // Der Rahmen ist nur ~2/3 bildschirmhoch; in Vollbild laesst sich die
+    // Anwendung so bedienen, wie sie gedacht ist. Fehlt die Unterstuetzung
+    // (z. B. iOS Safari), faellt der Knopf weg.
+    if (!document.fullscreenEnabled) {
+      liveFull.style.display = "none";
+    } else {
+      liveFull.addEventListener("click", function () {
+        if (!liveFrame) return;
+        try {
+          var req = liveFrame.requestFullscreen();
+          if (req && req.catch) req.catch(function () {});
+        } catch (e) { /* Vollbild verweigert: dann eben nicht */ }
+      });
+    }
+  }
+  document.addEventListener("keydown", function (e) {
+    if (!liveMode) return;
+    if (e.key === "Escape" || e.key === "Esc") { e.preventDefault(); liveSetMode(false); }
+  });
+
+  // `inert` haelt die jeweils verdeckte Seite aus Fokus und Klickfolge. Aeltere
+  // Engines kennen die Eigenschaft nicht; dann bleibt es beim reinen
+  // Sichtbarkeitswechsel (visibility), der schon alles verdeckt.
+  function setInert(el, on) {
+    if (!el || !("inert" in el)) return;
+    el.inert = on;
+  }
 
   function runwayPx() {
     var v = flip && getComputedStyle(flip).getPropertyValue("--flip-runway");
@@ -576,24 +1001,55 @@
     return Math.max(1, window.innerHeight * n);
   }
 
+  /* ---------- Leerlauf am Graph-Ende -------------------------------------
+     Vor der Laufstrecke liegt eine Strecke (--flip-hold), in der sich nichts
+     bewegt: der Nutzer soll das Ergebnisbild in Ruhe ansehen koennen, bevor
+     die Drehung beginnt. holdLeft ist der Rest dieser Strecke; holdArm() legt
+     sie neu an, sobald der Graph das Ende verlaesst.
+
+     Anders als bei runwayPx() ist 0 hier ein gueltiger Wert ("kein
+     Leerlauf"), deshalb wird nur ein fehlender oder unbrauchbarer Wert
+     ersetzt. */
+  function holdPx() {
+    var v = flip && getComputedStyle(flip).getPropertyValue("--flip-hold");
+    var n = parseFloat(v);
+    if (!isFinite(n) || n < 0) n = 0.4;
+    return window.innerHeight * n;
+  }
+
+  var holdLeft = holdPx();   // Rest der Leerlauf-Strecke in px
+
+  function holdArm() {
+    holdLeft = holdPx();
+  }
+
   // Setzt die Flaeche auf den Fortschritt p. Der Sichtbarkeitswechsel haengt
   // an p >= .5 (Kante an), nicht an einem Timer.
   function applyFlip(p) {
     flipP = clamp(p, 0, 1);
     if (flipApplied === flipP) return;
     flipApplied = flipP;
-    if (!flipInner) return;
-    if (reduceMotion) {
-      // Ohne Drehung: Zielseite direkt zeigen. .flip__inner hat per CSS
-      // transform:none, hier wird nur die sichtbare Seite gewaehlt.
-      if (flipFront) flipFront.style.visibility = flipP >= .5 ? "hidden" : "visible";
-      if (flipBack) flipBack.style.visibility = flipP >= .5 ? "visible" : "hidden";
-      return;
-    }
-    flipInner.style.transform = "rotateY(" + (flipP * 180).toFixed(2) + "deg)";
     var showBack = flipP >= .5;
-    if (flipFront) flipFront.style.visibility = showBack ? "hidden" : "visible";
-    if (flipBack) flipBack.style.visibility = showBack ? "visible" : "hidden";
+    if (flipInner && !reduceMotion) {
+      // Bei reduzierter Bewegung hat .flip__inner per CSS transform:none; dann
+      // wird nur die sichtbare Seite gewaehlt (unten).
+      flipInner.style.transform = "rotateY(" + (flipP * 180).toFixed(2) + "deg)";
+    }
+    if (flipFront) {
+      flipFront.style.visibility = showBack ? "hidden" : "visible";
+      flipFront.setAttribute("aria-hidden", showBack ? "true" : "false");
+      setInert(flipFront, showBack);
+    }
+    if (flipBack) {
+      flipBack.style.visibility = showBack ? "visible" : "hidden";
+      flipBack.setAttribute("aria-hidden", showBack ? "false" : "true");
+      setInert(flipBack, !showBack);
+    }
+    if (showBack) {
+      liveLoad();          // Anwendung erst jetzt holen (siehe oben)
+    } else {
+      liveSetMode(false);  // verdeckt heisst: nicht bedienbar
+    }
   }
 
   if (tryonSection) {
@@ -610,13 +1066,44 @@
       var down = e.deltaY > 0;
       var atEnd = atGraphEnd(c), atStart = atGraphStart(c);
 
+      // --- Leerlauf: am Graph-Ende erst ansehen, dann drehen -------------
+      // Liegt das Ergebnisbild vor uns, wird zuerst die Leerlauf-Strecke
+      // verbraucht: das Rad bewegt weder Drehung noch Graph. Der Weg bleibt
+      // umkehrbar wie die Drehung - hochscrollen fuellt die Strecke wieder
+      // auf, bevor irgendetwas anderes passiert. Nur wenn die Strecke voll
+      // ist, laeuft der Rest weiter (Drehung bzw. Graph).
+      var rest = e.deltaY;
+      if (!reduceMotion && atEnd && flipP === 0 && !atStart) {
+        if (down) {
+          var used = Math.min(holdLeft, rest);
+          holdLeft -= used;
+          rest -= used;
+          e.preventDefault();
+          // Strecke noch nicht leer: hier endet der Schritt.
+          if (holdLeft > 0) return;
+        } else if (holdLeft < holdPx()) {
+          // Hochscrollen: zuerst den Leerlauf auffuellen. Nur der Rest, der
+          // nicht mehr hineinpasst, darf den Graphen bewegen - sonst liefe
+          // der Weg an der Nahtstelle doppelt (auffuellen UND scrollen).
+          var fill = Math.min(holdPx() - holdLeft, -rest);
+          holdLeft += fill;
+          rest += fill;
+          e.preventDefault();
+          if (rest === 0) return;
+          // Strecke ist jetzt voll: der echte Rest scrollt den Graphen, das
+          // Ende ist damit verlassen (Leerlauf neu anlegen).
+          holdArm();
+          c.scrollTop += rest;
+          return;
+        }
+      }
+
       // --- Laufstrecke: die Drehung hat Vorrang vor allem anderen ---------
       // Die Drehung beginnt erst, wenn der Graph wirklich am Ende steht.
       // Sonst schluckt das Rad, das den Graphen ans Ende faehrt, gleich noch
       // die halbe Drehung: der Uebergang springt statt zu scrubben.
       // Beim Zurueckdrehen auf 0 wird der Rest des Deltas an den Graphen
       // weitergegeben, damit die Bewegung an der Nahtstelle nicht stockt.
-      var rest = e.deltaY;
       if (!reduceMotion) {
         var inRunway = atEnd
           ? (down && flipP < 1) || (!down && flipP > 0)
@@ -626,12 +1113,19 @@
           pausedAt = 0;
           endReachedAt = 0;
           var before = flipP;
-          var step = e.deltaY / runwayPx();
+          var step = rest / runwayPx();
           applyFlip(flipP + step);
           // Tatsaechlich verbrauchter Anteil des Deltas.
           rest = (flipP - before) * runwayPx();
           if (down || flipP > 0) return;
-          // p ist wieder auf 0: rest (<= 0) laeuft unten in den Graphen.
+          // p ist wieder auf 0: erst den Leerlauf auffuellen, nur der echte
+          // Rest laeuft in den Graphen (gleiche Umkehrbarkeit wie unten).
+          if (holdLeft < holdPx()) {
+            var refill = Math.min(holdPx() - holdLeft, -rest);
+            holdLeft += refill;
+            rest += refill;
+            if (rest === 0) return;
+          }
           if (!down && atStart) { pausedAt = 0; return; }
           c.scrollTop += rest;
           return;
@@ -659,6 +1153,10 @@
       // --- Sonst: Rad auf den Graphen umlenken, Seite steht still --------
       e.preventDefault();
       pausedAt = 0;
+      // Der Graph verlaesst hier das Ende (hoch) bzw. steht noch nicht dort
+      // (runter): die Leerlauf-Strecke neu anlegen, damit sie beim naechsten
+      // Anfahren wieder vollstaendig da ist.
+      holdArm();
       c.scrollTop += e.deltaY;
     }, { passive: false });
 
@@ -667,8 +1165,10 @@
         pausedAt = 0;
         endReachedAt = 0;
         // Section verlassen: Flaeche wieder auf den Graphen stellen, damit
-        // sie beim naechsten Durchlauf sauber von vorn beginnt.
+        // sie beim naechsten Durchlauf sauber von vorn beginnt. Die
+        // Leerlauf-Strecke wird dabei ebenfalls neu angelegt.
         if (flipP !== 0) applyFlip(0);
+        holdArm();
       }
     }, { passive: true });
 
