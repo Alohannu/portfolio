@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="css/outtakes.css">
   <link rel="stylesheet" href="css/showroom.css">
   <link rel="stylesheet" href="css/track.css">
+  <link rel="stylesheet" href="css/curtain.css">
+  <link rel="stylesheet" href="css/imageviewer.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
@@ -102,7 +104,8 @@
         </div>
         <!-- ComfyUI-Node-Ansicht: aus context/nodeview.json gerendert.
              Am Ende des Graphen dreht die ganze Flaeche um 180 Grad und zeigt
-             den Screenshot. Aufbau wie im Referenz-Effekt:
+             die eingebettete Live-Anwendung (AI Photo Studio). Aufbau wie im
+             Referenz-Effekt:
              .comfy = Perspektive, .flip__inner = preserve-3d + rotateY,
              beide Seiten inset:0 und backface-visibility:hidden.
              Der Sichtbarkeitswechsel haengt an der Scrollposition (p >= .5),
@@ -113,9 +116,48 @@
               <div class="flip__face flip__front">
                 <div id="comfy-slot"></div>
               </div>
+              <!-- Rückseite: statt des früheren Screenshots (assets/photo-studio.png)
+                   läuft hier die echte Anwendung in einem iframe. Sie wird erst
+                   geladen, wenn die Rückseite zum ersten Mal sichtbar wird, und
+                   erst nach einem Klick bedienbar (.is-live): eine eingebettete
+                   Seite fängt Mausrad und Tasten für sich, ohne diesen Schritt
+                   käme das Scrollen der Portfolio-Seite dort nicht mehr weiter. -->
               <div class="flip__face flip__back" aria-hidden="true">
-                <img class="flip__shot" id="flipShot" src="assets/photo-studio.png"
-                     alt="Photo Studio – Oberfläche mit Model-Auswahl und Item-Upload" width="1920" height="1080">
+                <div class="live" id="liveStudio"
+                     data-src="https://ai-photo-studio-cd-a2006f264f.netlify.app/">
+                  <!-- Leiste im Bedienmodus: sie traegt den Ausstieg ausserhalb
+                       der eingebetteten Seite, damit der Knopf keine Bedienelemente
+                       der Anwendung verdeckt, und bleibt als Rand zum Scrollen frei. -->
+                  <div class="live__bar">
+                    <p class="live__bar-title">
+                      <span class="live__bar-dot" aria-hidden="true"></span>AI Photo Studio – Live
+                    </p>
+                    <button class="live__full" id="liveFull" type="button">Vollbild</button>
+                    <button class="live__exit" id="liveExit" type="button">
+                      Bedienung beenden <span class="live__exit-key">Esc</span>
+                    </button>
+                  </div>
+
+                  <iframe class="live__frame" id="liveFrame" tabindex="-1"
+                          title="AI Photo Studio – Live-Anwendung"
+                          allow="fullscreen"></iframe>
+
+                  <div class="live__cover" id="liveCover">
+                    <div class="live__card">
+                      <p class="live__kicker">Live-Anwendung</p>
+                      <h3 class="live__title">AI Photo Studio</h3>
+                      <p class="live__text">Model wählen, Kleidungsstück hochladen, Pose setzen – der echte Workflow läuft hier direkt in der Seite.</p>
+                      <div class="live__actions">
+                        <button class="live__btn live__btn--primary" id="liveStart" type="button" disabled>
+                          Hier ausprobieren
+                        </button>
+                        <a class="live__btn" href="https://ai-photo-studio-cd-a2006f264f.netlify.app/"
+                           target="_blank" rel="noopener">In neuem Tab öffnen</a>
+                      </div>
+                      <p class="live__hint" id="liveHint" role="status">Live-Anwendung wird geladen …</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -150,17 +192,17 @@
       <div class="ot-stack__grid">
         <div class="ot-stack__col ot-stack__col--left">
           <figure class="ot-tile">
-            <video src="media/videos/outtake1.mp4" muted playsinline loop preload="metadata"
+            <video src="media/selected-works/videos/outtake1.mp4" muted playsinline loop preload="metadata"
                    aria-label="Outtake 1 – Video-Generierung"></video>
           </figure>
           <figure class="ot-tile">
-            <video src="media/videos/outtake2.mp4" muted playsinline loop preload="metadata"
+            <video src="media/selected-works/videos/outtake2.mp4" muted playsinline loop preload="metadata"
                    aria-label="Outtake 2 – Video-Generierung"></video>
           </figure>
         </div>
         <div class="ot-stack__col ot-stack__col--right">
           <figure class="ot-tile">
-            <video src="media/videos/outtake3.mp4" muted playsinline loop preload="metadata"
+            <video src="media/selected-works/videos/outtake3.mp4" muted playsinline loop preload="metadata"
                    aria-label="Outtake 3 – Video-Generierung"></video>
           </figure>
         </div>
@@ -208,15 +250,38 @@
          vorhanden). Der Avatar-Stack hat eine Spalte mit 6 Bildern. -->
     <div class="track__panel track__panel--2" id="serum">
 
-      <!-- Projekt 2, Hero: das Kampagnenvideo, analog zu video-2 in Track 1.
-           Anders als der Hero ist das Quellmaterial hochkant (720x960),
-           deshalb wird es zentriert und vollstaendig gezeigt (contain)
-           statt formatfuellend beschnitten (cover). -->
+      <!-- Projekt 2, Hero: derselbe Ablauf wie am Anfang von Track 1.
+           1. Das erste Bild steht still (poster + angehaltenes Video),
+              darueber liegt die Ueberschrift.
+           2. Scrollen blendet die Ueberschrift aus und scrubbte das Video
+              Frame fuer Frame durch (js/script.js).
+           3. Am Ende der Strecke laeuft das Video von vorn.
+
+           Quellmaterial ist skincare.mp4 (1112x834, also quer) - es fuellt
+           die Buehne bildschirmfuellend wie video-1 in Track 1 (object-fit:
+           cover) und nicht mehr contain wie das alte hochkante
+           Kampagnenvideo. Das Standbild liegt als poster daneben, damit der
+           erste Frame sofort steht und nicht erst nach dem Laden der
+           Videodaten erscheint. -->
       <div class="hero-wrapper hero-wrapper--serum" id="serumHero">
         <div class="hero-stage hero-stage--serum" id="serumHeroStage">
-          <video class="serum-video" id="serumVideo" src="media/projects/projekt-2/serum-campaign.mp4"
+
+          <video class="serum-video" id="serumVideo" src="media/projects/projekt-3/skincare.mp4"
+                 poster="media/projects/projekt-3/skincare-poster.webp"
                  muted playsinline preload="auto" loop
-                 aria-label="Serum-Kampagnenvideo"></video>
+                 aria-label="Kampagnenvideo Hautpflege-Serum"></video>
+
+          <!-- Eigene ID statt der des Track-1-Overlays: script.js steuert
+               beide getrennt (das Video wird hier gescrubbt, nicht
+               abgespielt). Ein doppeltes id="stageOverlay" haette dafuer
+               gesorgt, dass getElementById immer das erste Element liefert
+               und dieser Titel nie ausgeblendet wird. -->
+          <div class="stage__overlay" id="serumOverlay">
+            <div class="stage__text">
+              <h2 class="stage__title">face serum</h2>
+              <p class="stage__subtitle">ai skincare brand</p>
+            </div>
+          </div>
 
           <button class="sound-toggle sound-toggle--serum" id="serumSoundToggle" type="button"
                   aria-label="Stummschalten" aria-pressed="true">
@@ -233,25 +298,51 @@
       </div>
 
       <!-- Projekt 2, Abschnitt 1: Avatar-/Bildwechsel (sticky) -->
-      <section class="project project--serum morph-reveal p2-stack" data-morph
+      <section class="project project--serum morph-reveal" data-morph
                aria-label="Projekt ai face serum">
-        <div class="project__stage morph-reveal__stage">
+        <div class="project__stage morph-reveal__stage p2-stack">
           <div class="project__col project__col--text">
             <h2 class="project__title reveal"><span class="reveal__inner">ai face serum</span></h2>
             <p class="project__text fade-in">Konzeption und visuelle Entwicklung einer Skincare-Produktlinie sowie der zugehörigen Social-Media-Assets.</p>
           </div>
           <div class="project__col project__col--image avatar-stack">
-            <img class="avatar is-active" src="media/projects/projekt-2/ai-serum.avif" alt="Serum-Produktbild, Ansicht 1 von 6" width="566" height="916">
-            <img class="avatar" src="media/projects/projekt-2/ai-serum-1.avif" alt="Serum-Produktbild, Ansicht 2 von 6" width="566" height="916">
-            <img class="avatar" src="media/projects/projekt-2/ai-serum-2.avif" alt="Serum-Produktbild, Ansicht 3 von 6" width="566" height="916">
-            <img class="avatar" src="media/projects/projekt-2/ai-serum-3.avif" alt="Serum-Produktbild, Ansicht 4 von 6" width="566" height="916">
-            <img class="avatar" src="media/projects/projekt-2/ai-serum-skin.avif" alt="Serum-Anwendung auf der Haut, Ansicht 5 von 6" width="566" height="916">
-            <img class="avatar" src="media/projects/projekt-2/ai-aloevera.avif" alt="Aloe-Vera-Produktbild, Ansicht 6 von 6" width="566" height="916">
+            <img class="avatar is-active" src="media/selected-works/serum/ai-serum.avif" alt="Serum-Produktbild, Ansicht 1 von 6" width="566" height="916">
+            <img class="avatar" src="media/selected-works/serum/ai-serum-1.avif" alt="Serum-Produktbild, Ansicht 2 von 6" width="566" height="916">
+            <img class="avatar" src="media/selected-works/serum/ai-serum-2.avif" alt="Serum-Produktbild, Ansicht 3 von 6" width="566" height="916">
+            <img class="avatar" src="media/selected-works/serum/ai-serum-3.avif" alt="Serum-Produktbild, Ansicht 4 von 6" width="566" height="916">
+            <img class="avatar" src="media/selected-works/serum/ai-serum-skin.avif" alt="Serum-Anwendung auf der Haut, Ansicht 5 von 6" width="566" height="916">
+            <img class="avatar" src="media/selected-works/serum/ai-aloevera.avif" alt="Aloe-Vera-Produktbild, Ansicht 6 von 6" width="566" height="916">
           </div>
         </div>
       </section>
 
-      <!-- Projekt 2, Abschnitt 2: Produktentwicklung in sechs Phasen.
+      <!-- Projekt 2, Abschnitt 2: dieselbe Ansicht kommt gespiegelt zurueck.
+           Titel und Text stehen rechts, das Kampagnenvideo links. Die
+           Buehne bleibt eine Bildschirmhoehe stehen (100vh Halten), damit
+           die Ansicht nicht nur durchlaeuft, sondern wie die erste
+           tatsaechlich als Seite erscheint.
+           Das Video ist still und geloopt; es wird nur abgespielt, solange
+           die Ansicht im Bild steht (js/serum-campaign.js). Das Poster ist
+           der erste Frame der Kampagne, damit vor dem Laden kein weisser
+           Kasten steht und der Uebergang ins laufende Video nahtlos ist. -->
+      <section class="project project--serum-repeat" id="serumRepeat"
+               aria-label="Projekt ai face serum - Kampagnenfilm">
+        <div class="project__stage p2-repeat">
+          <div class="project__col project__col--text">
+            <h2 class="project__title reveal"><span class="reveal__inner">ai face serum</span></h2>
+            <p class="project__text fade-in">Konzeption und visuelle Entwicklung einer Skincare-Produktlinie sowie der zugehörigen Social-Media-Assets.</p>
+          </div>
+          <div class="project__col campaign__media">
+            <video class="campaign__video" id="campaignVideo"
+                   src="media/selected-works/serum/serum-campaign.mp4"
+                   poster="media/selected-works/serum/serum-campaign-poster.webp"
+                   muted loop playsinline preload="metadata"
+                   aria-label="Kampagnenfilm ai face serum"></video>
+          </div>
+        </div>
+      </section>
+
+      <!-- Projekt 2, Abschnitt 3: Produktentwicklung in sechs Phasen.
            Aufbau und Inhalte stammen 1:1 aus dem Original
            (yytrieu.github.io/ai-portfolio/#serum), dort lag der Bereich in
            einem Vollbild-Overlay. Hier steht er als normaler Abschnitt im
@@ -299,25 +390,71 @@
       </section>
 
     </div><!-- /Panel 2 -->
+
+    <!-- Ansicht 3: eggo - AI Sunglass Brand.
+         Der Vorhang-Effekt stammt aus dem Referenzstand
+         (portfolio-yytrieu, Abschnitt "Vorhang"): Bild 2 und Bild 3
+         schieben sich beim Scrollen von unten ueber Bild 1
+         (css/curtain.css, js/curtain.js).
+         Er liegt hier in einer eigenen Spur-Ansicht, damit er - wie
+         Ansicht 2 - per Schwenk von rechts hereinkommt. Die beiden
+         Steigungen beginnen erst NACH dem Schwenk: js/curtain.js zieht
+         die Schwenkstrecke vom Scrollfortschritt ab, solange die Ansicht
+         noch hereinfaehrt. -->
+    <div class="track__panel track__panel--3" id="curtain-view">
+
+      <section class="curtain" id="curtain" aria-label="eggo - AI Sunglass Brand">
+        <div class="curtain__stage">
+          <img class="curtain__img curtain__img--1" src="media/projects/projekt-2/sunglass-hd-1.avif" alt="Sonnenbrille der Marke eggo, Bild 1">
+
+          <div class="stage__overlay curtain__overlay" id="curtainOverlay">
+            <div class="stage__text">
+              <h2 class="stage__title">eggo</h2>
+              <p class="stage__subtitle">AI SUNGLASS BRAND</p>
+            </div>
+          </div>
+
+          <img class="curtain__img curtain__img--2" src="media/projects/projekt-2/sunglass-hd-2.avif" alt="Sonnenbrille der Marke eggo, Bild 2">
+          <img class="curtain__img curtain__img--3" src="media/projects/projekt-2/sunglass-hd-3.avif" alt="Sonnenbrille der Marke eggo, Bild 3">
+        </div>
+      </section>
+
+      <!-- Ansicht 3, Abschnitt am Ende: dieselbe Video-Collage wie am Ende
+           von Ansicht 1 ("selected works") - Aufbau, Kopfzeile und Effekt
+           1:1 von dort uebernommen.
+
+           Material sind die drei Eggo-Clips aus media/selected-works/videos
+           (eggo-story, eggo-campaign-1, eggo-campaign-2); die Daten stehen
+           unten in #collage-data-eggo. Der Kopf wird wie in Ansicht 1 von
+           js/collage.js in die gepinnte Buehne geholt; die Suche ist ueber
+           root.parentNode auf DIESEN Abschnitt begrenzt.
+
+           Zwei Anpassungen gegenueber Ansicht 1:
+             - eigene id (collage-eggo) und data-collage="eggo": id="collage"
+               ist in Ansicht 1 vergeben, doppelte ids wuerden getElementById
+               auf das erste Element lenken. data-collage="eggo" laesst
+               collage.js die Daten aus #collage-data-eggo lesen.
+             - .collage--trio: es sind nur drei (hochkante) Clips, deshalb
+               stehen sie in EINER Reihe zu dritt statt im 5er-Mosaik
+               (css/collage.css) - sonst bliebe die halbe Rasterflaeche leer. -->
+      <section class="collage collage--trio" id="collage-eggo"
+               aria-label="Video-Collage: Arbeiten aus allen Projekten – eggo">
+        <div class="collage__head" data-collage-head>
+          <h2 class="collage__title reveal" data-collage-reveal><span class="reveal__inner">selected works</span></h2>
+          <p class="collage__text fade-in" data-collage-reveal>Videos aus allen Projekten – generiert mit Midjourney, RunwayML, Seedance, Suno und ComfyUI. Alle Clips laufen gleichzeitig und in Schleife.</p>
+        </div>
+        <!-- Slots werden von js/collage.js aus #collage-data-eggo gerendert -->
+        <div data-collage="eggo"></div>
+      </section>
+
+    </div><!-- /Panel 3 -->
    </div><!-- /Track -->
   </main>
 
-  <!-- Schwenk-Pfeile: ausserhalb des Tracks, damit position:fixed nicht
-       am Track haengt. Erst am Ende der jeweiligen Ansicht sichtbar. -->
-  <button class="turn turn--next turn--on-dark" id="turnNext" type="button"
-          aria-label="Nächstes Projekt anzeigen" aria-hidden="true" tabindex="-1">
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5"
-            stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </button>
-  <button class="turn turn--back" id="turnPrev" type="button"
-          aria-label="Vorheriges Projekt anzeigen" aria-hidden="true" tabindex="-1">
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.5"
-            stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </button>
+  <!-- Der Wechsel zwischen den beiden Ansichten laeuft ueber das Scrollen:
+       js/track.js setzt die horizontale Verschiebung des Tracks Frame fuer
+       Frame aus der Scrollposition. Klick-Pfeile gibt es deshalb keine mehr;
+       die Pfeiltasten der Tastatur bleiben als unsichtbare Bedienung. -->
 
   <!-- Collage-Daten: 5 Slots mit ihren Videoketten. Reihenfolge = Abspielreihenfolge. -->
   <script type="application/json" id="collage-data">
@@ -329,8 +466,8 @@
       "shape": "wide",
       "label": "Showreel und Fashion-Film",
       "clips": [
-        { "src": "media/videos/hero-video.mp4", "title": "Hero-Showreel", "alt": "Hero-Showreel – creative vision", "duration": 5.93 },
-        { "src": "media/videos/Fashion-Video-Swim-Upstream.mp4", "title": "Fashion Film", "alt": "Fashion Film „Swim Upstream“", "duration": 22.09 }
+        { "src": "media/selected-works/videos/hero-video.mp4", "title": "Hero-Showreel", "alt": "Hero-Showreel – creative vision", "duration": 5.93 },
+        { "src": "media/selected-works/videos/Fashion-Video-Swim-Upstream.mp4", "title": "Fashion Film", "alt": "Fashion Film „Swim Upstream“", "duration": 22.09 }
       ]
     },
 
@@ -339,9 +476,9 @@
       "shape": "portrait",
       "label": "nandemoii Kampagne",
       "clips": [
-        { "src": "media/videos/e-commerce-video.mp4", "title": "E-Commerce", "alt": "E-Commerce-Video – nandemoii", "duration": 15.21 },
-        { "src": "media/videos/ucg-outfit1.mp4", "title": "UCG Outfit 1", "alt": "UCG 9:16 – Outfit 1", "duration": 5.06 },
-        { "src": "media/videos/ucg-outfit2.mp4", "title": "UCG Outfit 2", "alt": "UCG 9:16 – Outfit 2", "duration": 8.06 }
+        { "src": "media/selected-works/videos/e-commerce-video.mp4", "title": "E-Commerce", "alt": "E-Commerce-Video – nandemoii", "duration": 15.21 },
+        { "src": "media/selected-works/videos/ucg-outfit1.mp4", "title": "UCG Outfit 1", "alt": "UCG 9:16 – Outfit 1", "duration": 5.06 },
+        { "src": "media/selected-works/videos/ucg-outfit2.mp4", "title": "UCG Outfit 2", "alt": "UCG 9:16 – Outfit 2", "duration": 8.06 }
       ]
     },
 
@@ -350,9 +487,9 @@
       "shape": "portrait",
       "label": "EGGO Kampagne",
       "clips": [
-        { "src": "media/videos/eggo-story.mp4", "title": "EGGO Story", "alt": "EGGO – Story 9:16", "duration": 5.09 },
-        { "src": "media/videos/eggo-campaign-1.mp4", "title": "EGGO Kampagne 1", "alt": "EGGO – Kampagnenfilm 1", "duration": 9.45 },
-        { "src": "media/videos/eggo-campaign-2.mp4", "title": "EGGO Kampagne 2", "alt": "EGGO – Kampagnenfilm 2", "duration": 12.66 }
+        { "src": "media/selected-works/videos/eggo-story.mp4", "title": "EGGO Story", "alt": "EGGO – Story 9:16", "duration": 5.09 },
+        { "src": "media/selected-works/videos/eggo-campaign-1.mp4", "title": "EGGO Kampagne 1", "alt": "EGGO – Kampagnenfilm 1", "duration": 9.45 },
+        { "src": "media/selected-works/videos/eggo-campaign-2.mp4", "title": "EGGO Kampagne 2", "alt": "EGGO – Kampagnenfilm 2", "duration": 12.66 }
       ]
     },
 
@@ -361,8 +498,8 @@
       "shape": "portrait",
       "label": "Serum und Pantomime",
       "clips": [
-        { "src": "media/videos/serum-campaign.mp4", "title": "Serum", "alt": "Serum-Kampagne", "duration": 9.52 },
-        { "src": "media/videos/Pantomime-Intro.mp4", "title": "Pantomime", "alt": "Concept Pantomime – Intro", "duration": 13.07 }
+        { "src": "media/selected-works/serum/serum-campaign.mp4", "title": "Serum", "alt": "Serum-Kampagne", "duration": 9.52 },
+        { "src": "media/selected-works/videos/Pantomime-Intro.mp4", "title": "Pantomime", "alt": "Concept Pantomime – Intro", "duration": 13.07 }
       ]
     },
 
@@ -371,8 +508,8 @@
       "shape": "portrait",
       "label": "Outtakes",
       "clips": [
-        { "src": "media/videos/outtake1.mp4", "title": "Outtake 1", "alt": "Outtake 1 – Video-Generierung", "duration": 3.53 },
-        { "src": "media/videos/outtake2.mp4", "title": "Outtake 2", "alt": "Outtake 2 – Video-Generierung", "duration": 3.53 }
+        { "src": "media/selected-works/videos/outtake1.mp4", "title": "Outtake 1", "alt": "Outtake 1 – Video-Generierung", "duration": 3.53 },
+        { "src": "media/selected-works/videos/outtake2.mp4", "title": "Outtake 2", "alt": "Outtake 2 – Video-Generierung", "duration": 3.53 }
       ]
     },
 
@@ -381,10 +518,34 @@
       "shape": "wide",
       "label": "Outtake 3",
       "clips": [
-        { "src": "media/videos/outtake3.mp4", "title": "Outtake 3", "alt": "Outtake 3 – Video-Generierung", "duration": 3.53 }
+        { "src": "media/selected-works/videos/outtake3.mp4", "title": "Outtake 3", "alt": "Outtake 3 – Video-Generierung", "duration": 3.53 }
       ]
     }
 
+  ]
+}
+  </script>
+
+  <!-- Collage-Daten der Ansicht 3 (eggo). Aufbau wie #collage-data oben,
+       nur mit den drei Eggo-Clips. Wichtig ist "only": js/collage.js
+       laesst ohne diesen Schluessel nur die Videos der Startseite durch
+       (e-commerce, ucg-outfit1/2, fashion, hero-video) - die Eggo-Clips
+       wuerden dann herausgefiltert und die Buehne bliebe leer. -->
+  <script type="application/json" id="collage-data-eggo">
+{
+  "fadeMs": 450,
+  "only": ["eggo-story", "eggo-campaign-1", "eggo-campaign-2"],
+  "slots": [
+    {
+      "pos": "left",
+      "shape": "portrait",
+      "label": "EGGO Kampagne",
+      "clips": [
+        { "src": "media/selected-works/videos/eggo-story.mp4", "title": "EGGO Story", "alt": "EGGO – Story 9:16", "duration": 5.04 },
+        { "src": "media/selected-works/videos/eggo-campaign-1.mp4", "title": "EGGO Kampagne 1", "alt": "EGGO – Kampagnenfilm 1", "duration": 9.43 },
+        { "src": "media/selected-works/videos/eggo-campaign-2.mp4", "title": "EGGO Kampagne 2", "alt": "EGGO – Kampagnenfilm 2", "duration": 12.63 }
+      ]
+    }
   ]
 }
   </script>
@@ -393,30 +554,48 @@
   <!-- Fliegendes Gesichtsbild: liegt während des Morphs 4 → 5 über beiden Abschnitten -->
   <img class="face-fly" id="faceFly" src="media/projects/projekt-1/avatar-jason-face.webp" alt="" aria-hidden="true">
 
+  <!-- Graph-Daten als JS statt fetch(): funktioniert auch per file:// -->
+  <script src="context/nodeview-data.js"></script>
   <script src="context/nodeview.js"></script>
   <script src="js/script.js"></script>
   <script src="js/collage.js"></script>
   <script src="js/outtakes.js"></script>
   <script src="js/showroom.js"></script>
+  <script src="js/imageviewer.js"></script>
   <script src="js/track.js"></script>
+  <script src="js/curtain.js"></script>
   <script src="js/serum-phases.js"></script>
+  <script src="js/serum-campaign.js"></script>
   <script>
     // ComfyUI-Node-Ansicht (virtual try-on) aus dem normalisierten JSON rendern.
     // Ersetzt das frühere statische comfyui.png in Abschnitt 5.
+    //
+    // Die Daten kommen aus context/nodeview-data.js (window.__NODEVIEW_DATA),
+    // nicht per fetch(): Chrome blockiert fetch() auf file:// (Origin "null"),
+    // dadurch blieb der Block beim direkten Oeffnen der index.html leer.
+    // Der fetch-Zweig bleibt als Fallback, falls die Datendatei fehlt.
     (function () {
       var slot = document.getElementById("comfy-slot");
       if (!slot || !window.NodeView) return;
+
+      function render(data) {
+        window.__nodeview = NodeView.renderNodeView(slot, data, {
+          assetBase: "assets/",       // lokale Kopien unter portfolio/assets/
+          canvasHeight: "100%",        // füllt #comfy; der Graph scrollt/pant intern
+          showHeading: false,          // Überschrift + Text liefert die Sektion selbst
+          accent: "#5257b0"
+        });
+        window.dispatchEvent(new Event("resize")); // Layout (try__save) neu ausrichten
+      }
+
+      if (window.__NODEVIEW_DATA) {
+        render(window.__NODEVIEW_DATA);
+        return;
+      }
+
       fetch("context/nodeview.json")
         .then(function (r) { return r.json(); })
-        .then(function (data) {
-          window.__nodeview = NodeView.renderNodeView(slot, data, {
-            assetBase: "assets/",       // lokale Kopien unter portfolio/assets/
-            canvasHeight: "100%",        // füllt #comfy; der Graph scrollt/pant intern
-            showHeading: false,          // Überschrift + Text liefert die Sektion selbst
-            accent: "#5257b0"
-          });
-          window.dispatchEvent(new Event("resize")); // Layout (try__save) neu ausrichten
-        })
+        .then(render)
         .catch(function (e) { console.error("[comfyui] Ansicht konnte nicht geladen werden", e); });
     })();
   </script>
@@ -455,6 +634,35 @@
         <span class="showroom__sound-text" data-showroom-sound-text>stumm</span>
       </button>
     </div>
+  </div>
+
+  <!-- Bild-Ansicht: Klick auf ein Bild mit data-viewer-src zeigt genau diese
+       Datei gross ueber der Seite - das Original, nicht eine Kopie
+       (js/imageviewer.js). Angesteuert wird sie vom Ergebnisbild im
+       ComfyUI-Graphen (context/nodeview.js, Node "Save Image").
+       Steuerung: ESC / X / Klick daneben schliesst, "1 : 1" zeigt die
+       echten Bildpunkte, der Link oeffnet die Datei selbst. -->
+  <div class="imageviewer" id="imageviewer" role="dialog" aria-modal="true"
+       aria-label="Bild-Ansicht" hidden>
+    <div class="imageviewer__backdrop" data-viewer-close></div>
+
+    <div class="imageviewer__bar">
+      <button class="imageviewer__mode" type="button" data-viewer-mode
+              aria-pressed="false" aria-label="Bild in Originalgroesse zeigen (1:1)">1 : 1</button>
+      <button class="imageviewer__close" type="button" data-viewer-close
+              data-viewer-close-button aria-label="Schliessen (ESC)">
+        <span aria-hidden="true">&#215;</span>
+      </button>
+    </div>
+
+    <figure class="imageviewer__panel">
+      <img class="imageviewer__img" id="imageviewerImg" alt="" decoding="async">
+      <figcaption class="imageviewer__caption">
+        <span class="imageviewer__meta" id="imageviewerMeta"></span>
+        <a class="imageviewer__link" id="imageviewerLink" href="#" target="_blank"
+           rel="noopener">Originaldatei oeffnen</a>
+      </figcaption>
+    </figure>
   </div>
 </body>
 </html>

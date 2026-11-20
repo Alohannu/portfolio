@@ -18,6 +18,8 @@
   --bg-light: #f7f7f8;
   --text-on-video: #fff;
   --overlay: rgba(0, 0, 0, 0.3);
+  /* Laenge des Verlaufs am Uebergang hell -> schwarz (siehe .placeholder). */
+  --seam-fade: clamp(160px, 30vh, 420px);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -131,11 +133,77 @@ body {
 .sound-toggle[aria-pressed="true"] .icon--sound,
 .sound-toggle[aria-pressed="false"] .icon--muted { display: none; }
 
-/* ---------- Abschnitt 3: Platzhalter ---------- */
+/* ---------- Abschnitt 6: Platzhalter = Uebergang ----------
+   Der Abschnitt trennt die hellen Projektansichten von der schwarzen
+   Video-Collage. Vorher trafen beide mit einer harten Kante aufeinander
+   (#f7f7f8 direkt neben #000).
+
+   Der Uebergang war eine volle Bildschirmhoehe hoch und wirkte damit wie
+   ein eigener Abschnitt zwischen den beiden. Er ist jetzt halb so hoch:
+   50vh (50svh). Die Kurve in assets/grain-curve-3840x900.png ist
+   dieselbe wie in der alten 3840x2160-Fassung, nur vertikal auf das neue
+   Format gestaucht: oben weiss (255), unten schwarz (9), mit Filmkorn
+   darueber, quadratisch und von derselben Art, Groesse und Staerke wie
+   vorher (gemessen im 1371x619-Fenster bei 2x: Hochpass-Streuung 2,83
+   gegen 2,99 und Halbwertsbreite der Autokorrelation 1,32 gegen 1,35
+   Geraetepixel). Das Korn ist weiches, korreliertes Rauschen (Gauss,
+   sigma 1,05 px im 3840er Bild), kein Blockmuster; seine Staerke folgt
+   der Helligkeit wie im alten Bild. Drei Ebenen uebereinander:
+
+     1. Kanten: oben #fdfdfd (dort endet die Try-on-Buehne) und unten
+        #000 (dort beginnt die Collage). Dazwischen transparent, damit
+        die Kurve durchkommt. Noetig, weil die Kurve diagonal liegt:
+        ihre obere rechte Ecke ist 206, ihre obere linke 255 - ohne
+        diese Ebene haette die Oberkante ein Gefaelle.
+     2. Die Kurve, 3840x900 (4,27:1) und verlustfrei. cover nimmt den
+        kleinsten Zoom, der die Flaeche deckt, und skaliert beide Achsen
+        gleich stark (im 1371x619-Fenster 0,357 in CSS, 0,71 pro
+        Geraetepixel bei 2x): das Korn bleibt quadratisch. Ist die Flaeche
+        flacher als das Bild, schneidet cover unten ab - im
+        1371x619-Fenster sind das 3,5 % der Bildhoehe, und zwar am
+        unteren Rand, wo das Bild schon schwarz ist (Zeile 884 statt 899,
+        Luminanz 12 statt 9). Staerker trifft es nur noch flachere
+        Fenster (ueber 4,27:1), ebenfalls nur im schwarzen Ende.
+     3. Der reine Verlauf wie vorher, als Unterlage. Er greift nur, wenn
+        die Bilddatei fehlt; ohne ihn waere der Abschnitt dann schwarz.
+
+   Das Korn ist gewollt und soll scharf bleiben: es kaschiert die
+   Streifen (Banding), die so ein grosser Verlauf auf 8-Bit-Schirmen
+   sonst zeigt. Deshalb keine Verlaufs-Ebene ueber der Bildmitte, keine
+   Weichzeichner, kein Filter - und die Datei bleibt verlustfrei. */
 .placeholder {
-  height: 100vh;
-  height: 100svh;
-  background: var(--bg-light);
+  height: 50vh;
+  height: 50svh;
+  background-color: #000;
+  background-image:
+    linear-gradient(
+      to bottom,
+      #fdfdfd 0,
+      var(--bg-light) clamp(40px, 9vh, 130px),
+      rgba(247, 247, 248, 0) clamp(80px, 22vh, 300px),
+      rgba(0, 0, 0, 0) 82%,
+      #000 100%
+    ),
+    url("../assets/grain-curve-3840x900.png"),
+    linear-gradient(
+      to bottom,
+      #fdfdfd 0,
+      var(--bg-light) clamp(60px, 12vh, 180px),
+      var(--bg-light) calc(100% - var(--seam-fade)),
+      #000 100%
+    );
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover, 100% 100%;
+  background-position: center top, center top, center top;
+  /* Korn Pixel fuer Pixel, nicht weichgezeichnet: Chrome resampelt
+     Hintergrundbilder mit einem Glaettungsfilter, sobald skaliert wird -
+     im 1371x619-Fenster bei 2x liegt das Bild 0,71x gross. Gemessen an
+     derselben Flaeche (Hochpass-Streuung in den Mittentoenen):
+     pixelated 2,83, auto 2,54, ideal heruntergerechnet 3,01. pixelated
+     nimmt den naechsten Nachbarn und trifft damit genau den Wert eines
+     idealen Resamplers. Streifen (Banding) entstehen dabei nicht, weil
+     das Bild selbst koernig ist. */
+  image-rendering: pixelated;
 }
 
 @media (min-width: 768px) {
@@ -321,12 +389,18 @@ body {
    - Der Sichtbarkeitswechsel haengt an der Scrollposition (p >= .5), nicht an
      einer festen 0.27s-Verzoegerung. Bei einer gescrubbten, umkehrbaren
      Drehung wuerde ein Timer sofort auseinanderlaufen.
-   Tuning live in DevTools: --flip-perspective und --flip-runway. */
+   Tuning live in DevTools: --flip-perspective, --flip-runway und --flip-hold. */
 .comfy {
   --flip-perspective: min(1200px, 120vw);
   /* Scrollstrecke der Drehung, in Anteilen der Viewport-Hoehe.
      Wird in js/script.js gelesen; Fallback dort ist derselbe Wert. */
   --flip-runway: 0.6;
+  /* Leerlauf-Strecke am Graph-Ende, in Anteilen der Viewport-Hoehe: so viel
+     Rad-Weg passiert, ohne dass sich etwas bewegt. Der Nutzer soll das
+     Ergebnisbild (Save-Image-Node) erst in Ruhe ansehen, bevor die Drehung
+     beginnt. Wird in js/script.js gelesen; 0 ist gueltig und heisst
+     "kein Leerlauf". */
+  --flip-hold: 0.4;
   perspective: var(--flip-perspective);
 }
 .flip { position: relative; width: 100%; height: 100%; min-height: 0; }
@@ -354,7 +428,208 @@ body {
 }
 .flip__front { visibility: visible; }
 .flip__back { transform: rotateY(180deg); background: var(--nv-bg, #0A0A0F); }
-.flip__shot { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+
+/* ---------- Abschnitt 5: Rueckseite – AI Photo Studio live eingebettet ----------
+   Frueher lag hier der Screenshot assets/photo-studio.png. Jetzt laeuft die
+   echte Anwendung in einem iframe.
+
+   Bedienbarkeit: der Rahmen ist zuerst pointer-events: none. Erst der Klick
+   auf "Hier ausprobieren" schaltet ihn scharf (.is-live). Grund: eine
+   eingebettete Seite bekommt Mausrad und Tasten selbst und gibt sie nicht an
+   das Eltern-Dokument weiter – ohne diesen Zwischenschritt bliebe die
+   Portfolio-Seite ueber dem Rahmen haengen und wuerde nicht weiterscrollen.
+   Der Rand um den Rahmen bleibt in beiden Zustaenden zum Scrollen frei. */
+.live {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: .6rem;
+  padding: clamp(8px, 1.6vh, 18px);
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(82, 87, 176, .30), transparent 60%),
+    #0A0A0F;
+}
+
+/* Leiste: bleibt im Layout, damit der Rahmen beim Umschalten nicht springt.
+   Sichtbar wird sie nur im Bedienmodus (.is-live). */
+.live__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.1rem;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.live.is-live .live__bar { opacity: 1; }
+.live__bar-title {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: .68rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #9d9db8;
+}
+.live__bar-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5257b0;
+  box-shadow: 0 0 10px #5257b0;
+}
+
+.live__frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 14px;
+  background: #101018;
+  pointer-events: none;
+}
+.live.is-live .live__frame { pointer-events: auto; }
+
+/* Abdeckung: laesst die Anwendung durchscheinen und traegt den Aufruf. */
+.live__cover {
+  position: absolute;
+  inset: clamp(8px, 1.6vh, 18px);
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  border-radius: 14px;
+  background: rgba(10, 10, 15, .68);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  text-align: center;
+  transition: opacity .25s ease, visibility .25s linear;
+}
+.live.is-live .live__cover { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.live__card {
+  max-width: 34rem;
+  margin: auto;
+  padding: clamp(1.25rem, 3.5vw, 2.5rem);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 16px;
+  background: rgba(18, 18, 26, .88);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+}
+.live__kicker {
+  margin: 0 0 .5rem;
+  font-size: .72rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: #9d9db8;
+}
+.live__title {
+  margin: 0 0 .75rem;
+  font-size: clamp(1.35rem, 3.4vw, 2rem);
+  font-weight: 500;
+  line-height: 1.15;
+  color: #f4f4fb;
+}
+.live__text {
+  margin: 0 0 1.25rem;
+  font-size: clamp(.9rem, 2.6vw, 1rem);
+  line-height: 1.55;
+  color: #c9c9dd;
+}
+.live__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  justify-content: center;
+}
+.live__hint {
+  margin: 1rem 0 0;
+  font-size: .78rem;
+  letter-spacing: .04em;
+  color: #8b8ba6;
+}
+
+.live__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: .7rem 1.35rem;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 999px;
+  background: transparent;
+  color: #eaeaf5;
+  font-family: inherit;
+  font-size: .76rem;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.live__btn:hover { border-color: #fff; background: rgba(255, 255, 255, .10); }
+.live__btn--primary { background: #5257b0; border-color: #5257b0; color: #fff; }
+.live__btn--primary:hover { background: #646ac6; border-color: #646ac6; }
+.live__btn[disabled] { opacity: .45; cursor: progress; }
+.live__btn[disabled]:hover { border-color: #5257b0; background: #5257b0; }
+
+/* Ausstieg aus dem Bedienmodus: sitzt in der Leiste ueber dem Rahmen, nicht
+   auf der Anwendung – dort wuerde er deren eigene Knoepfe verdecken. */
+.live__exit,
+.live__full {
+  display: none;
+  flex: none;
+  align-items: center;
+  gap: .5rem;
+  min-height: 40px;
+  padding: .5rem .95rem;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  background: rgba(22, 22, 32, .92);
+  color: #eaeaf5;
+  font-family: inherit;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.live__full { margin-left: auto; }   /* schiebt Vollbild + Ausstieg nach rechts */
+.live.is-live .live__exit,
+.live.is-live .live__full { display: inline-flex; }
+.live__exit:hover,
+.live__full:hover { border-color: #fff; background: rgba(40, 40, 58, .95); }
+.live__exit-key {
+  padding: .1rem .35rem;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 4px;
+  font-size: .6rem;
+  letter-spacing: .06em;
+  color: #b9b9d0;
+}
+.live__btn:focus-visible, .live__exit:focus-visible, .live__full:focus-visible { outline: 2px solid #8f93ff; outline-offset: 2px; }
+
+/* Kurze Viewports: Karte verkleinern, damit sie ohne Scrollen passt. */
+@media (max-width: 700px), (max-height: 620px) {
+  .live__text { display: none; }
+  .live__card { padding: 1rem 1.1rem; }
+  .live__title { font-size: 1.15rem; margin-bottom: .5rem; }
+  .live__hint { margin-top: .65rem; }
+  .live__bar-title { display: none; }   /* in der Leiste bleibt nur der Ausstieg */
+  .live__bar { justify-content: flex-end; }
+  .live__exit, .live__full { min-height: 34px; padding: .35rem .7rem; }
+  .live__exit-key { display: none; }
+}
+
 .try__image { position: relative; width: 100%; height: 100%; min-height: 0; }
 .face-fly {
   position: fixed;

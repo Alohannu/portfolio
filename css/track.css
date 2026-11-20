@@ -1,30 +1,49 @@
 /* ==========================================================================
-   Projekt-Track + Schwenk-Pfeil
+   Projekt-Track + scroll-gescrubbter Schwenk
 
-   Die Seite besteht aus zwei Ansichten nebeneinander:
+   Die Seite besteht aus zwei Ansichten:
 
-     [ Panel 1: Hero, Projekt 1, Collage, Outtakes, Notizen ][ Panel 2: Projekt 2 ]
+     [ Ansicht 1: Hero, Projekt 1, Collage, Outtakes, Notizen ]
+     [ Ansicht 2: Projekt 2 (Serum) ]
 
-   Der Track ist doppelt so breit wie der Viewport und wird per
-   transform: translateX() verschoben - ein Klick auf den Pfeil faehrt
-   eine Ansicht weiter, der Pfeil auf der Gegenseite faehrt zurueck.
+   Beide liegen nebeneinander im doppelt so breiten Track und werden per
+   transform: translateX() verschoben. Wie weit, bestimmt jetzt allein die
+   Scrollposition: die letzte Strecke von Ansicht 1 (PAN_VH = 1.0
+   Viewport-Hoehen, js/track.js) ist die Schwenkstrecke. Auf ihr faehrt
+   Ansicht 1 nach links aus dem Bild, waehrend Ansicht 2 von rechts
+   hereinkommt und ihr Titelvideo von unten aufsteigt. Klick-Pfeile gibt
+   es nicht mehr.
+
+   Davor liegt eine Leerlauf-Strecke (HOLD_VH = 0.4 Viewport-Hoehen,
+   js/track.js): so viel Scrollweg steht der Track still, damit man die
+   letzte Bildschirmseite der alten Ansicht noch ansehen kann. Erst
+   danach faehrt der Schwenk - der Track bewegt sich dort also nicht,
+   gepinnt bleibt die Auslauf-Buehne trotzdem.
+
+   Dafuer liegt die jeweils naechste Ansicht in der Scrollspur NICHT auf
+   derselben Hoehe, sondern beginnt dort, wo die vorige endet (das JS
+   setzt margin-top; ein transform waere hier falsch, weil es den
+   Containing Block der sticky-Pins verschieben wuerde). Die Hoehe des
+   Tracks ergibt sich damit aus dem Inhalt - die frueher noetige
+   JS-Hoehensetzung und das Abschneiden der laengeren Ansicht entfallen.
 
    Wichtig: Der Track darf KEINEN eigenen Containing Block fuer die
-   sticky-Pins erzeugen, solange das Verschieben nicht laeuft. Deshalb
-   setzt das JS transform erst beim Schwenk und raeumt es danach wieder
-   weg (translateX(0) wird zu "none").
+   sticky-Pins erzeugen, solange kein Schwenk laeuft. Deshalb setzt das
+   JS transform ausserhalb der Schwenkstrecke auf "none" zurueck.
    ========================================================================== */
 
 /* ---------- Kein horizontales Scrollen der Seite ----------
    Der Track ist 200vw breit (zwei Ansichten nebeneinander). Daraus
    entstand ein horizontaler Scrollbalken, mit dem man - etwa per
-   Trackpad-Wischen - OHNE Klick in die zweite Ansicht rutschen konnte.
-   Dort fuellt die schwarze Stage den Bildschirm und das Video ist
-   angeschnitten; das sah aus wie ein Vollbild-Player, der nicht laedt.
+   Trackpad-Wischen - am Schwenk vorbei in die zweite Ansicht rutschen
+   konnte. Dort fuellte die schwarze Stage den Bildschirm und das Video
+   war angeschnitten; das sah aus wie ein Vollbild-Player, der nicht
+   laedt. Der Schwenk soll ausschliesslich ueber die Scrollposition
+   laufen, deshalb bleibt der Ueberstand abgeschnitten.
 
    Der Clip liegt auf #main: das umschliesst NUR den Track, ist selbst
-   100vw breit und wird nicht transformiert. Die Pfeile und .face-fly
-   liegen ausserhalb von #main und bleiben unberuehrt.
+   100vw breit und wird nicht transformiert. .face-fly und das
+   Showroom-Overlay liegen ausserhalb von #main und bleiben unberuehrt.
 
    overflow: clip (nicht hidden!) erzeugt keinen Scroll-Container - mit
    hidden wuerden die sticky-Pins der Projekt-Abschnitte brechen.
@@ -40,26 +59,24 @@
 
 .track {
   position: relative;
-  /* Zwei Ansichten nebeneinander. Die Hoehe kommt aus dem Inhalt -
-     die Panels selbst sind nicht positioniert, damit die sticky-Pins
-     weiterhin am Viewport haengen. */
-  width: 200vw;
+  /* Drei Ansichten nebeneinander. Die Hoehe kommt aus dem Inhalt: jede
+     Ansicht traegt ihre eigene Hoehe, die naechste beginnt per
+     margin-top (setzt js/track.js) eine Schwenkstrecke hoeher. Die Panels
+     sind dafuer nicht positioniert, damit die sticky-Pins weiterhin am
+     Viewport haengen. */
+  width: 300vw;
   display: flex;
   flex-wrap: nowrap;
   align-items: flex-start;
   will-change: transform;
-  transition: transform .8s cubic-bezier(.22, .61, .36, 1);
-  /* Die Hoehe setzt das JS auf die Hoehe der AKTIVEN Ansicht (Panel 1
-     ist deutlich hoeher als Panel 2). overflow: clip schneidet den
-     Ueberstand ab, ohne einen Scroll-Container zu erzeugen - im
-     Gegensatz zu overflow: hidden, das die sticky-Pins der
-     Projekt-Abschnitte ausschalten wuerde. */
+  /* Keine Transition: die Verschiebung wird Frame fuer Frame aus der
+     Scrollposition gesetzt (Scrubbing). Eine Uebergangszeit wuerde dem
+     Scrollen nachlaufen.
+     overflow: clip schneidet den 300vw-Ueberstand ab, ohne einen
+     Scroll-Container zu erzeugen - overflow: hidden wuerde die
+     sticky-Pins der Projekt-Abschnitte ausschalten. */
   overflow: clip;
 }
-
-/* Waehrend des Schwenks laeuft die Fahrt; danach schaltet das JS die
-   Transition wieder ab, damit das Scrollen im Panel nicht mitschwingt. */
-.track.is-idle { transition: none; }
 
 .track__panel {
   /* Jede Ansicht ist genau ein Viewport breit. overflow:hidden ist hier
@@ -72,135 +89,87 @@
   max-width: 100vw;
 }
 
-/* Beide Panels liegen im Track nebeneinander und ueberlappen sich
-   vertikal (Panel 1 ist deutlich hoeher als Panel 2). Damit nicht das
-   falsche Panel das sichtbare verdeckt, wird der z-index beim Schwenk
-   mitgesetzt: nur die aktive Ansicht liegt oben. */
+/* In der Scrollspur liegen die Ansichten untereinander, nicht
+   uebereinander - der z-index entscheidet also nur, welche Ansicht beim
+   Schwenk oben liegt, wenn sich die Raender beruehren. */
 .track__panel { z-index: 1; }
 .track__panel.is-current { z-index: 2; }
 .track__panel--2 { background: #000; }
 
-/* ---------- Schwenk-Pfeil ---------- */
+/* Auslauf-Buehne: die letzte Section einer Ansicht, hinter der noch eine
+   weitere Ansicht liegt, bleibt waehrend des Leerlaufs UND des Schwenks
+   am Viewport stehen. Nur so ist beim Schwenk ausschliesslich die
+   seitliche Bewegung zu sehen - ohne sie rollt der Inhalt zusaetzlich
+   nach oben weg, und der Schwenk wirkt diagonal ("es scrollt diagonal
+   nach rechts statt nur nach rechts"). Im Leerlauf davor bewegt sich
+   gar nichts: der Track steht still, die Buehne ist gepinnt.
 
-.turn {
-  position: fixed;
-  top: 50%;
-  right: max(1rem, env(safe-area-inset-right));
-  z-index: 60;
-  display: grid;
-  place-items: center;
-  width: 3.25rem;
-  height: 3.25rem;
-  margin-top: -1.625rem;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #111;
-  cursor: pointer;
-  /* Dezent: erst am Seitenende eingeblendet, davor unsichtbar und
-     nicht anklickbar. */
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(8px);
-  transition: opacity .5s ease, transform .5s ease, visibility 0s linear .5s;
-}
+   Den Platz dafuer schafft js/track.js: es gibt der Ansicht eine
+   Pin-Strecke Reserve unter dem Inhalt (min-height = Inhalt + run) und
+   setzt die Buehne selbst auf genau diese Strecke Hoehe (run = hold +
+   pan, also Leerlauf + Schwenk). Damit beginnen Pin und Leerlauf am
+   selben Punkt und enden mit dem Schwenk - kein Vorlauf, kein
+   Restdrift.
 
-.turn.is-visible {
-  opacity: .55;
-  visibility: visible;
-  transform: none;
-  transition: opacity .5s ease, transform .5s ease, visibility 0s;
-}
-
-.turn.is-visible:hover,
-.turn.is-visible:focus-visible {
-  opacity: 1;
-  background: rgba(17, 17, 17, .06);
-}
-
-.turn:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-}
-
-.turn svg {
-  display: block;
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-/* Auf dunklem Grund (Collage, Notizen) hell zeichnen. */
-.turn--on-dark { color: #fff; }
-.turn--on-dark.is-visible:hover,
-.turn--on-dark.is-visible:focus-visible { background: rgba(255, 255, 255, .12); }
-
-/* Rueckweg-Pfeil auf Panel 2: linke Seite, gespiegelt. */
-.turn--back {
-  right: auto;
-  left: max(1rem, env(safe-area-inset-left));
-  transform: translateX(-8px);
-}
-.turn--back.is-visible { transform: none; }
-
-@media (min-width: 768px) {
-  .turn { width: 3.75rem; height: 3.75rem; margin-top: -1.875rem; right: 2rem; }
-  .turn--back { right: auto; left: 2rem; }
+   Bedingung dafuer: die Auslauf-Buehne ist ungefaehr ein Viewport hoch
+   (hier: die Notizen in Ansicht 1 und der "ai solution"-Abschnitt in
+   Ansicht 2). Waehrend des Schwenks steht dann genau ihr erster
+   Bildschirm still, was ueber die Buehnenhoehe hinausragt, liegt unter
+   der Viewport-Unterkante und ist nicht zu sehen. Eine deutlich hoehere
+   letzte Section wuerde beim Stauchen auf eine Bildschirmhoehe Inhalt
+   verlieren - die gehoert dann in eine eigene Buehne. */
+.track__panel:not(:last-child) > :last-child {
+  position: sticky;
+  top: 0;
 }
 
 /* ---------- Panel 2: Projekt 2 (Serum) ---------- */
 
-/* Hero von Projekt 2: ein einzelnes Kampagnenvideo, analog zu video-2
-   in Track 1 - es spielt von selbst, hat Ton und einen Mute-Button.
+/* Hero von Projekt 2: ein Video, das die Buehne bildschirmfuellend
+   ausfuellt - wie video-1 im Hero von Track 1.
 
-   Unterschied: das Quellmaterial ist hochkant (720x960 = 3:4). Mit
-   object-fit:cover (wie im Track-1-Hero) wuerde ein 1440x900-Viewport
-   das Video auf 1440px Breite ziehen und dabei 1920px hoch machen -
-   oben und unten fehlten je ~510px. Deshalb contain: vollstaendig
-   sichtbar, zentriert, so gross wie die Viewport-Hoehe erlaubt. */
+   Frueher lag hier serum-campaign.mp4 (720x960, hochkant). Das konnte
+   mit cover nicht sinnvoll fuellen (bei 1440x900 waeren oben und unten
+   je ~510px weg) und stand deshalb zentriert als contain-Bild in einer
+   schwarzen Flaeche. Jetzt: skincare.mp4 (1112x834, quer) mit cover. */
 .hero-wrapper--serum {
   position: relative;
-  /* Kein Scrubbing: eine Viewport-Hoehe reicht, damit die Stage stehen
-     bleibt und das Video in Ruhe laufen kann. */
-  height: 100vh;
+  /* Dieselbe Strecke wie .hero-wrapper in Track 1: 200vh Scrubbing
+     (SCRUB_VH in js/script.js) + 300vh, in denen die Stage gepinnt
+     bleibt, waehrend das Video laeuft und die naechste Section
+     darueberfaehrt. */
+  height: 500vh;
 }
 
-/* Kein sticky: eine sticky Stage orientiert sich am Scroll-Container und
-   wandert beim seitlichen Schwenk des Tracks NICHT mit - das Video
-   bliebe ausserhalb des Viewports stehen (gemessen: rect.left blieb
-   1440 statt 0). Der Serum-Hero ist nur eine Bildschirmhoehe hoch und
-   wird nicht gepinnt, deshalb reicht normale Positionierung. */
+/* Wie der Hero in Track 1: die Stage bleibt stehen, waehrend die Seite
+   scrollt - sonst waere das Video nach einer Bildschirmhoehe schon
+   vorbei und es gaebe keine Strecke zum Scrubbing.
+
+   Frueher stand hier position: relative mit der Begruendung, eine sticky
+   Stage wandere beim seitlichen Schwenk nicht mit (gemessen: rect.left
+   blieb 1440). Nachgemessen im Chromium: sticky funktioniert auch im
+   transformierten Track - rect.top bleibt waehrend der Scrollstrecke 0
+   und rect.left folgt dem Schwenk korrekt. Der Fehler von damals lag
+   woanders (die Stage war nur 100vh hoch und damit sofort vorbei). */
 .hero-stage--serum {
-  position: relative;
+  position: sticky;
+  top: 0;
   height: 100vh;
   height: 100svh;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: #000;
 }
 
-/* Das Video wird NICHT auf die Stage aufgeblaeht. Vorher stand hier
-   width/height: 100% + object-fit: contain - das Element fuellte damit
-   den ganzen Bildschirm (1440x900), und weil ein <video> eine eigene
-   Flaeche zeichnet, sah das aus wie ein bildschirmfuellender schwarzer
-   Player mit einem kleinen Bild darin ("fullscreen").
-   Stattdessen: das Element selbst bekommt die Groesse des Videos.
-   max-height/max-width begrenzen es auf die Stage, width/height:auto
-   halten das Seitenverhaeltnis. Kein object-fit noetig, weil nichts
-   beschnitten wird. */
+/* Bildschirmfuellend wie .stage__video in Track 1: das Video-Element
+   selbst fuellt die Stage, object-fit: cover beschneidet nur den Rand.
+   (Vorher stand hier die contain-Variante: Element in Video-Groesse,
+   zentriert, mit aspect-ratio 720/960 als Platzhalter vor dem Laden.) */
 .serum-video {
-  display: block;
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
-  /* 3:4-Quellmaterial: ohne feste Hoehe waere das Element 0 hoch,
-     solange die Metadaten nicht geladen sind. */
-  aspect-ratio: 720 / 960;
-  flex: 0 1 auto;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Der Mute-Button sitzt wie im Hero unten rechts. */
@@ -213,12 +182,18 @@
    Ein eigener try-on-Abschnitt entfaellt bei Projekt 2.
 
    WICHTIG: .project bringt aus style.css ein margin-top: -200vh mit.
-   Diese Ueberlappung ist fuer Track 1 gedacht - dort beginnt der Morph,
-   waehrend Video 2 noch gepinnt ist. In Panel 2 gibt es kein
-   Scrub-Video, auf das ueberlappt werden muesste; der negative Margin
-   zieht den Abschnitt dort nur aus dem Panel heraus (offsetTop -900)
-   und laesst die Panel-Hoehe schrumpfen. Deshalb hier aufheben. */
-.track__panel--2 .project { margin-top: 0; }
+   In Track 1 ueberlappt damit der Morph den noch gepinnten Hero. Genau
+   das passiert jetzt auch hier: der Serum-Hero hat dieselbe 500vh-Strecke
+   wie der Hero in Track 1, also darf seine erste Section ihn ebenfalls um
+   200vh ueberlappen - der Morph oeffnet sich, waehrend das Kampagnenvideo
+   noch laeuft. Vorher (Hero nur 100vh hoch) zog derselbe negative Margin
+   die Section aus dem Panel heraus, deshalb war er hier aufgehoben. */
+.track__panel--2 .project--serum { margin-top: -200vh; }
+
+/* Die Phasen-Section dagegen nicht: sie wird weder gepinnt noch
+   scroll-gesteuert (Umschalten per Klick) und soll ohne Ueberlappung
+   unter der Avatar-Section stehen. */
+.track__panel--2 .project--serum-phases { margin-top: 0; }
 
 .project--serum { height: 500vh; }
 
@@ -228,6 +203,19 @@
    zusammen mit dem Morph-Pin eine Scrollstrecke ergaben, auf der nichts
    passierte, sobald der Inhalt nicht mehr scroll-gesteuert ist.
    Ohne Pinning braucht der Abschnitt auch kein sticky. */
+/* Die Phasen-Section ist die Auslauf-Buehne von Ansicht 2 und muss die
+   Ansicht deshalb vollflaechig ausfuellen. Ihr .project__stage ist nur
+   1400px breit, zentriert und so hoch wie ihr Inhalt - daneben und
+   darunter schien der schwarze Panel-Hintergrund durch: als schwarzer
+   Rand am Ende von Ansicht 2 und als Spalt zwischen den beiden Ansichten
+   mitten im Schwenk.
+   Die Section traegt denselben Verlauf wie die Stage (css/style.css,
+   .project__stage), damit der Uebergang unsichtbar bleibt; der Verlauf
+   laeuft ueber fast dieselbe Hoehe, die Stoesse fallen nicht auf. */
+.track__panel--2 .p2-phases {
+  background: linear-gradient(to bottom, #c3b9b6 0%, #fdfdfd 100%);
+}
+
 .project--serum-phases { height: auto; }
 
 /* Der Avatar-Stack hat hier nur EINE Spalte; die Stage bleibt sonst
@@ -394,6 +382,74 @@
   .p2-stack .project__col--text { grid-column: auto; align-self: center; }
 }
 
+/* ---------- Projekt 2, Abschnitt 2: dieselbe Ansicht gespiegelt ----------
+   Dieselbe Seite wie der Avatar-Abschnitt, nur mit vertauschten Seiten:
+   links das Kampagnenvideo (720x960, hochkant), rechts Titel und Text.
+   Die Buehne ist eine Bildschirmhoehe hoch und bleibt eine Viewport-
+   Hoehe stehen (Section 200svh = 100svh Buehne + 100svh Halten), damit
+   die Ansicht als Seite erscheint und nicht nur durchlaeuft.
+
+   Die Section liegt ZWISCHEN Avatar-Abschnitt und Phasen-Section. Sie
+   darf deshalb nicht die Rolle der Auslauf-Buehne erben: letztes Kind
+   von Panel 2 bleibt die Phasen-Section, sonst setzt js/track.js die
+   falsche Section auf die Pin-Strecke (hold + pan). */
+.project--serum-repeat {
+  height: 200vh;
+  height: 200svh;
+  margin-top: 0;
+  z-index: 5;
+}
+
+/* Mobil: Text zuerst, Asset darunter - wie im Avatar-Abschnitt steht
+   die Ueberschrift ueber dem Bild. Auf dem Desktop dreht das Raster die
+   Reihenfolge (Video links, Text rechts), ohne dass die DOM-Reihenfolge
+   (Text zuerst) sich aendert. */
+.p2-repeat.project__stage {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+}
+
+.p2-repeat .project__col--text { grid-column: 1 / -1; }
+
+.campaign__media {
+  position: relative;
+  min-height: 0;
+}
+
+/* Gleiche Behandlung wie die Produktbilder des Avatar-Abschnitts:
+   ganz in der Zelle, nichts wird beschnitten (object-fit: contain),
+   Unterkante buendig. */
+.campaign__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  background: transparent;
+}
+
+@media (min-width: 900px) {
+  /* Spiegelbild der Rasterwerte von .p2-stack: 1.1fr fuer das Asset,
+     1fr fuer den Text; der breitere Innenabstand wandert auf die
+     Textseite (rechts statt links). */
+  .p2-repeat.project__stage {
+    grid-template-columns: 1.1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 2rem;
+    padding: 3rem 8vw 3rem 5vw;
+  }
+  .p2-repeat .project__col--text {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+  .p2-repeat .campaign__media {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
 /* Vollbild am Ende von Projekt 2. */
 .p2-fullscreen {
   position: relative;
@@ -410,7 +466,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .track { transition: none; }
-  .turn { transition: opacity .01s; transform: none; }
-  .turn.is-visible { transform: none; }
+  /* Kein Scrubbing: js/track.js setzt die Schwenkstrecke auf 0, der
+     Wechsel springt dann an der Grenze von Ansicht 1 auf Ansicht 2.
+     js/script.js springt beim Hero direkt auf das Ende; der Serum-Hero
+     braucht deshalb nur die Pin-Strecke wie der Hero in Track 1
+     (style.css: .hero-wrapper { height: 300vh }). */
+  .hero-wrapper--serum { height: 300vh; }
 }

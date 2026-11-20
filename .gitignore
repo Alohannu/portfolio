@@ -4,3 +4,6 @@
 /*.mp4
 /*.ttf
 /.claude/
+
+# macOS-Finder-Metadaten
+.DS_Store

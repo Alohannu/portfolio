@@ -70,7 +70,24 @@
     '.nv-root .nv-widget .k{color:var(--nv-widget-key);white-space:nowrap}',
     '.nv-root .nv-widget .v{color:var(--nv-widget-value);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.nv-root .nv-text{margin:6px 9px 0;padding:7px 9px;border-radius:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);font-size:9.5px;line-height:1.45;color:#c3c3d8;overflow:hidden}',
-    '.nv-root .nv-img{width:calc(100% - 18px);margin:6px 9px 0;display:block;border-radius:4px;background:#0e0e15}',
+    /* height:auto ist noetig, seit die Bilder width/height-Attribute tragen:
+       die Attribute liefern nur das Seitenverhaeltnis als Platzhalter, ohne
+       height:auto pinnt das height-Attribut aber die Naturhoehe (727px) und
+       object-fit:fill zieht das Bild auf das Dreifache in die Laenge. */
+    '.nv-root .nv-img{width:calc(100% - 16px);height:auto;margin:6px 8px 0;display:block;border-radius:4px;background:#0e0e15}',
+    /* Das Ergebnisbild des Graphen ist anklickbar: es oeffnet dieselbe
+       Datei in der Grossansicht (js/imageviewer.js, Delegation auf
+       [data-viewer-src]). Der Knopf liegt genau dort, wo sonst das Bild
+       steht, damit sich am Aufbau des Knotens nichts aendert. */
+    '.nv-root .nv-img-btn{position:relative;display:block;width:100%;margin:0;padding:0;border:0;background:none;font:inherit;color:inherit;cursor:zoom-in}',
+    '.nv-root .nv-img-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:6px}',
+    '.nv-root .nv-img-btn::after{content:"";position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(0,0,0,.55) url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23fff\' stroke-width=\'2\' stroke-linecap=\'round\'%3E%3Ccircle cx=\'10.5\' cy=\'10.5\' r=\'6.5\'/%3E%3Cpath d=\'M20 20l-4.8-4.8M10.5 7.5v6M7.5 10.5h6\'/%3E%3C/svg%3E") center / 22px 22px no-repeat;opacity:0;transform:scale(.85);transition:opacity .25s ease,transform .25s ease;pointer-events:none}',
+    '.nv-root .nv-img-btn:hover::after,.nv-root .nv-img-btn:focus-visible::after{opacity:1;transform:scale(1)}',
+    /* Hinweiszeile unter dem Bild: sie sitzt am unteren Knotenrand und ist
+       damit auch dann zu sehen, wenn der Canvas nur den unteren Teil des
+       Knotens zeigt. Der Zeiger allein (zoom-in) ist zu leise. */
+    '.nv-root .nv-hint{display:block;margin:5px 8px 0;font-size:9px;letter-spacing:.08em;text-transform:uppercase;text-align:center;color:#9fb4ff}',
+    '.nv-root .nv-img-btn:hover .nv-hint,.nv-root .nv-img-btn:focus-visible .nv-hint{color:#fff}',
     '.nv-root .nv-caption{text-align:center;font-size:9px;color:#8b8ba6;margin-top:4px}',
     '@media (prefers-reduced-motion:reduce){.nv-root .nv-pulse{animation:none!important;opacity:0}}'
   ].join('\n');
@@ -113,6 +130,37 @@
       });
     }
     return rows;
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Bild eines Knotens
+   *
+   * width/height aus den Daten reservieren den Platz schon vor dem Laden:
+   * ohne sie ist der Knoten bis zum Laden nur ~112 px hoch und springt
+   * dann auf seine volle Hoehe - der Graph steht waehrend des Scrollens
+   * an der falschen Stelle und das Bild "erscheint" nicht, es ploppt auf.
+   *
+   * Beim Ergebnis-Knoten des Graphen (ComfyUI "Save Image", hier Node 9)
+   * steckt das Bild in einem Knopf: ein Klick oeffnet genau diese Datei in
+   * der Grossansicht. Welcher Knoten das ist, sagt entweder das Datenfeld
+   * imageZoom oder der Knotentyp; js/imageviewer.js nimmt den Klick per
+   * Delegation auf [data-viewer-src] entgegen.
+   * ------------------------------------------------------------------------- */
+  function nodeImage(n, assetBase) {
+    var src = esc(assetBase + String(n.image).replace(/^assets\//, ''));
+    var alt = esc(n.imageAlt || (n.title ? n.title + ' \u2013 Vorschaubild' : n.image));
+    var dims = (n.imageW && n.imageH) ? ' width="' + n.imageW + '" height="' + n.imageH + '"' : '';
+    var img = '<img class="nv-img" loading="lazy" alt="' + alt + '" src="' + src + '"' + dims + '>';
+    if (n.imageZoom !== true && n.type !== 'SaveImage') return img;
+    var label = n.title || n.type || 'Ergebnisbild';
+    return '<button type="button" class="nv-img-btn"' +
+      ' data-viewer-src="' + src + '"' +
+      ' data-viewer-alt="' + alt + '"' +
+      ' data-viewer-label="' + esc(label) + '"' +
+      ' aria-label="' + esc(label + ' in Originalgr\u00f6\u00dfe ansehen') + '">' +
+      img +
+      '<span class="nv-hint nv-mono" aria-hidden="true">\u2197 Original gro\u00df ansehen</span>' +
+      '</button>';
   }
 
   /* ---------------------------------------------------------------------------
@@ -228,7 +276,7 @@
             return '<div class="nv-widget"><span class="k">◄ ' + esc(w.k) + '</span><span class="v">' + esc(w.v) + ' ►</span></div>';
           }).join('') +
           (n.text ? '<div class="nv-text">' + esc(n.text) + '</div>' : '') +
-          (n.image ? '<img class="nv-img" loading="lazy" alt="' + esc(n.imageAlt || (n.title ? n.title + ' – Vorschaubild' : n.image)) + '" src="' + esc(assetBase + String(n.image).replace(/^assets\//, '')) + '">' : '') +
+          (n.image ? nodeImage(n, assetBase) : '') +
           (n.caption ? '<div class="nv-caption nv-mono">' + esc(n.caption) + '</div>' : '') +
         '</div></div>';
     }).join('');

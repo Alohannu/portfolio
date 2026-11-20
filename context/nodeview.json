@@ -428,7 +428,7 @@
           "v": "Look/Jason"
         }
       ],
-      "image": "comfy-result.avif",
+      "image": "output.webp",
       "imageW": 445,
       "imageH": 589,
       "caption": "445 × 589"
@@ -576,10 +576,10 @@
           "v": "image"
         }
       ],
-      "image": "comfy-model.avif",
-      "imageW": 198,
-      "imageH": 248,
-      "caption": "198 × 248"
+      "image": "model.webp",
+      "imageW": 581,
+      "imageH": 727,
+      "caption": "581 × 727"
     },
     {
       "id": "87",
@@ -610,10 +610,10 @@
           "v": "image"
         }
       ],
-      "image": "comfy-standing.avif",
-      "imageW": 190,
-      "imageH": 190,
-      "caption": "190 × 190"
+      "image": "pose.webp",
+      "imageW": 375,
+      "imageH": 375,
+      "caption": "375 × 375"
     },
     {
       "id": "83",
@@ -644,10 +644,10 @@
           "v": "image"
         }
       ],
-      "image": "comfy-outfit.avif",
-      "imageW": 152,
-      "imageH": 272,
-      "caption": "152 × 272"
+      "image": "outfit.webp",
+      "imageW": 300,
+      "imageH": 538,
+      "caption": "300 × 538"
     }
   ],
   "links": [

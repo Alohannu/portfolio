@@ -15,10 +15,10 @@
 (function () {
   "use strict";
 
-  /* Die elf Bilder liegen lokal unter media/projects/projekt-2/phases/.
+  /* Die elf Bilder liegen lokal unter media/selected-works/phases/.
      Dateinamen wie im Original belassen, damit der Abgleich mit der
      Quelle trivial bleibt. */
-  var BASE = "media/projects/projekt-2/phases/";
+  var BASE = "media/selected-works/phases/";
 
   /* Phasendaten 1:1 aus dem Original. "single: true" bedeutet: nur EIN
      breites Bild statt des Paares (Phase 4).

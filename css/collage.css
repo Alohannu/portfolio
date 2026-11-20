@@ -137,6 +137,29 @@
   min-height: 24vh;
 }
 
+/* ---------- Ansicht 3 (eggo): dieselbe Collage mit nur drei Clips ----------
+   Die drei Quellvideos sind hochkant (eggo-story 720x1280, eggo-campaign-1/2
+   720x904). Im 5er-Mosaik oben belegten sie nur Slot 1, 2 und 3 - die
+   untere rechte Rasterhaelfte bliebe schwarz. Sie stehen deshalb in EINER
+   Reihe zu dritt, je zwei der sechs Spalten breit: drei gleich grosse,
+   leicht hochkante Kacheln in derselben Buehne und Hoehe wie in Ansicht 1.
+   Nur ab 900px Breite - darunter stapelt die Regel aus dem Media-Query
+   unten die Kacheln ohnehin untereinander.
+   Die Grenze ist bewusst 900px und nicht 901px: der Media-Query unten
+   heisst (max-width: 900px), die beiden Bedingungen ueberlappen sich also
+   in genau einem Punkt statt eine Luecke zu lassen. Mit 901px faellt jede
+   gebrochene Breite dazwischen (z.B. 900.5px durch Browser-Zoom) durch
+   BEIDE Regeln und die drei Kacheln landen wieder im 5er-Mosaik mit
+   leerer unterer Rasterhaelfte. Bei genau 900px gewinnen unten die
+   !important-Regeln (grid-column/grid-row) und stapeln weiter. */
+@media (min-width: 900px) {
+  .collage--trio .collage__grid { grid-template-rows: 1fr; }
+  .collage--trio .collage__grid > .collage__slot:nth-child(n) {
+    grid-column: span 2;
+    grid-row: 1;
+  }
+}
+
 /* Jeder Slot ist eine Kachel im Raster. Es spielt immer nur EINER –
    alle anderen bleiben weiss. Dadurch laeuft nur ein Decoder. */
 .collage__slot {
