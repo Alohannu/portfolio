@@ -19,7 +19,7 @@
 
    Im Markup:
 
-     <button data-viewer-src="assets/output.webp"
+     <button data-viewer-src="media/projects/projekt-1/output.webp"
              data-viewer-alt="Beschreibung"
              data-viewer-label="Save Image"> … </button>
    ========================================================================== */

@@ -1,16 +1,18 @@
 /* ==========================================================================
    Projekt-Track + scroll-gescrubbter Schwenk
 
-   Die Seite besteht aus zwei Ansichten:
+   Die Seite besteht aus vier Ansichten:
 
      [ Ansicht 1: Hero, Projekt 1, Collage, Outtakes, Notizen ]
      [ Ansicht 2: Projekt 2 (Serum) ]
+     [ Ansicht 3: Projekt 3 (eggo) ]
+     [ Ansicht 4: Musik-Teil "ai music" ]
 
-   Beide liegen nebeneinander im doppelt so breiten Track und werden per
+   Sie liegen nebeneinander im vierfach breiten Track und werden per
    transform: translateX() verschoben. Wie weit, bestimmt jetzt allein die
-   Scrollposition: die letzte Strecke von Ansicht 1 (PAN_VH = 1.0
-   Viewport-Hoehen, js/track.js) ist die Schwenkstrecke. Auf ihr faehrt
-   Ansicht 1 nach links aus dem Bild, waehrend Ansicht 2 von rechts
+   Scrollposition: die letzte Strecke einer Ansicht (PAN_VH = 1.0
+   Viewport-Hoehen, js/track.js) ist die Schwenkstrecke. Auf ihr faehrt die
+   alte Ansicht nach links aus dem Bild, waehrend die neue von rechts
    hereinkommt und ihr Titelvideo von unten aufsteigt. Klick-Pfeile gibt
    es nicht mehr.
 
@@ -33,7 +35,7 @@
    ========================================================================== */
 
 /* ---------- Kein horizontales Scrollen der Seite ----------
-   Der Track ist 200vw breit (zwei Ansichten nebeneinander). Daraus
+   Der Track ist 400vw breit (vier Ansichten nebeneinander). Daraus
    entstand ein horizontaler Scrollbalken, mit dem man - etwa per
    Trackpad-Wischen - am Schwenk vorbei in die zweite Ansicht rutschen
    konnte. Dort fuellte die schwarze Stage den Bildschirm und das Video
@@ -59,12 +61,12 @@
 
 .track {
   position: relative;
-  /* Drei Ansichten nebeneinander. Die Hoehe kommt aus dem Inhalt: jede
+  /* Vier Ansichten nebeneinander. Die Hoehe kommt aus dem Inhalt: jede
      Ansicht traegt ihre eigene Hoehe, die naechste beginnt per
      margin-top (setzt js/track.js) eine Schwenkstrecke hoeher. Die Panels
      sind dafuer nicht positioniert, damit die sticky-Pins weiterhin am
      Viewport haengen. */
-  width: 300vw;
+  width: 400vw;
   display: flex;
   flex-wrap: nowrap;
   align-items: flex-start;
@@ -72,7 +74,7 @@
   /* Keine Transition: die Verschiebung wird Frame fuer Frame aus der
      Scrollposition gesetzt (Scrubbing). Eine Uebergangszeit wuerde dem
      Scrollen nachlaufen.
-     overflow: clip schneidet den 300vw-Ueberstand ab, ohne einen
+     overflow: clip schneidet den 400vw-Ueberstand ab, ohne einen
      Scroll-Container zu erzeugen - overflow: hidden wuerde die
      sticky-Pins der Projekt-Abschnitte ausschalten. */
   overflow: clip;
@@ -112,12 +114,13 @@
    Restdrift.
 
    Bedingung dafuer: die Auslauf-Buehne ist ungefaehr ein Viewport hoch
-   (hier: die Notizen in Ansicht 1 und der "ai solution"-Abschnitt in
-   Ansicht 2). Waehrend des Schwenks steht dann genau ihr erster
-   Bildschirm still, was ueber die Buehnenhoehe hinausragt, liegt unter
-   der Viewport-Unterkante und ist nicht zu sehen. Eine deutlich hoehere
-   letzte Section wuerde beim Stauchen auf eine Bildschirmhoehe Inhalt
-   verlieren - die gehoert dann in eine eigene Buehne. */
+   (hier: die Notizen in Ansicht 1, der "ai solution"-Abschnitt in
+   Ansicht 2 und die Titel-Karte "ai music" in Ansicht 3). Waehrend des
+   Schwenks steht dann genau ihr erster Bildschirm still, was ueber die
+   Buehnenhoehe hinausragt, liegt unter der Viewport-Unterkante und ist
+   nicht zu sehen. Eine deutlich hoehere letzte Section wuerde beim
+   Stauchen auf eine Bildschirmhoehe Inhalt verlieren - die gehoert dann
+   in eine eigene Buehne. */
 .track__panel:not(:last-child) > :last-child {
   position: sticky;
   top: 0;
@@ -448,6 +451,62 @@
     grid-column: 1;
     grid-row: 1;
   }
+}
+
+/* ---------- Panel 2: Sand-Kurve als Uebergang zwischen den Seiten ----------
+   Dieselbe Buehne wie .placeholder in Ansicht 1 (css/style.css, "Abschnitt
+   6"): eine halbe Bildschirmhoehe hoch, darauf die Kurve aus
+   media/background/ ueber
+   eine Kanten-Verlaufs-Ebene und eine reine Verlaufs-Unterlage. Warum die
+   drei Ebenen, warum cover und warum image-rendering: pixelated - siehe den
+   ausfuehrlichen Kommentar bei .placeholder; hier gilt alles unveraendert.
+
+   Nur die Kantenfarben sind andere. In Ansicht 1 trennt die Buehne hell
+   (#fdfdfd) von schwarz (#000). In Ansicht 2 stossen zwei helle Seiten
+   aufeinander, und beide Nahtstellen liegen auf denselben Farben:
+
+     oben   #fdfdfd  - so endet die Buehne der vorigen Seite
+                       (.project__stage, Verlauf #c3b9b6 -> #fdfdfd)
+     unten  #c3b9b6  - so beginnt die Buehne der naechsten Seite
+                       (derselbe Verlauf, 0%-Stop; .p2-phases traegt ihn
+                       ebenfalls, siehe oben)
+
+   Die Sand-Kurve laeuft in dieselbe Richtung: oben #f7f7f8 (247), unten
+   das Sandgrau des Verlaufs (199). Sie ist damit selbst der Uebergang -
+   die Kanten-Ebene pinnt nur die beiden Raender exakt fest, weil die
+   Kurve diagonal liegt und ihre Ecken nicht gleich hell sind.
+
+   Das Bild ist die 3840x900-Fassung von sandgrain-curve-3840x2160.webp
+   (liegt unbenutzt in media/_unused/):
+   wie bei grain-curve-3840x900.png nur vertikal auf das Format der Buehne
+   gestaucht, damit cover die volle Kurve zeigt und nicht die untere
+   Haelfte abschneidet. Verlustfrei gespeichert, damit das Korn scharf
+   bleibt (Banding-Kaschierung, siehe .placeholder). */
+.seam {
+  height: 50vh;
+  height: 50svh;
+  background-color: #c3b9b6;
+  background-image:
+    linear-gradient(
+      to bottom,
+      #fdfdfd 0,
+      var(--bg-light) clamp(40px, 9vh, 130px),
+      rgba(247, 247, 248, 0) clamp(80px, 22vh, 300px),
+      rgba(195, 185, 182, 0) 82%,
+      #c3b9b6 100%
+    ),
+    url("../media/background/sandgrain-curve-3840x900.webp"),
+    linear-gradient(
+      to bottom,
+      #fdfdfd 0,
+      var(--bg-light) clamp(60px, 12vh, 180px),
+      var(--bg-light) calc(100% - var(--seam-fade)),
+      #c3b9b6 100%
+    );
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover, 100% 100%;
+  background-position: center top, center top, center top;
+  image-rendering: pixelated;
 }
 
 /* Vollbild am Ende von Projekt 2. */

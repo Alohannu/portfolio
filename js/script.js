@@ -666,7 +666,8 @@
   /* ---------- Gesichtsbild: von Abschnitt 4 in den Node-Graph (Abschnitt 5) ----------
      Das Porträt aus #konsistenz wandert als Klon (#faceFly) skaliert zum
      Bild-Node "model" des Graphen. Dort geht es in das Node-Bild über:
-     assets/model.webp ist dieselbe Datei wie avatar-jason-face.webp, deshalb
+     media/projects/projekt-1/model.webp ist dieselbe Datei wie
+     media/projects/projekt-1/avatar-jason-face.webp, deshalb
      ist die Übergabe am Ende ohne Kante. Eine CSS-Änderung braucht es nicht –
      .face-fly ist position:fixed mit transform-origin 0 0, wir rechnen also
      durchgehend in Viewport-Koordinaten (kein Stage-Ursprung).

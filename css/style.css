@@ -140,7 +140,7 @@ body {
 
    Der Uebergang war eine volle Bildschirmhoehe hoch und wirkte damit wie
    ein eigener Abschnitt zwischen den beiden. Er ist jetzt halb so hoch:
-   50vh (50svh). Die Kurve in assets/grain-curve-3840x900.png ist
+   50vh (50svh). Die Kurve in media/background/grain-curve-3840x900.png ist
    dieselbe wie in der alten 3840x2160-Fassung, nur vertikal auf das neue
    Format gestaucht: oben weiss (255), unten schwarz (9), mit Filmkorn
    darueber, quadratisch und von derselben Art, Groesse und Staerke wie
@@ -184,7 +184,7 @@ body {
       rgba(0, 0, 0, 0) 82%,
       #000 100%
     ),
-    url("../assets/grain-curve-3840x900.png"),
+    url("../media/background/grain-curve-3840x900.png"),
     linear-gradient(
       to bottom,
       #fdfdfd 0,
@@ -430,7 +430,8 @@ body {
 .flip__back { transform: rotateY(180deg); background: var(--nv-bg, #0A0A0F); }
 
 /* ---------- Abschnitt 5: Rueckseite – AI Photo Studio live eingebettet ----------
-   Frueher lag hier der Screenshot assets/photo-studio.png. Jetzt laeuft die
+   Frueher lag hier der Screenshot photo-studio.png (jetzt in media/_unused/).
+   Jetzt laeuft die
    echte Anwendung in einem iframe.
 
    Bedienbarkeit: der Rahmen ist zuerst pointer-events: none. Erst der Klick

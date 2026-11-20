@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="css/track.css">
   <link rel="stylesheet" href="css/curtain.css">
   <link rel="stylesheet" href="css/imageviewer.css">
+  <link rel="stylesheet" href="css/music.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
@@ -116,7 +117,8 @@
               <div class="flip__face flip__front">
                 <div id="comfy-slot"></div>
               </div>
-              <!-- Rückseite: statt des früheren Screenshots (assets/photo-studio.png)
+              <!-- Rückseite: statt des früheren Screenshots (photo-studio.png,
+                   liegt unbenutzt in media/_unused/)
                    läuft hier die echte Anwendung in einem iframe. Sie wird erst
                    geladen, wenn die Rückseite zum ersten Mal sichtbar wird, und
                    erst nach einem Klick bedienbar (.is-live): eine eingebettete
@@ -316,6 +318,13 @@
         </div>
       </section>
 
+      <!-- Projekt 2, Uebergang 1: Sand-Kurve zwischen den beiden "ai face
+           serum"-Seiten. Dieselbe Buehne wie .placeholder in Ansicht 1
+           (css/style.css) - hier mit media/background/sandgrain-curve-3840x900.webp
+           und den Kantenfarben dieser beiden Seiten (css/track.css .seam).
+           Rein dekorativ: keine Ueberschrift, kein Inhalt. -->
+      <section class="seam" aria-hidden="true"></section>
+
       <!-- Projekt 2, Abschnitt 2: dieselbe Ansicht kommt gespiegelt zurueck.
            Titel und Text stehen rechts, das Kampagnenvideo links. Die
            Buehne bleibt eine Bildschirmhoehe stehen (100vh Halten), damit
@@ -341,6 +350,13 @@
           </div>
         </div>
       </section>
+
+      <!-- Projekt 2, Uebergang 2: dieselbe Sand-Kurve zwischen der zweiten
+           "ai face serum"-Seite und "ai solution". Gleiche Buehne wie oben;
+           sie steht VOR der Phasen-Section, damit die weiterhin letztes
+           Kind von Panel 2 bleibt (js/track.js haengt seine Pin-Strecke an
+           das letzte Kind). -->
+      <section class="seam" aria-hidden="true"></section>
 
       <!-- Projekt 2, Abschnitt 3: Produktentwicklung in sechs Phasen.
            Aufbau und Inhalte stammen 1:1 aus dem Original
@@ -447,7 +463,296 @@
         <div data-collage="eggo"></div>
       </section>
 
+      <!-- Ansicht 3, Bilder am Ende: die fuenf eggo-Kampagnenmotive aus
+           media/projects/projekt-2/ (eggo-1..5) als klickbare Collage -
+           dieselbe Machart wie die "selected works"-Abschnitte (schwarzer
+           Grund, Kopfzeile, abgerundete Kacheln in einer Reihe), nur sind
+           die Kacheln hier Bilder statt Videos.
+
+           WARUM ohne eigenes JS: js/imageviewer.js oeffnet jedes Element mit
+           data-viewer-src in der Bild-Ansicht; der Klick wird auf document
+           delegiert, data-viewer-alt und data-viewer-label beschriften die
+           Ansicht. Die Kacheln sind deshalb <button> und keine <div>: so
+           sind sie mit der Tastatur erreichbar und der Fokus kehrt beim
+           Schliessen auf die angeklickte Kachel zurueck.
+
+           WARUM die Kacheln unterschiedlich breit sind: die Motive sind
+           hochkant (703x1260, 703x1004, 704x882). In gleich breiten Kacheln
+           muesste "object-fit: cover" die Koepfe anschneiden. Die Breiten
+           wachsen deshalb im Verhaeltnis des Motivs (flex-grow je Kachel,
+           css/collage.css .imgcollage) - alle Bilder stehen gleich hoch und
+           vollstaendig im Bild.
+
+           Die Section bleibt VOR .music-intro stehen: js/track.js setzt die
+           letzte Section der Ansicht auf die Pin-Strecke (Leerlauf +
+           Schwenk), das darf nur die Titelkarte sein. -->
+      <section class="collage collage--bilder" id="collage-eggo-bilder"
+               aria-label="eggo – Kampagnenmotive als klickbare Bild-Collage">
+        <div class="collage__head">
+          <h2 class="collage__title">kampagnenmotive</h2>
+          <p class="collage__text">Fünf Motive der eggo-Kampagne – ein Klick auf ein Bild öffnet es in voller Größe.</p>
+        </div>
+        <div class="imgcollage">
+          <button class="imgcollage__tile" type="button"
+                  data-viewer-src="media/projects/projekt-2/eggo-1.avif"
+                  data-viewer-alt="eggo-Kampagnenmotiv 1: rosa Blüten mit pinker Sonnenbrille"
+                  data-viewer-label="eggo – Kampagnenmotiv 1">
+            <img src="media/projects/projekt-2/eggo-1.avif"
+                 alt="eggo-Kampagnenmotiv 1: rosa Blüten mit pinker Sonnenbrille"
+                 width="703" height="1260" loading="lazy" decoding="async">
+          </button>
+          <button class="imgcollage__tile" type="button"
+                  data-viewer-src="media/projects/projekt-2/eggo-2.avif"
+                  data-viewer-alt="eggo-Kampagnenmotiv 2: Büste in Folie mit Sonnenbrille vor Blüten-Kacheln"
+                  data-viewer-label="eggo – Kampagnenmotiv 2">
+            <img src="media/projects/projekt-2/eggo-2.avif"
+                 alt="eggo-Kampagnenmotiv 2: Büste in Folie mit Sonnenbrille vor Blüten-Kacheln"
+                 width="703" height="1004" loading="lazy" decoding="async">
+          </button>
+          <button class="imgcollage__tile" type="button"
+                  data-viewer-src="media/projects/projekt-2/eggo-3.avif"
+                  data-viewer-alt="eggo-Kampagnenmotiv 3: Kopf in Folie mit Sonnenbrille"
+                  data-viewer-label="eggo – Kampagnenmotiv 3">
+            <img src="media/projects/projekt-2/eggo-3.avif"
+                 alt="eggo-Kampagnenmotiv 3: Kopf in Folie mit Sonnenbrille"
+                 width="704" height="882" loading="lazy" decoding="async">
+          </button>
+          <button class="imgcollage__tile" type="button"
+                  data-viewer-src="media/projects/projekt-2/eggo-4.avif"
+                  data-viewer-alt="eggo-Kampagnenmotiv 4: Model mit blütenbesetzter Brille über einer Brillenskizze"
+                  data-viewer-label="eggo – Kampagnenmotiv 4">
+            <img src="media/projects/projekt-2/eggo-4.avif"
+                 alt="eggo-Kampagnenmotiv 4: Model mit blütenbesetzter Brille über einer Brillenskizze"
+                 width="703" height="1004" loading="lazy" decoding="async">
+          </button>
+          <button class="imgcollage__tile" type="button"
+                  data-viewer-src="media/projects/projekt-2/eggo-5.avif"
+                  data-viewer-alt="eggo-Kampagnenmotiv 5: Model im transparenten Kleid mit Sonnenbrille"
+                  data-viewer-label="eggo – Kampagnenmotiv 5">
+            <img src="media/projects/projekt-2/eggo-5.avif"
+                 alt="eggo-Kampagnenmotiv 5: Model im transparenten Kleid mit Sonnenbrille"
+                 width="703" height="1004" loading="lazy" decoding="async">
+          </button>
+        </div>
+      </section>
+
+      <!-- Auslauf-Buehne von Ansicht 3 (siehe css/track.css): die
+           Ueberschrift des Musik-Teils steht hier als vollbildhohe
+           Titel-Karte am Ende des eggo-Tracks. Damit hat der Schwenk zu
+           Ansicht 4 die Buehne, die waehrend Leerlauf und Schwenk still am
+           Viewport steht - wie die "Notizen" in Ansicht 1 und
+           "ai solution" in Ansicht 2.
+
+           WARUM nicht die Video-Collage darueber: js/track.js setzt die
+           letzte Section einer Ansicht auf genau die Pin-Strecke (1.4
+           Viewport-Hoehen, run = hold + pan). Die Collage ist mit 1.87 vh
+           deutlich hoeher und hat kein overflow - sie wuerde ueberlaufen
+           und in Ansicht 4 hineinragen.
+
+           Die Karte selbst ist eine Bildschirmhoehe hoch
+           (.music-intro__inner); der Rest der Pin-Strecke bleibt unter der
+           Viewport-Unterkante und ist nicht zu sehen. -->
+      <section class="music-intro" aria-label="ai music - Titel-Karte">
+        <div class="music-intro__inner">
+          <h2 class="music-intro__title">ai music</h2>
+        </div>
+      </section>
+
     </div><!-- /Panel 3 -->
+
+    <!-- ================= Ansicht 4: Musik-Teil "ai music" =================
+         Uebernommen aus dem Original (yytrieu.github.io/ai-portfolio,
+         Abschnitt "ai music" - dort die letzte Sektion der Seite). Aufbau
+         1:1: links die Werkzeug-Pillen, in der Mitte der Soundtrack-Player
+         mit Wellenform, Fortschritt und Songtext, rechts das Concept-Video
+         "Pantomime".
+
+         Die Ueberschrift steht als vollbildhohe Titel-Karte am Ende von
+         Ansicht 3 (css/music.css, .music-intro) - dort ist sie die
+         Auslauf-Buehne des Schwenks.
+
+         Medien: media/projects/projekt-4/Pantomime.mp3 und
+         media/projects/projekt-4/pantomime-background.avif; das
+         Concept-Video liegt als media/selected-works/videos/
+         Pantomime-Intro.mp4 im Projekt. Stil: css/music.css, Steuerung:
+         js/music.js. -->
+    <div class="track__panel track__panel--4" id="music-view">
+      <section class="music" id="music" aria-label="ai music - Musik-Teil">
+        <div class="music__pin">
+          <div class="music__stage">
+            <img class="music__bg" src="media/projects/projekt-4/pantomime-background.avif" alt="">
+
+            <div class="music__grid">
+
+              <!-- Links: womit der Track entstanden ist -->
+              <div class="music__tools">
+                <div class="music__tool">
+                  <span class="music__tool-name">ChatGPT</span>
+                  <span class="music__tool-use">Concept</span>
+                </div>
+                <div class="music__tool">
+                  <span class="music__tool-name">Suno</span>
+                  <span class="music__tool-use">Song producing</span>
+                </div>
+                <div class="music__tool">
+                  <span class="music__tool-name">Midjourney</span>
+                  <span class="music__tool-use">Image Generation</span>
+                </div>
+                <div class="music__tool">
+                  <span class="music__tool-name">Lumalabs AI</span>
+                  <span class="music__tool-use">Video &amp; Voice</span>
+                </div>
+              </div>
+
+              <!-- Mitte: Soundtrack und Songtext -->
+              <div class="music__player-col">
+                <p class="music__hint">[ Click to play soundtrack ]</p>
+
+                <div class="music__player">
+                  <audio id="musicSong" src="media/projects/projekt-4/Pantomime.mp3" preload="metadata"></audio>
+                  <button class="music__play" id="musicPlay" type="button"
+                          aria-label="Soundtrack abspielen" aria-pressed="false">
+                    <span class="music__play-icon" id="musicPlayIcon" aria-hidden="true">&#9654;</span>
+                  </button>
+                  <div class="music__meta">
+                    <div class="music__wave" aria-hidden="true">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <div class="music__bar"><div class="music__bar-fill" id="musicBarFill"></div></div>
+                    <div class="music__labels">
+                      <span class="music__song">Song Pantomime &mdash; Suno AI Synthesis</span>
+                      <span class="music__time" id="musicTime">0:00 / 0:00</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="music__lyrics">
+                  <div class="music__lyrics-inner">
+                    <pre class="music__lyrics-text">[Verse 1]
+you press your palm against the air
+like there's a wall that's really there
+I watch you build it, brick by brick
+just silence and your fingertips
+no key, no door, no need to knock
+you trace the shape, I feel it lock
+a room for two, no blueprint, no plan
+just the quiet architecture of your hands
+
+[Pre-Chorus]
+nobody sees it, nobody knows
+but I can feel where the fourth wall goes
+you don't say stay, you don't say mine
+you just close your eyes and build the line
+
+[Chorus]
+we're living in an invisible box
+soundproof, safe, nobody talks
+just your hands on the glass I can't see
+tracing out "I love you" over me
+no words, no sound, just space we made
+a room for two in the love we've stayed
+so hold the wall, don't let it drop
+this quiet box is all we've got
+
+[Verse 2]
+you leave a window, cracked, just right
+a gesture folded into night
+you touch the glass, I touch it too
+somehow I always know it's true
+the city's loud outside these walls
+but nothing gets in, nothing falls
+just you, the shape of what you feel
+sealed in air, but it's still real
+
+[Pre-Chorus]
+nobody sees it, nobody knows
+but I can feel where the fourth wall goes
+you don't say stay, you don't say mine
+you just close your eyes and build the line
+
+[Chorus]
+we're living in an invisible box
+soundproof, safe, nobody talks
+just your hands on the glass I can't see
+tracing out "I love you" over me
+no words, no sound, just space we made
+a room for two in the love we've stayed
+so hold the wall, don't let it drop
+this quiet box is all we've got
+
+[Bridge]
+(half-spoken, breathy, vocals pulled back — almost a whisper)
+what if the walls came down one night
+what if you said it, black and white—
+would it break the spell we're in
+or would it just let daylight in
+(pause — a beat of silence)
+I don't need you to say the words
+I've read them in a thousand blurs
+of hands on glass and held-back air
+you love me like you're always there
+
+[Final Chorus]
+we're living in an invisible box
+soundproof, safe, nobody talks
+just your hands on the glass I can't see
+tracing out "I love you" over me
+so hold the wall
+don't let it drop
+this quiet box
+is all we've got</pre>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rechts: Concept-Video (laeuft stumm in Schleife) -->
+              <div class="music__video-col">
+                <h3 class="music__video-title">Concept Pantomime</h3>
+                <div class="music__video-frame">
+                  <video class="music__video" id="musicVideo" src="media/selected-works/videos/Pantomime-Intro.mp4"
+                         autoplay loop muted playsinline></video>
+                  <button class="music__audio" id="musicAudio" type="button" aria-pressed="false">
+                    <span class="music__audio-icon" aria-hidden="true">&#128263;</span>
+                    <span data-audio-label>Audio on</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div><!-- /Panel 4 -->
+
    </div><!-- /Track -->
   </main>
 
@@ -566,6 +871,7 @@
   <script src="js/curtain.js"></script>
   <script src="js/serum-phases.js"></script>
   <script src="js/serum-campaign.js"></script>
+  <script src="js/music.js"></script>
   <script>
     // ComfyUI-Node-Ansicht (virtual try-on) aus dem normalisierten JSON rendern.
     // Ersetzt das frühere statische comfyui.png in Abschnitt 5.
@@ -580,7 +886,7 @@
 
       function render(data) {
         window.__nodeview = NodeView.renderNodeView(slot, data, {
-          assetBase: "assets/",       // lokale Kopien unter portfolio/assets/
+          assetBase: "media/projects/projekt-1/", // Try-on-Bilder unter portfolio/media/
           canvasHeight: "100%",        // füllt #comfy; der Graph scrollt/pant intern
           showHeading: false,          // Überschrift + Text liefert die Sektion selbst
           accent: "#5257b0"
