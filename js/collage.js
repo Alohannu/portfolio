@@ -57,6 +57,20 @@
       });
     }
     if (opts.shuffle !== false) shuffle(clips);
+
+    /* Festes Bild statt eines Videos: steht immer an derselben Stelle
+       (opts.image.index, 0-basiert) und ersetzt das Video "drop". Ein Klick
+       oeffnet es in der Bild-Ansicht (js/imageviewer.js). */
+    if (opts.image && opts.image.src) {
+      if (opts.image.drop) {
+        var dropKey = String(opts.image.drop).toLowerCase();
+        clips = clips.filter(function (c) {
+          return c.src.split("/").pop().toLowerCase().indexOf(dropKey) === -1;
+        });
+      }
+      var at = Math.min(opts.image.index || 0, clips.length);
+      clips.splice(at, 0, { image: opts.image, title: opts.image.label || "", alt: opts.image.alt || "" });
+    }
     if (!clips.length) return null;
 
     /* --- Struktur --- */
@@ -84,6 +98,28 @@
     var slots = clips.map(function (clip, i) {
       var el = makeEl("div", "collage__slot collage__slot--m");
       el.dataset.idx = String(i);
+
+      if (clip.image) {
+        el.classList.add("collage__slot--img");
+        el.setAttribute("role", "button");
+        el.setAttribute("tabindex", "0");
+        el.setAttribute("data-viewer-src", clip.image.src);
+        el.setAttribute("data-viewer-alt", clip.image.alt || "");
+        el.setAttribute("data-viewer-label", clip.image.label || "");
+        el.setAttribute("aria-label", (clip.image.alt || "Bild") + " – in voller Größe öffnen");
+        var pic = makeEl("img");
+        pic.src = clip.image.src;
+        pic.alt = clip.image.alt || "";
+        pic.decoding = "async";
+        el.appendChild(pic);
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); }
+        });
+        grid.appendChild(el);
+        /* Platzhalter, damit die Video-Logik unten das Bild wie eine
+           Kachel behandeln kann. */
+        return { el: el, video: { paused: true, pause: function () {}, play: function () { this.paused = false; return null; } }, clip: clip };
+      }
 
       var video = makeEl("video");
       video.muted = true;
@@ -132,6 +168,7 @@
         slot.el.classList.remove("is-active");
         playing = Math.max(0, playing - 1);
         if (!slot.video.paused) slot.video.pause();
+        if (slot.clip.image) slot.video.paused = true;
       }
     }
 
@@ -245,6 +282,7 @@
       mount(root, {
         slots: data.slots,
         only: data.only !== undefined ? data.only : defaultOnly,
+        image: data.image,
         shuffle: data.shuffle !== false
       });
     });

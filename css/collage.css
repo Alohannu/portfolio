@@ -1,0 +1,437 @@
+/* ==========================================================================
+   Video-Collage (Abschnitt 8)
+
+   Aufbau nach Vorlage: feste Slots auf schwarzem Grund, sichtbare
+   Zwischenraeume. Fuer Widescreen um 90 Grad gedreht:
+
+     [ breit  ][ hoch  ][ breit ]      Reihe 1: breit + hoch + breit
+     [ breit  ][ halb  ][ breit ]      Reihe 2: der hohe Slot laeuft weiter,
+     [ breit  ][ halb  ][ breit ]      rechts zwei gestapelte Slots
+
+   In jedem Slot laufen die Videos nacheinander durch: ist eins zu Ende,
+   folgt eine Schwarzbende und danach das naechste Video im selben Slot.
+   Alles ist an das Scrollen gekoppelt – ohne Sichtbarkeit laeuft nichts.
+   ========================================================================== */
+.collage {
+  position: relative;
+  z-index: 7;
+  background: #000;
+  color: #fff;
+  /* Der Kopfbereich hat eigenes Padding; die Buehne bringt ihre eigene
+     Zentrierung mit. Kein grosses Padding unten, sonst reisst die
+     gepinnte Buehne optisch ab. */
+  padding: 12vh 0 0;
+}
+.collage__head {
+  /* Der Abstand zum Raster haelt den Kopf mit im Bild. */
+  margin: 0 0 clamp(1.4rem, 3.5vh, 3rem);
+  padding: 0;
+  flex: none;
+}
+
+/* Der Outtakes-Kopf steht OHNE .collage__stage direkt in der Sektion.
+   Normalerweise kommt der seitliche Einzug von der Buehne
+   (.collage__stage { padding: 0 5vw }); hier fehlt er sonst und die
+   Ueberschrift klebt am linken Rand (gemessen: left 0 statt 72 bei
+   1440px). Deshalb derselbe Einzug wie an der Buehne.
+   Der Einzug sitzt am Kopf, nicht am Kasten: so bleibt die Kante bei
+   jeder Breite gleich (bei 1920px sonst 306 statt 210, weil der
+   zentrierte Kasten und das Padding sich addieren). */
+.collage--intro .collage__head {
+  padding: 0 5vw;
+  max-width: min(1500px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: content-box;
+}
+
+/* Die Ueberschrift nutzt denselben Effekt wie "ComfyUI virtual try on":
+   .reveal als Maske (overflow: hidden) und .reveal__inner, das von unten
+   herauffaehrt. Die Styles dafuer stehen in style.css. Hier bewusst
+   KEIN eigenes opacity/transform mehr - das wuerde die Maske aushebeln. */
+.collage__head .reveal { display: block; }
+.collage__head .fade-in { transition-delay: .25s; }
+
+.collage__title {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: .01em;
+}
+.collage__text {
+  margin: 0;
+  max-width: 52ch;
+  font-weight: 400;
+  font-size: clamp(.95rem, 1.1vw, 1.1rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, .72);
+}
+
+/* ---------- Scroll-Scrubbing: Wrapper + sticky Buehne ----------
+   Derselbe Aufbau wie beim Hero oben: der Wrapper liefert die
+   Scrollstrecke (Hoehe setzt das JS), die Buehne darin steht per
+   position:sticky still, waehrend der Fortschritt die Videos spult. */
+.collage__scrub {
+  position: relative;
+  /* Kein Scrubbing der Videos mehr. Etwas mehr als eine Bildschirmhoehe,
+     damit die sticky Buehne Spielraum hat und Ueberschrift und Raster
+     zusammen im Bild bleiben, waehrend man daran vorbeiscrollt. */
+  height: 175vh;
+}
+
+.collage__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5vw;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Kopf und Raster liegen gemeinsam in der gepinnten Buehne, damit die
+   Ueberschrift nicht wegscrollt, waehrend die Videos stehen bleiben. */
+.collage__stage-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
+/* ---------- Raster ----------
+   5 Videos, alle Kacheln mit brauchbarer Hoehe. Zwei grosse Kacheln oben,
+   drei gleich grosse darunter – statt der flachen Streifen von vorher
+   (die unterste war 823x188, also 4.37:1, und damit nicht erkennbar). */
+.collage__grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  /* Oben die hohen Kacheln, unten die drei flacheren. Unten bekommt mehr
+     Hoehe als vorher, damit die Kacheln nicht zu Streifen werden. */
+  grid-template-rows: 1.35fr 1fr;
+  gap: clamp(8px, 1.1vw, 20px);
+  background: #000;
+  height: 62vh;
+  max-width: min(1500px, 100%);
+  margin: 0 auto;
+  width: 100%;
+  --radius: clamp(8px, 1vw, 18px);
+}
+
+/* Oben: zwei breite, hohe Kacheln */
+.collage__grid > .collage__slot:nth-child(1) { grid-column: 1 / 4; grid-row: 1; }
+.collage__grid > .collage__slot:nth-child(2) { grid-column: 4 / 7; grid-row: 1; }
+/* Unten: drei gleich grosse */
+.collage__grid > .collage__slot:nth-child(3) { grid-column: 1 / 3; grid-row: 2; }
+.collage__grid > .collage__slot:nth-child(4) { grid-column: 3 / 5; grid-row: 2; }
+.collage__grid > .collage__slot:nth-child(5) { grid-column: 5 / 7; grid-row: 2; }
+/* Falls mehr Videos dazukommen: unten anfuegen statt ueberlappen */
+.collage__grid > .collage__slot:nth-child(n+6) {
+  grid-column: span 2;
+  grid-row: auto;
+  min-height: 24vh;
+}
+
+/* ---------- Ansicht 3 (eggo): dieselbe Collage mit nur drei Clips ----------
+   Die drei Quellvideos sind hochkant (eggo-story 720x1280, eggo-campaign-1/2
+   720x904). Im 5er-Mosaik oben belegten sie nur Slot 1, 2 und 3 - die
+   untere rechte Rasterhaelfte bliebe schwarz. Sie stehen deshalb in EINER
+   Reihe zu dritt, je zwei der sechs Spalten breit: drei gleich grosse,
+   leicht hochkante Kacheln in derselben Buehne und Hoehe wie in Ansicht 1.
+   Nur ab 900px Breite - darunter stapelt die Regel aus dem Media-Query
+   unten die Kacheln ohnehin untereinander.
+   Die Grenze ist bewusst 900px und nicht 901px: der Media-Query unten
+   heisst (max-width: 900px), die beiden Bedingungen ueberlappen sich also
+   in genau einem Punkt statt eine Luecke zu lassen. Mit 901px faellt jede
+   gebrochene Breite dazwischen (z.B. 900.5px durch Browser-Zoom) durch
+   BEIDE Regeln und die drei Kacheln landen wieder im 5er-Mosaik mit
+   leerer unterer Rasterhaelfte. Bei genau 900px gewinnen unten die
+   !important-Regeln (grid-column/grid-row) und stapeln weiter. */
+@media (min-width: 900px) {
+  .collage--trio .collage__grid { grid-template-rows: 1fr; }
+  .collage--trio .collage__grid > .collage__slot:nth-child(n) {
+    grid-column: span 2;
+    grid-row: 1;
+  }
+}
+
+/* Jeder Slot ist eine Kachel im Raster. Es spielt immer nur EINER –
+   alle anderen bleiben weiss. Dadurch laeuft nur ein Decoder. */
+.collage__slot {
+  position: relative;
+  overflow: hidden;
+  background: #000;                 /* Kachelgrund, das Video liegt davor */
+  border-radius: var(--radius, 14px);
+  isolation: isolate;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(30px) scale(.98);
+  transition: opacity .9s cubic-bezier(.22, .61, .36, 1),
+              transform .9s cubic-bezier(.22, .61, .36, 1);
+}
+.collage__slot.is-in { opacity: 1; transform: none; }
+
+/* Im inaktiven Slot ist das Video unsichtbar -> weisse Kachel. */
+.collage__slot .collage__slot-video,
+.collage__slot video { visibility: hidden; }
+.collage__slot.is-active video { visibility: visible; }
+
+.collage__slot video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+
+/* Schwarzbende ueber dem aktiven Video. */
+.collage__fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ---------- Responsive ---------- */
+
+/* Schmal: alles untereinander, natuerliche Hoehen */
+/* Schmal / flach: kein Pinning moeglich, weil 6 gestapelte Slots nicht in
+   eine Bildschirmhoehe passen. Dort laeuft die Collage normal mit und die
+   Buehne wird zur normalen Sektion (Scrubbing greift weiterhin, die
+   Strecke kommt dann aus der Sektionshoehe). */
+@media (max-width: 900px) {
+  .collage { padding: 10vh 0 12vh; }
+  /* Kein Pinning auf schmalen Viewports: 8 Kacheln passen nicht in eine
+     Bildschirmhoehe. Die Kacheln stehen dann einfach untereinander und
+     das Scrubbing greift ueber die Sektionshoehe. */
+  .collage__scrub { height: auto !important; }
+  .collage__stage {
+    position: static;
+    height: auto;
+    padding: 0 5vw;
+    overflow: visible;
+  }
+  .collage__grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+    height: auto;
+    max-height: none;
+    max-width: 100%;
+    gap: clamp(8px, 2vw, 14px);
+  }
+  .collage__grid > .collage__slot {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collage__slot,
+  .collage__head .reveal__inner,
+  .collage__head .fade-in { opacity: 1; transform: none; transition: none; }
+  .collage__fade { display: none; }
+}
+
+/* ---------- Link zur Outtake-Seite ---------- */
+.collage__more {
+  margin: 6vh 0 0;
+  padding: 0 5vw;
+  text-align: center;
+}
+
+.collage__more-link {
+  display: inline-block;
+  padding: .7rem 1.3rem;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 999px;
+  color: #fff;
+  text-decoration: none;
+  font-size: .82rem;
+  letter-spacing: .06em;
+  transition: border-color .25s ease, background-color .25s ease;
+}
+.collage__more-link:hover,
+.collage__more-link:focus-visible {
+  border-color: rgba(255, 255, 255, .7);
+  background: rgba(255, 255, 255, .08);
+}
+
+/* ==========================================================================
+   Ansicht 3 (eggo): klickbare Bild-Collage
+
+   Dieselbe Machart wie die "selected works"-Abschnitte (schwarzer Grund,
+   Kopfzeile, abgerundete Kacheln in einer Reihe), aber die Kacheln sind
+   Bilder: ein Klick oeffnet sie in der Bild-Ansicht (js/imageviewer.js,
+   Vertrag: data-viewer-src am <button>; der Klick wird auf document
+   delegiert, hier ist deshalb kein eigenes Skript noetig).
+
+   WARUM die Kacheln unterschiedlich breit sind: die fuenf eggo-Motive sind
+   hochkant (703x1260, 703x1004, 704x882, 703x1004, 703x1004). In gleich
+   breiten Kacheln muesste "object-fit: cover" die Koepfe anschneiden. Die
+   Breite waechst deshalb im Verhaeltnis des Motivs: flex-grow je Kachel
+   = Breite/Hoehe (558 : 700 : 798 : 700 : 700). Bei einer Kachelreihe von
+   rund 1240 px und 40 vh Hoehe weicht das Verhaeltnis nur um rund ein
+   Prozent ab - der Rest wird von "cover" aufgefangen, ohne dass ein Motiv
+   sichtbar beschnitten wird.
+   ========================================================================== */
+.collage--bilder {
+  /* Anders als die gepinnten Collagen steht dieser Abschnitt normal im
+     Fluss (kein .collage__scrub) - er braucht deshalb auch unten Luft. */
+  padding: 12vh 0 12vh;
+}
+
+/* Kopf wie .collage--intro: der seitliche Einzug sitzt am Kopf, nicht am
+   zentrierten Kasten - sonst addieren sich beide bei breiten Fenstern
+   (gemessen dort: 306 statt 210 px bei 1920 px). */
+.collage--bilder .collage__head {
+  padding: 0 5vw;
+  max-width: min(1500px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: content-box;
+}
+
+.imgcollage {
+  display: flex;
+  gap: clamp(8px, 1.1vw, 20px);
+  /* KEIN width: 100%: mit box-sizing: content-box wuerde die Breite sonst
+     ZUSAETZLICH zum seitlichen Padding gelten und die Reihe um 2 x 5vw
+     ueber den Rand laufen (gemessen: Kachelreihe 1440 statt 1296 px breit,
+     die Kacheln dadurch rund 10 % breiter als ihre Motive). */
+  max-width: min(1500px, 100%);
+  margin: 0 auto;
+  padding: 0 5vw;
+  box-sizing: content-box;
+  /* Derselbe Radius wie im Raster der Video-Collage. */
+  --radius: clamp(8px, 1vw, 18px);
+}
+
+.imgcollage__tile {
+  /* Grundwert 700 (das Verhaeltnis von eggo-2/4/5); die Kacheln mit
+     anderem Seitenverhaeltnis ueberschreiben flex-grow weiter unten. */
+  flex: 700 1 0;
+  height: clamp(200px, 40vh, 440px);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #000;
+  border-radius: var(--radius, 14px);
+  overflow: hidden;
+  position: relative;
+  display: block;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.imgcollage__tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  transition: transform .5s cubic-bezier(.22, .61, .36, 1);
+}
+
+/* Klickbare Kachel: die Vergroesserung zeigt, dass hier etwas aufgeht. */
+.imgcollage__tile:hover img { transform: scale(1.03); }
+.imgcollage__tile:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+/* Kachelbreite = Seitenverhaeltnis des Motivs (Breite/Hoehe, x1000):
+   eggo-1 703/1260, eggo-2 703/1004, eggo-3 704/882, eggo-4 703/1004,
+   eggo-5 703/1004. */
+.imgcollage__tile:nth-child(1) { flex-grow: 558; }
+.imgcollage__tile:nth-child(2) { flex-grow: 700; }
+.imgcollage__tile:nth-child(3) { flex-grow: 798; }
+.imgcollage__tile:nth-child(4) { flex-grow: 700; }
+.imgcollage__tile:nth-child(5) { flex-grow: 700; }
+
+/* Schmal: eine Spalte mit natuerlichen Hoehen - wie die uebrigen Collagen.
+   flex: none ist noetig, weil flex-basis 0 in einer Spalte die Hoehe auf 0
+   setzen wuerde. */
+@media (max-width: 900px) {
+  .collage--bilder { padding: 10vh 0 12vh; }
+  .imgcollage { flex-direction: column; }
+  .imgcollage__tile { flex: none; height: auto; }
+  .imgcollage__tile img { height: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imgcollage__tile img { transition: none; }
+  .imgcollage__tile:hover img { transform: none; }
+}
+
+/* ---------- Tool-Set-Bar (Kopf von "kampagnenmotive, e-commerce, UGC") ---------- */
+.collage__tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem clamp(1.5rem, 5vw, 6rem);
+  max-width: 1100px;
+}
+.collage__toolrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem .6rem;
+  padding: .55rem 1.2rem .55rem .6rem;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 999px;
+}
+.collage__tool {
+  padding: .5rem .95rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .09);
+  color: rgba(255, 255, 255, .78);
+  font-size: clamp(.6rem, .75vw, .75rem);
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.collage__tooluse {
+  margin-left: .4rem;
+  font-size: clamp(.85rem, 1.05vw, 1.05rem);
+  font-weight: 500;
+  color: #fff;
+}
+@media (max-width: 760px) {
+  .collage__tools { grid-template-columns: 1fr; gap: .5rem; }
+  .collage__toolrow { border-radius: 1.4rem; }
+}
+
+#collage .collage__title { font-size: clamp(1.6rem, 3.6vw, 3.2rem); }
+#collage .collage__tools { max-width: none; }
+.collage__tooluse { white-space: nowrap; }
+
+/* ---------- Festes Bild in der Collage (klickbar) ---------- */
+.collage__slot--img { cursor: zoom-in; }
+.collage__slot--img img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+.collage__slot--img:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* eggo-Kopf: Zeilen so breit wie ihr Inhalt, damit nichts umbricht. */
+.collage--trio .collage__tools { grid-template-columns: repeat(2, max-content); }

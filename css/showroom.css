@@ -1,0 +1,265 @@
+/* ==========================================================================
+   Showroom – Klick auf ein Video oeffnet es gross ueber der Seite
+
+   Die Videos im Mosaik haben drei verschiedene Formen (16:9, 9:16, 3:4).
+   Im Showroom behaelt jedes seine echte Form: der Rahmen bekommt das
+   Seitenverhaeltnis des Videos und wird nur gedeckelt, damit er in den
+   Bildschirm passt. So wird nichts abgeschnitten.
+
+   Ablauf: das Overlay liegt ueber der Seite, die Seite dahinter scrollt
+   nicht mehr (html.is-locked). ESC / Klick daneben / X schliessen.
+   ========================================================================== */
+
+.showroom {
+  position: fixed;
+  inset: 0;
+  z-index: 900;              /* ueber allem, auch ueber dem gepinnten Graphen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 56px);
+  box-sizing: border-box;
+}
+
+.showroom[hidden] { display: none; }
+
+/* Dunkler Grund. Etwas transparent, damit die Seite noch durchscheint. */
+.showroom__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .9);
+  opacity: 0;
+  transition: opacity .28s ease;
+}
+.showroom.is-open .showroom__backdrop { opacity: 1; }
+
+.showroom__panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Panel und Knopf stehen untereinander. Die verfuegbare Hoehe im
+     Overlay ist die Flaeche minus Abstand, damit nichts hinausragt. */
+  flex-direction: column;
+  gap: 12px;
+  max-width: 100%;
+  max-height: 100%;
+  opacity: 0;
+  transform: scale(.97);
+  transition: opacity .3s cubic-bezier(.22, .61, .36, 1),
+              transform .3s cubic-bezier(.22, .61, .36, 1);
+}
+.showroom.is-open .showroom__panel { opacity: 1; transform: none; }
+
+/* Der Rahmen bekommt das Seitenverhaeltnis des Videos per JS
+   (--ar), damit die echte Form erhalten bleibt. */
+.showroom__frame {
+  position: relative;
+  aspect-ratio: var(--ar, 16 / 9);
+  /* Breite und Hoehe setzt js/showroom.js in Pixeln (siehe fitFrame).
+     Hier nur die Obergrenzen als Sicherheitsnetz. */
+  width: var(--fw, 80vw);
+  height: var(--fh, 45vw);
+  max-width: 100%;
+  max-height: 100%;
+  background: #000;
+  border-radius: clamp(8px, 1vw, 18px);
+  overflow: hidden;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .6);
+}
+
+.showroom__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* contain statt cover: das ganze Bild ist zu sehen, nichts abgeschnitten */
+  object-fit: contain;
+  background: #000;
+  display: block;
+  border-radius: inherit;
+}
+
+/* ---------- Schliessen ---------- */
+.showroom__close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 50%;
+  background: rgba(18, 18, 20, .92);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+.showroom__close:hover { background: rgba(40, 40, 44, .98); border-color: rgba(255, 255, 255, .45); }
+.showroom__close:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* ---------- Blaettern ---------- */
+.showroom__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 50%;
+  background: rgba(18, 18, 20, .72);
+  color: #fff;
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .2s ease, opacity .2s ease;
+}
+.showroom__nav:hover { background: rgba(40, 40, 44, .95); }
+.showroom__nav:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.showroom__nav--prev { left: -20px; }
+.showroom__nav--next { right: -20px; }
+
+/* Gibt es nur ein Video, sind die Pfeile ohne Funktion. */
+.showroom.is-single .showroom__nav { display: none; }
+
+/* ---------- Ton ---------- */
+.showroom__sound {
+  /* Im Fluss unter dem Rahmen: so kann er nie auf dem Bild liegen,
+     unabhaengig von Seitenverhaeltnis und Bildschirmgroesse. */
+  position: relative;
+  flex: none;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .9rem;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 999px;
+  background: rgba(18, 18, 20, .82);
+  color: rgba(255, 255, 255, .82);
+  font: inherit;
+  font-size: .78rem;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.showroom__sound:hover { background: rgba(40, 40, 44, .95); color: #fff; }
+.showroom__sound:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.showroom__sound[aria-pressed="true"] { color: #fff; border-color: rgba(255, 255, 255, .4); }
+
+/* Kleines Lautsprecherzeichen, rein per CSS. */
+.showroom__sound-icon {
+  width: 12px;
+  height: 12px;
+  position: relative;
+  flex: none;
+}
+.showroom__sound-icon::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  width: 4px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 1px;
+}
+.showroom__sound-icon::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid currentColor;
+}
+.showroom__sound[aria-pressed="true"] .showroom__sound-icon {
+  box-shadow: 0 0 0 1px transparent;
+}
+
+/* ---------- Hinweis auf den Kacheln ---------- */
+/* Die Kacheln werden klickbar: Zeiger zur Hand und ein dezentes Symbol,
+   sonst sieht das Mosaik wie ein reines Schaufenster aus. */
+.collage__slot[data-playable],
+.ot-tile[data-playable] {
+  cursor: pointer;
+}
+
+.collage__slot[data-playable]::after,
+.ot-tile[data-playable]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .5) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E") center / 26px 26px no-repeat;
+  opacity: 0;
+  transform: scale(.85);
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.collage__slot[data-playable]:hover::after,
+.collage__slot[data-playable]:focus-visible::after,
+.ot-tile[data-playable]:hover::after,
+.ot-tile[data-playable]:focus-visible::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.collage__slot[data-playable]:focus-visible,
+.ot-tile[data-playable]:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+/* ---------- Scroll-Sperre, solange der Showroom offen ist ---------- */
+html.is-locked,
+html.is-locked body {
+  overflow: hidden;
+  /* Kein Sprung: die Scrollposition bleibt erhalten */
+  touch-action: none;
+}
+
+/* ---------- Schmal ---------- */
+@media (max-width: 900px) {
+  .showroom { padding: 12px; }
+  .showroom__frame {
+    width: min(100%, calc((100svh - 24px) * var(--arn, 1.7778)));
+    max-height: calc(100svh - 24px);
+    border-radius: 14px;
+  }
+  /* Pfeile nach innen, sonst liegen sie ausserhalb des Schirms */
+  .showroom__nav--prev { left: 8px; }
+  .showroom__nav--next { right: 8px; }
+  .showroom__nav { width: 42px; height: 42px; }
+  .showroom__close { top: 4px; right: 4px; }
+}
+
+/* Sehr flache Schirme: Ton-Leiste ueber das Video legen */
+@media (max-height: 480px) {
+  .showroom__sound { bottom: 10px; }
+}
+
+/* ---------- Reduced Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .showroom__backdrop,
+  .showroom__panel { transition: none; }
+  .collage__slot[data-playable]::after,
+  .ot-tile[data-playable]::after { transition: none; }
+}

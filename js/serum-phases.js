@@ -89,6 +89,34 @@
     }
   ];
 
+  /* Englische Texte fuer index-engl.html (<html lang="en">): ueberschreiben
+     Ueberschrift und Textzeilen je Phase; Bilder und Tool-Zeilen bleiben. */
+  var EN = [
+    { heading: "Phase 1 – Initial Concept Development",
+      rows: { 1: "Brainstorm the packaging concept and explore initial shapes.",
+              2: "Limited material realism. Even after several prompt iterations, the desired “glossy wax” effect lacked depth. The glass reflections felt flat, artificial, and imprecise." } },
+    { heading: "Phase 2 – Visual Breakthrough",
+      rows: { 1: "Turned the initial ChatGPT concepts into a focused Midjourney prompt.",
+              2: "A major improvement in material and lighting realism. The “glossy wax” effect translated convincingly, with realistic reflections and light refraction." } },
+    { heading: "Phase 3 – Refining Proportions",
+      rows: { 1: "Brought the Midjourney render back into ChatGPT to quickly test and adjust the bottle proportions.",
+              2: "Faster iteration without using Midjourney credits on simple geometric changes." } },
+    { heading: "Phase 4 – Exploring Variations",
+      rows: { 1: "Used the refined image from Phase 3 to explore alternative design directions.",
+              2: "Quickly developed a broader range of visually distinct concepts." } },
+    { heading: "Phase 5 – Product Isolation & Detail Refinement",
+      rows: { 1: "Selected the strongest direction and refined individual product details, including changing the serum dispenser from hard plastic to a premium matte rubber finish." } },
+    { heading: "Phase 6 – Final Product Shot",
+      rows: { 1: "Created the final high-end render using the Phase 5 design alongside AI-generated mood imagery as visual and style references.",
+              2: "A polished, high-fashion product aesthetic." } }
+  ];
+  if (document.documentElement.lang === "en") {
+    EN.forEach(function (t, i) {
+      PHASES[i].heading = t.heading;
+      Object.keys(t.rows).forEach(function (k) { PHASES[i].rows[k].text = t.rows[k]; });
+    });
+  }
+
   function el(tag, className) {
     var n = document.createElement(tag);
     if (className) n.className = className;

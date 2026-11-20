@@ -1,0 +1,442 @@
+/* ==========================================================================
+   Musik-Teil: "ai music"
+
+   Aus dem Original uebernommen (yytrieu.github.io/ai-portfolio, Abschnitt
+   "ai music" - dort die letzte sichtbare Sektion der Seite). Die Werte sind
+   1:1 aus dessen Inline-Styles uebernommen und nur in Klassen ueberfuehrt,
+   damit die Seite ihre Stylesheets beisammen haelt.
+
+   Aufbau: links die Werkzeug-Pillen, in der Mitte der Soundtrack-Player
+   (Wellenform, Fortschritt, Zeit) ueber dem Songtext-Fenster, rechts das
+   Concept-Video "Pantomime". Der Abschnitt ist Ansicht 4 des Projekt-Tracks
+   (index.html); seine Ueberschrift steht als Titel-Karte am Ende von
+   Ansicht 3 - siehe .music-intro unten.
+
+   Medien: media/projects/projekt-4/ (Pantomime.mp3, pantomime-background.avif)
+   und media/selected-works/videos/Pantomime-Intro.mp4.
+   Steuerung: js/music.js
+   ========================================================================== */
+
+.music {
+  /* Kein Padding: die Buehne ist das Erste im Panel und muss beim Ankommen
+     von Ansicht 4 genau an der Viewport-Oberkante stehen (siehe
+     .music__pin). Als der Musik-Teil noch am Seitenende lag, sorgte hier
+     ein Abstand oben und unten fuer Luft - die uebernimmt jetzt die
+     Pin-Strecke. */
+  padding: 0;
+  background: #fff;
+}
+
+/* ---------- Titel-Karte: Auslauf-Buehne von Ansicht 3 ----------
+   Die Ueberschrift des Musik-Teils steht nicht im Panel, sondern als
+   vollbildhohe Karte am Ende des eggo-Tracks. Dort ist sie die
+   Auslauf-Buehne des Schwenks: js/track.js setzt ihre Section auf genau die
+   Pin-Strecke run = hold + pan (1.4 Viewport-Hoehen), damit sie waehrend
+   Leerlauf und Schwenk still am Viewport steht.
+
+   WARUM die Zentrierung auf .music-intro__inner liegt und nicht auf der
+   Section: die Section bekommt ihre Hoehe von js/track.js (1.4 vh). Ein
+   "align-items: center" auf ihr wuerde die Zeile also auf die Mitte der
+   GANZEN Pin-Strecke setzen, nicht auf die der sichtbaren Bildschirmhoehe.
+   Der innere Kasten bleibt dagegen genau eine Bildschirmhoehe hoch, die
+   Zeile steht damit mittig im sichtbaren ersten Viewport; die restliche
+   Pin-Strecke bleibt leer darunter. */
+.music-intro {
+  background: #fff;
+}
+
+.music-intro__inner {
+  position: relative;
+  overflow: hidden;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5vw;
+  box-sizing: border-box;
+}
+
+.music-intro__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Overlay wie im Hero (.stage__overlay): schwarz 30 %, weisse Schrift. */
+.music-intro__shade {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, .3);
+  color: #fff;
+  text-align: center;
+  will-change: opacity;
+}
+
+/* ---------- Pin-Strecke der Musik-Buehne ----------
+   WARUM sie noetig ist: der Schwenk laesst die neue Ansicht um genau `pan`
+   (1 Viewport-Hoehe, js/track.js) ueber die vorige hinausragen - beim
+   Schwenkende liegt die Oberkante von Ansicht 4 also schon `pan` Pixel
+   ueber dem Viewport. Ansicht 2 (.hero-wrapper--serum, 500vh) und Ansicht 3
+   (.curtain, 3600px) faengt das mit einer eigenen, langen Pin-Strecke ab.
+   Ohne eine solche waere der Musik-Teil - er ist nur gut eine
+   Bildschirmhoehe hoch - bereits vorbeigescrollt, wenn er ankommt
+   (gemessen: Buehne bei [-810, 112] statt [0, 921], Play-Knopf bei y=-689).
+
+   Hoehe = Buehnenhoehe + 150vh: die ersten 100vh decken die Ueberlappung
+   ab, die restlichen 50vh bleiben zum Ansehen, bevor die Buehne weiterzieht.
+   Die Buehnenhoehe steht hier bewusst als dieselbe clamp()-Formel wie in
+   .music__stage - so bleibt die Pin-Strecke unabhaengig davon, wie hoch die
+   Buehne im konkreten Viewport ausfaellt. */
+.music__pin {
+  height: calc(clamp(560px, 64vw, 1050px) + 150vh);
+  height: calc(clamp(560px, 64vw, 1050px) + 150svh);
+}
+
+.music__stage {
+  /* Bleibt waehrend der Pin-Strecke am Viewport stehen - wie die
+     Hero-Buehnen in Ansicht 2 (.hero-wrapper--serum) und Ansicht 3
+     (.curtain). sticky (nicht relative) ist zugleich weiterhin der
+     Bezugsrahmen fuer .music__bg (position: absolute). */
+  position: sticky;
+  top: 0;
+  width: 100%;
+  min-height: clamp(560px, 64vw, 1050px);
+  background: linear-gradient(140deg, #e9e4e6 0%, #f3dfe6 35%, #efe6ef 70%, #e4dee6 100%);
+  overflow: hidden;
+}
+
+.music__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: .5;
+  display: block;
+}
+
+.music__grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.5fr) minmax(240px, 1fr);
+  gap: clamp(20px, 3vw, 56px);
+  align-items: start;
+  padding: clamp(28px, 4vw, 72px) clamp(20px, 4vw, 68px);
+}
+
+/* ---------- Links: Werkzeug-Pillen ---------- */
+.music__tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(12px, 1.6vw, 26px);
+}
+
+.music__tool {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.2vw, 20px);
+  background: rgba(255, 255, 255, .92);
+  border-radius: 999px;
+  padding: clamp(7px, .8vw, 12px) clamp(18px, 2.2vw, 34px) clamp(7px, .8vw, 12px) clamp(7px, .8vw, 12px);
+  box-shadow: 0 8px 26px rgba(60, 40, 55, .12);
+}
+
+.music__tool-name {
+  background: #ece9f0;
+  border-radius: 999px;
+  padding: clamp(7px, .9vw, 13px) clamp(13px, 1.4vw, 22px);
+  font-size: clamp(9px, .8vw, 13px);
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #3a3634;
+  white-space: nowrap;
+}
+
+.music__tool-use {
+  font-size: clamp(13px, 1.3vw, 21px);
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: #111;
+  white-space: nowrap;
+}
+
+/* ---------- Mitte: Player und Songtext ---------- */
+.music__player-col {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 1.6vw, 24px);
+}
+
+.music__hint {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(9px, .78vw, 12px);
+  font-weight: 600;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: rgba(38, 26, 34, .72);
+}
+
+.music__player {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 1.6vw, 24px);
+  background: rgba(255, 255, 255, .24);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, .42);
+  border-radius: 999px;
+  padding: clamp(12px, 1.2vw, 18px) clamp(20px, 2vw, 30px) clamp(12px, 1.2vw, 18px) clamp(12px, 1.2vw, 16px);
+  box-shadow: 0 20px 46px rgba(60, 40, 55, .24);
+}
+
+/* Das Audio-Element bleibt unsichtbar; bedient wird es ueber den Knopf
+   daneben (js/music.js). */
+.music__player audio { display: none; }
+
+.music__play {
+  flex: none;
+  width: clamp(46px, 4vw, 58px);
+  height: clamp(46px, 4vw, 58px);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .75);
+  background: linear-gradient(150deg, #d8c2f5, #c3a7ee 55%, #b79ae8);
+  color: #2a1f38;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 6px rgba(200, 170, 240, .18), 0 0 22px 4px rgba(198, 166, 238, .55), 0 8px 20px rgba(60, 40, 55, .22);
+  transition: box-shadow .25s ease;
+}
+
+.music__play:hover,
+.music__play:focus-visible {
+  box-shadow: 0 0 0 8px rgba(200, 170, 240, .24), 0 0 30px 8px rgba(198, 166, 238, .7), 0 8px 22px rgba(60, 40, 55, .26);
+}
+
+.music__meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(7px, .7vw, 11px);
+  min-width: 0;
+}
+
+/* Wellenform: 30 Balken. Hoehe und Animationsversatz je Balken sind aus dem
+   Original uebernommen - dort standen sie als Inline-Styles an jedem span. */
+.music__wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: clamp(24px, 2.4vw, 34px);
+  opacity: .85;
+}
+
+.music__wave span {
+  flex: 1;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .72);
+  transform-origin: center;
+  animation: wavePulse 1.8s ease-in-out infinite;
+}
+
+.music__wave span:nth-child(1)  { height: 7px;  animation-delay: 0s; }
+.music__wave span:nth-child(2)  { height: 13px; animation-delay: .16s; }
+.music__wave span:nth-child(3)  { height: 20px; animation-delay: .32s; }
+.music__wave span:nth-child(4)  { height: 11px; animation-delay: .48s; }
+.music__wave span:nth-child(5)  { height: 26px; animation-delay: .64s; }
+.music__wave span:nth-child(6)  { height: 16px; animation-delay: .8s; }
+.music__wave span:nth-child(7)  { height: 9px;  animation-delay: .96s; }
+.music__wave span:nth-child(8)  { height: 22px; animation-delay: 0s; }
+.music__wave span:nth-child(9)  { height: 14px; animation-delay: .16s; }
+.music__wave span:nth-child(10) { height: 28px; animation-delay: .32s; }
+.music__wave span:nth-child(11) { height: 12px; animation-delay: .48s; }
+.music__wave span:nth-child(12) { height: 18px; animation-delay: .64s; }
+.music__wave span:nth-child(13) { height: 8px;  animation-delay: .8s; }
+.music__wave span:nth-child(14) { height: 24px; animation-delay: .96s; }
+.music__wave span:nth-child(15) { height: 15px; animation-delay: 0s; }
+.music__wave span:nth-child(16) { height: 10px; animation-delay: .16s; }
+.music__wave span:nth-child(17) { height: 21px; animation-delay: .32s; }
+.music__wave span:nth-child(18) { height: 13px; animation-delay: .48s; }
+.music__wave span:nth-child(19) { height: 27px; animation-delay: .64s; }
+.music__wave span:nth-child(20) { height: 9px;  animation-delay: .8s; }
+.music__wave span:nth-child(21) { height: 17px; animation-delay: .96s; }
+.music__wave span:nth-child(22) { height: 23px; animation-delay: 0s; }
+.music__wave span:nth-child(23) { height: 11px; animation-delay: .16s; }
+.music__wave span:nth-child(24) { height: 19px; animation-delay: .32s; }
+.music__wave span:nth-child(25) { height: 7px;  animation-delay: .48s; }
+.music__wave span:nth-child(26) { height: 25px; animation-delay: .64s; }
+.music__wave span:nth-child(27) { height: 14px; animation-delay: .8s; }
+.music__wave span:nth-child(28) { height: 12px; animation-delay: .96s; }
+.music__wave span:nth-child(29) { height: 20px; animation-delay: 0s; }
+.music__wave span:nth-child(30) { height: 8px;  animation-delay: .16s; }
+
+.music__bar {
+  position: relative;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(40, 28, 38, .22);
+}
+
+.music__bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+  width: 0;
+  background: linear-gradient(90deg, #c8aef0, #efe0ff);
+}
+
+.music__labels {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.music__song {
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(34, 24, 32, .78);
+  text-wrap: pretty;
+}
+
+.music__time {
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  color: rgba(34, 24, 32, .55);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Songtext-Fenster: laeuft von selbst durch (lyricsDrift), die Masken oben
+   und unten blenden die Raender weich ab. */
+.music__lyrics {
+  position: relative;
+  height: clamp(300px, 34vw, 520px);
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  background: rgba(22, 16, 21, .5);
+  backdrop-filter: blur(20px) saturate(130%);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  box-shadow: 0 18px 50px rgba(40, 26, 38, .28);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%);
+}
+
+.music__lyrics-inner {
+  padding: clamp(20px, 2.4vw, 40px) clamp(18px, 2vw, 32px);
+  animation: lyricsDrift 110s linear infinite;
+}
+
+.music__lyrics-text {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre-wrap;
+  font-size: clamp(11px, .95vw, 15px);
+  line-height: 2;
+  font-weight: 300;
+  letter-spacing: .02em;
+  color: rgba(255, 255, 255, .88);
+  text-wrap: pretty;
+}
+
+/* ---------- Rechts: Concept-Video ---------- */
+.music__video-col {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 1.4vw, 20px);
+}
+
+.music__video-title {
+  margin: 0;
+  font-size: clamp(17px, 1.7vw, 27px);
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: #111;
+}
+
+.music__video-frame {
+  position: relative;
+  box-shadow: 0 18px 50px rgba(60, 40, 55, .22);
+}
+
+.music__video {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+  background: #1b1519;
+}
+
+.music__audio {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  background: rgba(17, 17, 17, .78);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.music__audio:hover,
+.music__audio:focus-visible { background: #111; }
+
+.music__audio-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* ---------- Animationen (1:1 aus dem Original) ---------- */
+@keyframes wavePulse {
+  0%, 100% { transform: scaleY(.42); opacity: .55; }
+  50%      { transform: scaleY(1);   opacity: 1; }
+}
+
+@keyframes lyricsDrift {
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(-100% + clamp(300px, 34vw, 520px))); }
+}
+
+/* Wer Bewegung reduziert haben will, bekommt das Standbild: der Songtext
+   bleibt lesbar (dann ohne Wanderung), die Wellenform steht still. */
+@media (prefers-reduced-motion: reduce) {
+  /* Ohne Scrubbing gibt es keine Ueberlappung abzufangen (js/track.js setzt
+     pan auf 0) - dann soll die Buehne auch nicht 150vh lang stehen
+     bleiben. */
+  .music__pin { height: auto; }
+  .music__stage { position: relative; }
+  .music__lyrics-inner { animation: none; }
+  .music__wave span { animation: none; }
+}

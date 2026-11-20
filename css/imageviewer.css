@@ -1,0 +1,153 @@
+/* ==========================================================================
+   Bild-Ansicht – Klick auf ein Bild mit data-viewer-src zeigt es gross
+   ueber der Seite (js/imageviewer.js)
+
+   Zwei Betriebsarten, umschaltbar im Kopf der Ansicht:
+
+   - "Einpassen" (Standard): das ganze Bild ist auf einen Blick zu sehen,
+     so gross wie das Fenster es erlaubt (Obergrenze 2,5-fach).
+   - "1:1": das Bild steht in seinen echten Bildpunkten, ohne jede
+     Skalierung. Passt es nicht auf den Schirm, laesst sich die Ansicht
+     scrollen; das Bild wird dabei nicht beschnitten und nicht verzerrt.
+
+   Die Groesse rechnet js/imageviewer.js in Pixeln aus (wie im Showroom):
+   ein calc aus 100svh und Custom Properties loeste im Browser nicht
+   zuverlaessig auf.
+
+   Die Scroll-Sperre (html.is-locked) kommt aus css/showroom.css.
+   ========================================================================== */
+
+.imageviewer {
+  position: fixed;
+  inset: 0;
+  z-index: 950;              /* ueber dem Showroom (900) und dem gepinnten Graphen */
+  display: flex;
+  /* Scrollrahmen: bei 1:1 kann das Bild hoeher sein als der Schirm. */
+  overflow: auto;
+  padding: clamp(14px, 2.5vw, 40px);
+  box-sizing: border-box;
+}
+
+.imageviewer[hidden] { display: none; }
+
+/* Dunkler, fast deckender Grund: das Bild soll ohne Ablenkung stehen. */
+.imageviewer__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .94);
+  opacity: 0;
+  transition: opacity .28s ease;
+}
+.imageviewer.is-open .imageviewer__backdrop { opacity: 1; }
+
+/* margin:auto statt align-items:center - bei einem Bild, das hoeher ist
+   als der Schirm, wuerde die Zentrierung sonst den oberen Teil
+   abschneiden (der ist dann nicht mehr erscrollbar). */
+.imageviewer__panel {
+  position: relative;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .6rem;
+  max-width: 100%;
+  opacity: 0;
+  transform: scale(.97);
+  transition: opacity .3s cubic-bezier(.22, .61, .36, 1),
+              transform .3s cubic-bezier(.22, .61, .36, 1);
+}
+.imageviewer.is-open .imageviewer__panel { opacity: 1; transform: none; }
+
+/* Das Bild selbst: Breite/Hoehe setzt js/imageviewer.js in Pixeln.
+   max-width ist nur das Sicherheitsnetz beim Verkleinern des Fensters. */
+.imageviewer__img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  background: #0e0e15;
+  border-radius: 5px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .65);
+}
+
+.imageviewer__caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: .4rem .9rem;
+  font-size: .72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .6);
+}
+
+.imageviewer__link {
+  color: rgba(255, 255, 255, .85);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, .3);
+  padding-bottom: 1px;
+  transition: color .2s ease, border-color .2s ease;
+}
+.imageviewer__link:hover,
+.imageviewer__link:focus-visible { color: #fff; border-color: #fff; }
+
+/* ---------- Bedienleiste (bleibt beim Scrollen stehen) ---------- */
+.imageviewer__bar {
+  position: fixed;
+  top: clamp(12px, 2vw, 26px);
+  right: clamp(12px, 2vw, 26px);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.imageviewer__close {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 50%;
+  background: rgba(18, 18, 20, .92);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+.imageviewer__close:hover { background: rgba(40, 40, 44, .98); border-color: rgba(255, 255, 255, .45); }
+.imageviewer__close:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+.imageviewer__mode {
+  display: inline-flex;
+  align-items: center;
+  padding: .5rem .9rem;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 999px;
+  background: rgba(18, 18, 20, .82);
+  color: rgba(255, 255, 255, .82);
+  font: inherit;
+  font-size: .74rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.imageviewer__mode:hover { background: rgba(40, 40, 44, .95); color: #fff; }
+.imageviewer__mode:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* ---------- Schmal ---------- */
+@media (max-width: 900px) {
+  .imageviewer { padding: 12px; }
+  .imageviewer__caption { font-size: .68rem; }
+  .imageviewer__close { width: 40px; height: 40px; }
+}
+
+/* ---------- Reduced Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .imageviewer__backdrop,
+  .imageviewer__panel { transition: none; }
+}
