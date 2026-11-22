@@ -22,9 +22,7 @@
     var inner = section ? section.querySelector(".endcard__inner") : null;
     if (!mark || !inner) return;
 
-    var fit = function () {
-      var avail = inner.clientWidth;
-      if (!avail) return;
+    function fitWidth(avail) {
       /* Der <p> ist ein Block: scrollWidth waere immer die Spaltenbreite,
          nicht die Textbreite. Deshalb fuer die Messung inline-block +
          max-content - dann misst der Block genau den Text. */
@@ -35,12 +33,50 @@
       if (!w) return;
       var size = Math.max(18, (100 * avail) / w * 0.985);
       mark.style.fontSize = size.toFixed(2) + "px";
+    }
+
+    /* Die Karte ist genau eine Bildschirmhoehe hoch (css/endcard.css);
+       die Fusszeile muss unten im Bild stehen. Auf flachen Fenstern passt
+       der Text in der Breiten-Einpassung nicht in die Hoehe - dann wird
+       die Wortmarke Schritt fuer Schritt kleiner, bis Titel, Kontakt,
+       Wortmarke und Fusszeile in einen Screen passen. 1,14 = Zeilenhoehe
+       1 plus Unterlaengen-Padding .14em, also Hoehe je Schriftgroesse. */
+    function fitHeight() {
+      for (var n = 0; n < 8; n++) {
+        var over = section.scrollHeight - window.innerHeight;
+        if (over <= 1) return;
+        var size = parseFloat(mark.style.fontSize) || 100;
+        var next = size - over / 1.14;
+        if (next < 16) next = 16;
+        if (next >= size) return;
+        mark.style.fontSize = next.toFixed(2) + "px";
+      }
+    }
+
+    /* Schluessel aus Spaltenbreite und Fensterhoehe: der ResizeObserver
+       am inneren Block feuert auch, wenn wir selbst die Wortmarke
+       verkleinert haben - ohne den Vergleich wuerde sich fit() endlos
+       selbst nachziehen. */
+    var lastKey = "";
+
+    var fit = function () {
+      var avail = inner.clientWidth;
+      if (!avail) return;
+      var key = avail + "x" + window.innerHeight;
+      if (key === lastKey) return;
+      lastKey = key;
+      fitWidth(avail);
+      fitHeight();
     };
 
     fit();
 
     if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(fit).catch(function () {});
+      document.fonts.ready.then(function () {
+        /* Nach dem Laden der Schrift sitzen die Zeilen anders: neu messen. */
+        lastKey = "";
+        fit();
+      }).catch(function () {});
     }
     window.addEventListener("resize", fit);
     var ro = window.ResizeObserver && new ResizeObserver(fit);

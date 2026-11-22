@@ -5,9 +5,16 @@
    Darunter die Projekttexte, zeilenweise eingeblendet beim Scrollen.
    ========================================================================== */
 
-/* ---------- Die drei Kacheln ----------
-   Alles zusammen auf EINE Bildschirmhoehe: links zwei uebereinander,
-   rechts eines gross. Kein Scrollen noetig, um alles zu sehen.
+/* ---------- Der Outtakes-Screen ----------
+   Ueberschrift und die drei Kacheln stehen zusammen in EINEM Abschnitt, der
+   genau eine Bildschirmhoehe hoch ist: der Kopf als erste Zeile ("auto"),
+   das Raster bekommt den Rest ("1fr"). Damit steht beim Einrasten auf die
+   Oberkante des Abschnitts der Titel und alle drei Videos gleichzeitig im
+   Bild. Vorher war der Kopf eine eigene, nur ~250 px hohe Sektion davor;
+   eingrastet war dann entweder der Titel aus dem Bild oder die unteren
+   Teile der Kacheln abgeschnitten.
+   Das Raster selbst bleibt wie gehabt: links zwei uebereinander, rechts
+   eines gross. Kein Scrollen noetig, um alles zu sehen.
 
    Der seitliche Einzug ist derselbe wie bei den Assets davor. Die
    Collage bekommt 5vw von .collage__stage, ihr Raster ist zusaetzlich
@@ -24,14 +31,33 @@
   background: #000;
   position: relative;
   z-index: 6;
+  /* Der Kopf stand vorher in einer .collage-Sektion (color: #fff). Hier
+     erbt er sonst die dunkle Textfarbe des Body und waere auf Schwarz
+     unsichtbar - der Absatz darunter setzt seine Farbe selbst. */
+  color: #fff;
   height: 100vh;
   height: 100svh;
   box-sizing: border-box;
   padding: clamp(10px, 1.6vw, 26px) 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: clamp(10px, 1.4vw, 24px);
 }
+
+/* Kopf des Screens. Derselbe Kasten wie .ot-stack__grid (5vw Rand, max
+   1500px, zentriert) und box-sizing: border-box, damit Titel und Raster
+   an derselben Kante beginnen. */
+.ot-stack__head {
+  width: 100%;
+  max-width: min(1500px, 100%);
+  margin: 0 auto;
+  padding: clamp(6px, 1.2vh, 18px) 5vw 0;
+  box-sizing: border-box;
+}
+
+.ot-stack__head .collage__title { margin: 0 0 .7rem; }
+.ot-stack__head .collage__text { margin: 0; max-width: 60ch; }
 
 /* Genau die Box von .collage__grid: 5vw Rand, max 1500px, zentriert. */
 .ot-stack__grid {
@@ -83,7 +109,12 @@
   border-radius: inherit;
 }
 
-/* ---------- Textbereich ---------- */
+/* ---------- Textbereich ----------
+   Die letzte Seite von Ansicht 1. Sie soll selbst ein Screen sein: der
+   Abschnitt ist mindestens fensterhoch, damit er den Bildschirm fuellt,
+   wenn der Track auf seine Oberkante einrastet (js/track.js). Das Titel-
+   Band und der Kasten passen bei den ueblichen Fensterhoehen hinein; die
+   untere Luft bleibt schwarz. */
 .ot-notes {
   background: #000;
   color: #fff;
@@ -92,6 +123,9 @@
   margin: 0 auto;
   position: relative;
   z-index: 7;
+  min-height: 100vh;
+  min-height: 100svh;
+  box-sizing: border-box;
 }
 
 .ot-notes__title {
@@ -212,14 +246,19 @@
 /* ---------- Schmal ---------- */
 @media (max-width: 900px) {
   /* Auf schmalen Viewports nebeneinander waere alles zu klein:
-     die drei Kacheln stehen dann untereinander. */
+     die drei Kacheln stehen dann untereinander. Kopf und Raster bleiben
+     auch hier in einem Abschnitt, die Hoehe kommt aber aus dem Inhalt
+     (der Screen ist auf dem Telefon laenger als ein Bildschirm). */
   .ot-stack {
     height: auto;
-    /* Seitlich 0: den Einzug bringt .ot-stack__grid (5vw), damit die
-       Kante auch hier mit dem Raster der Collage uebereinstimmt. */
+    grid-template-rows: none;
+    /* Seitlich 0: den Einzug bringen .ot-stack__head und
+       .ot-stack__grid (5vw), damit die Kante auch hier mit dem Raster
+       der Collage uebereinstimmt. */
     padding: 12px 0;
     gap: 12px;
   }
+  .ot-stack__head { padding: 8px 5vw 0; }
   .ot-stack__grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
@@ -228,6 +267,17 @@
   .ot-stack__col { grid-template-rows: none; gap: 12px; }
   .ot-tile { aspect-ratio: 4 / 5; border-radius: 14px; }
   .ot-notes { padding: 12vh 5vw 10vh; }
+}
+
+/* ---------- Flache Fenster ----------
+   Bei 720 px Hoehe passt der "behind the scenes"-Kasten knapp nicht mehr
+   in einen Screen (gemessen: 739 px Inhalt). Etwas weniger Luft ueber und
+   unter dem Kasten und ein flacherer Innenabstand halten ihn komplett im
+   Bild, damit beim Einrasten nichts am unteren Rand abgeschnitten wird. */
+@media (min-width: 901px) and (max-height: 760px) {
+  .ot-notes { padding: 10vh 5vw 8vh; }
+  .ot-notes__title { margin-bottom: 1.4rem; }
+  .ot-box { padding: clamp(1.1rem, 2vw, 1.6rem); }
 }
 
 /* ---------- Reduced Motion ---------- */

@@ -35,12 +35,21 @@
       Titelsequenzen: sie laufen nur, solange ihr eigener Screen aktiv ist,
       und enden sofort beim Wechsel.
 
+   5. JUMP-EVENT - setzt diese Datei die Scrollposition selbst (Einrasten,
+      WEITER/ZURUECK-Pfeil, Tief-Link, Zurueckziehen an der harten Grenze),
+      schickt sie "track:jump" mit { top }. Das ist ein Sprung, kein
+      Scrollen: die Menueleiste (js/topbar.js) nimmt ihn nur als neue Basis,
+      statt ihn als "nach oben gescrollt" zu lesen. Sonst faehrt sie beim
+      Gummiband am Seitenende aus und legt sich ueber den Titel.
+
    Oeffentliche API:
      window.TurnTrack.init()
      window.TurnTrack.index              - aktive Ansicht (0 ... 3)
      window.TurnTrack.pan / .hold        - immer 0 (Reste der alten Mechanik)
      window.TurnTrack.instance.goTo(i, "next"|"prev")
-     window.TurnTrack.instance.nextScreen()  - eine Screen-Kante weiter
+     window.TurnTrack.instance.nextScreen()  - eine Screen-Kante mit Inhalt
+                                               weiter; leere Buehnen wie
+                                               #weiter werden uebersprungen
      window.TurnTrack.instance.tops      - Oberkanten der Ansichten
      window.TurnTrack.instance.screenTop - Oberkante des aktiven Screens
    ========================================================================== */
@@ -65,6 +74,16 @@
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
 
+  /* Meldet einen Sprung, den diese Datei selbst ausfuehrt: Einrasten,
+     WEITER/ZURUECK-Pfeil, Tief-Link und das Zurueckziehen an der harten
+     Grenze. Wer auf Scrollrichtung reagiert (js/topbar.js), nimmt das nur
+     als neue Basis - sonst liest er den Sprung als Scrollen des Nutzers
+     und faehrt z. B. beim Gummiband am Seitenende wieder ein, mitten in
+     den Seitentitel hinein. */
+  function announceJump(top) {
+    document.dispatchEvent(new CustomEvent("track:jump", { detail: { top: top } }));
+  }
+
   function init() {
     var track = document.getElementById("track");
     if (!track) return null;
@@ -78,6 +97,7 @@
     var lastPage = [];    // Oberkante der letzten Sektion je Ansicht
     var limits = [];      // Scroll-Grenze je Ansicht (letzte Seite)
     var lines = [];       // Snap-Kanten (absolute y), sortiert
+    var emptyLines = {};  // Kanten, die nur zu inhaltsleeren Buehnen gehoeren
 
     var rafPending = false;
     var snapTimer = 0;
@@ -106,6 +126,7 @@
 
       if (Math.abs(dist) < 2 || reduceMotion) {
         window.scrollTo(0, Math.round(target));
+        announceJump(target);
         return;
       }
 
@@ -124,9 +145,11 @@
         var e = 1 - Math.pow(1 - u, 3);   // ease-out: weich ankommen
         expected = Math.round(from + dist * e);
         window.scrollTo(0, expected);
+        announceJump(expected);
         if (u < 1) { scrollAnim = requestAnimationFrame(frame); return; }
         scrollAnim = 0;
         window.scrollTo(0, Math.round(target));
+        announceJump(target);
       }
 
       scrollAnim = requestAnimationFrame(frame);
@@ -139,12 +162,14 @@
       cancelScrollAnim();
       var goal = Math.round(target);
       window.scrollTo(0, goal);
+      announceJump(goal);
 
       var tries = 0;
       function check() {
         if (tries++ > 6) return;
         if (Math.abs(scrollTop() - goal) <= 1) return;
         window.scrollTo(0, goal);
+        announceJump(goal);
         requestAnimationFrame(check);
       }
       requestAnimationFrame(check);
@@ -152,14 +177,32 @@
 
     /* ---------- messen --------------------------------------------------- */
 
+    /* Inhaltsleer heisst: kein Element-Kind mit messbarer Hoehe und kein
+       Text darin. Genau so sehen die Uebergangs-Buehnen aus (.placeholder,
+       .seam): eine halbe Bildschirmhoehe Verlauf, sonst nichts. */
+    function isEmptySection(sec) {
+      var kids = sec.children;
+      for (var c = 0; c < kids.length; c++) {
+        if (kids[c].getBoundingClientRect().height > 1) return false;
+      }
+      return sec.textContent.trim() === "";
+    }
+
     /* Oberkanten, Snap-Kanten und Scroll-Grenzen. Die Ansichten bekommen
        ihren vertikalen Platz per margin-top (nicht transform - ein
-       transform wuerde die sticky-Pins verschieben); die Margins werden
-       vorher zurueckgesetzt, damit die echten Hoehen gemessen werden. */
+       transform wuerde die sticky-Pins verschieben).
+
+       WICHTIG: die Margins duerfen dafuer NICHT auf 0 gesetzt werden.
+       offsetHeight ist die Rahmen-Hoehe und enthaelt den Margin ohnehin
+       nicht; das Zuruecksetzen aller Margins hat die Ansichten dagegen
+       kurzzeitig uebereinandergelegt. Die Dokumenthoehe schrumpfte dabei
+       auf die Hoehe der ersten Ansicht, der Browser klemmte die
+       Scrollposition auf deren Ende, und der dadurch ausgeloeste
+       Scroll-Event rastete in js/track.js auf Ansicht 0 ein - der Klick
+       auf einen Phasen-Tab in "ai solution" sprang so zu Projekt 1
+       (dasselbe bei jedem Fenster-Resize). */
     function measure() {
       var i, j;
-
-      for (i = 0; i < panels.length; i++) panels[i].style.marginTop = "0px";
 
       var y = 0;
       for (i = 0; i < panels.length; i++) {
@@ -170,7 +213,10 @@
 
       var st = scrollTop();
       var lineSet = {};
+      var emptyAt = {};    // y -> 1: hier beginnt eine inhaltsleere Sektion
+      var contentAt = {};  // y -> 1: hier beginnt eine Sektion mit Inhalt
       lines = [];
+      emptyLines = {};
       var pageEnd = [];
 
       /* Seitenanfang ist auch ein Screen (Hero). */
@@ -178,7 +224,19 @@
       lines.push(0);
 
       for (i = 0; i < panels.length; i++) {
-        var secs = panels[i].querySelectorAll("section");
+        /* Nur DIREKTE Sektionen einer Ansicht sind Screens. In .ot-notes
+           stehen die beiden Textbloecke selbst in <section>-Elementen
+           (.ot-block) - das ist Inhalt, kein Screen. Vorher wurden sie
+           mitgezaehlt: sie legten Snap-Kanten mitten in "behind the
+           scenes" an und machten dessen Oberkante unerreichbar (die
+           letzte Seite landete auf 13347 statt auf 12933, der Titel stand
+           ueber dem Bild). */
+        var secs = [];
+        for (var p0 = 0; p0 < panels[i].children.length; p0++) {
+          if (panels[i].children[p0].tagName === "SECTION") {
+            secs.push(panels[i].children[p0]);
+          }
+        }
         var top = tops[i];
         var end = tops[i];
 
@@ -187,6 +245,8 @@
           var sTop = Math.round(r.top + st);
           var sEnd = Math.round(r.bottom + st);
           if (!lineSet[sTop]) { lineSet[sTop] = 1; lines.push(sTop); }
+          if (isEmptySection(secs[j])) emptyAt[sTop] = 1;
+          else contentAt[sTop] = 1;
           if (sTop > top) top = sTop;
 
           /* Inhaltsende der Sektion: das Ende des letzten sichtbaren
@@ -220,18 +280,39 @@
         pageEnd[i] = end;
       }
 
-      /* Scroll-Grenze: die letzte Seite ist die Stelle, an der das untere
-         Ende des Track-Inhalts genau am unteren Bildschirmrand steht
-         (pageEnd - Fensterhoehe). Dadurch ist der letzte Screen voll mit
-         Inhalt - kein schwarzer Leerraum wie beim blossen Sprung an die
-         Oberkante der letzten Sektion (die kuerzer sein kann als der
-         Bildschirm). Im letzten Track begrenzt das Dokument selbst. */
+      /* Eine Kante gilt nur dann als leer, wenn dort keine Sektion mit
+         Inhalt beginnt: lineSet ist dedupliziert, zwei Sektionen koennen
+         also dieselbe Kante belegen - dann gewinnt der Inhalt. */
+      for (var e in emptyAt) {
+        if (!contentAt[e]) emptyLines[e] = 1;
+      }
+
+      /* Scroll-Grenze: die letzte Seite ist der letzte Screen des Tracks.
+
+         Passt dessen Inhalt in einen Bildschirm (pageEnd - lastPage <=
+         Fensterhoehe), dann steht der ganze Screen da, sobald seine
+         Oberkante einrastet - Grenze = lastPage. Die fruehere Rechnung
+         pageEnd - Fensterhoehe zog bei Sektionen mit Luft unter dem Inhalt
+         (z. B. .ot-notes mit 14vh Padding) weiter nach oben: "behind the
+         scenes" hing dann 118 px ueber dem Bild, der vorige Outtakes-Screen
+         stand am oberen Rand und der Rahmen des Kastens lag auf der unteren
+         Bildschirmkante.
+
+         Passt der Inhalt nicht in einen Screen (z. B. eine gepinnte Buehne
+         am Track-Ende), bleibt es beim Ausrichten des Inhaltsendes
+         (pageEnd - Fensterhoehe): so bleibt unten nichts abgeschnitten und
+         es entsteht kein Leerraum. Im letzten Track begrenzt das Dokument
+         selbst. */
       for (i = 0; i < panels.length; i++) {
         if (i === panels.length - 1) {
           limits[i] = Infinity;
           continue;
         }
-        limits[i] = pageEnd[i] - vh();
+        if (pageEnd[i] - lastPage[i] <= vh() + 1) {
+          limits[i] = lastPage[i];
+        } else {
+          limits[i] = pageEnd[i] - vh();
+        }
         /* Nie vor den Anfang des Tracks und nie hinter das Track-Ende. */
         limits[i] = Math.max(limits[i], tops[i]);
         if (tops[i + 1] !== undefined) limits[i] = Math.min(limits[i], tops[i + 1] - 1);
@@ -351,14 +432,22 @@
       update();
     }
 
-    /* Eine Screen-Kante weiter (Weiter-scrollen-Knopf am Graph-Ende). */
+    /* Eine Screen-Kante weiter (Weiter-scrollen-Knopf am Graph-Ende).
+       Leere Buehnen werden uebersprungen. Fuer das freie Scrollen bleibt
+       so eine Buehne eine Kante wie jede andere - dort soll der Verlauf
+       einrasten -, der Knopf soll aber auf einer Kante landen, auf der
+       auch etwas zu sehen ist. Sonst steht der Klick auf einer leeren
+       Flaeche und der naechste Screen beginnt erst darunter. */
     function nextScreen() {
       var y = scrollTop();
       var k = indexAt(y);
       var target = null;
 
       for (var i = 0; i < lines.length; i++) {
-        if (lines[i] > y + 2) { target = lines[i]; break; }
+        if (lines[i] <= y + 2) continue;
+        if (emptyLines[lines[i]]) continue;
+        target = lines[i];
+        break;
       }
       if (target === null) return;
 
@@ -406,7 +495,10 @@
       /* Harte Grenze am Ende eines Tracks: keine Position hinter der
          letzten Seite. Beim Hochscrollen ueber eine Track-Grenze zieht das
          auf die letzte Seite des vorigen Tracks (die Spur gleitet dabei
-         nach links). */
+         nach links). Verschiebt sich die Grenze durch neue Inhaltshoehen
+         (Phasen-Tab), ist das hier nur noch die Sicherheitsleine: die
+         Phasen-Panels halten ihre Hoehe (js/serum-phases.js, reserveHeight),
+         damit die Grenze beim Klick nicht wandert und nichts springt. */
       if (lim !== Infinity && y > lim + 0.5) {
         y = lim;
         try {
@@ -414,6 +506,9 @@
         } catch (e) {
           window.scrollTo(0, Math.round(lim));
         }
+        /* Das Zurueckziehen an die Grenze ist ein Sprung, kein Scrollen
+           des Nutzers (siehe announceJump oben). */
+        announceJump(lim);
       }
 
       setActive(k);
@@ -457,8 +552,9 @@
       if (!hash || hash.length < 2) return;
       var target = document.getElementById(hash.slice(1));
       if (!target) return;
-      var y = target.getBoundingClientRect().top + scrollTop();
-      window.scrollTo(0, Math.max(0, Math.round(y)));
+      var y = Math.max(0, Math.round(target.getBoundingClientRect().top + scrollTop()));
+      window.scrollTo(0, y);
+      announceJump(y);
     }
 
     /* ---------- Verdrahtung --------------------------------------------- */
