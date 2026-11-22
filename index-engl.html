@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/imageviewer.css">
   <link rel="stylesheet" href="css/music.css">
   <link rel="stylesheet" href="css/tools.css">
+  <link rel="stylesheet" href="css/viewnav.css">
   <link rel="stylesheet" href="css/endcard.css">
 </head>
 <body>
@@ -799,6 +800,22 @@ is all we've got</pre>
 
    </div><!-- /Track -->
   </main>
+  <!-- Project navigation: left/right arrows. Visible only at the
+       transitions (first/last screen of a project), controlled by
+       js/track.js. A click scrolls smoothly to the top of the target view. -->
+  <nav class="viewnav" aria-label="Project navigation">
+    <button class="viewnav__btn viewnav__btn--prev" type="button" data-viewnav="prev"
+            aria-label="Previous project" aria-hidden="true" tabindex="-1">
+      <span class="viewnav__arrow" aria-hidden="true">&larr;</span>
+      <span class="viewnav__label">Back</span>
+    </button>
+    <button class="viewnav__btn viewnav__btn--next" type="button" data-viewnav="next"
+            aria-label="Next project" aria-hidden="true" tabindex="-1">
+      <span class="viewnav__label">Next</span>
+      <span class="viewnav__arrow" aria-hidden="true">&rarr;</span>
+    </button>
+  </nav>
+
 
   <!-- Der Wechsel zwischen den beiden Ansichten laeuft ueber das Scrollen:
        js/track.js setzt die horizontale Verschiebung des Tracks Frame fuer

@@ -1,0 +1,105 @@
+/* ==========================================================================
+   Projekt-Navigation: Pfeile links/rechts
+
+   Die vier Ansichten stehen untereinander (css/track.css). Zum naechsten
+   Projekt geht es nur ueber diese Knoepfe (und die Pfeiltasten), nicht
+   ueber seitliches Scrollen. Sichtbarkeit steuert js/track.js:
+     - links ("Zurueck"):  erste Bildschirmseite eines Projekts, nicht im
+                           ersten Projekt
+     - rechts ("Weiter"):  letzte Bildschirmseite eines Projekts, nicht im
+                           letzten Projekt
+   Ausgeblendet wird ueber opacity/visibility (nicht display): so bleiben
+   die Knoepfe ueberblendbar und werden per tabindex aus der Tab-Reihenfolge
+   genommen, solange sie unsichtbar sind.
+   ========================================================================== */
+
+.viewnav {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.viewnav__btn {
+  -webkit-appearance: none;
+  appearance: none;
+  position: fixed;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 46px;
+  padding: .6rem 1rem;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  background: rgba(10, 10, 15, .74);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  color: #eaeaf5;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .25s ease, visibility 0s linear .25s,
+              background-color .2s ease, border-color .2s ease, transform .25s ease;
+}
+
+.viewnav__btn--prev {
+  left: clamp(12px, 2vw, 28px);
+  transform: translateY(-50%) translateX(-8px);
+}
+
+.viewnav__btn--next {
+  right: clamp(12px, 2vw, 28px);
+  transform: translateY(-50%) translateX(8px);
+}
+
+.viewnav__btn.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+  transition: opacity .25s ease, visibility 0s linear 0s,
+              background-color .2s ease, border-color .2s ease, transform .25s ease;
+}
+
+.viewnav__btn:hover {
+  border-color: #fff;
+  background: rgba(28, 28, 42, .9);
+}
+
+.viewnav__btn:focus-visible {
+  outline: 2px solid #9fb4ff;
+  outline-offset: 3px;
+}
+
+.viewnav__arrow {
+  color: #9fb4ff;
+  font-size: 1.05em;
+  line-height: 1;
+}
+
+.viewnav__label {
+  line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .viewnav__btn {
+    min-height: 48px;
+    padding: .55rem .8rem;
+    font-size: 10px;
+    letter-spacing: .1em;
+  }
+  .viewnav__label { display: none; }
+  .viewnav__arrow { font-size: 1.3em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewnav__btn,
+  .viewnav__btn.is-visible { transition: none; }
+}
