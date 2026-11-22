@@ -433,6 +433,89 @@ body {
 .flip__front { visibility: visible; }
 .flip__back { transform: rotateY(180deg); background: var(--nv-bg, #0A0A0F); }
 
+/* ---------- Abschnitt 5: Knopf am Graph-Ende – Weg zum Photo Studio ----------
+   Er loest dieselbe Drehung aus wie die Laufstrecke am Graph-Ende, nur per
+   Klick: der Nutzer muss nicht erst durch Leerlauf und Laufstrecke scrollen.
+   Sichtbar wird er ueber .is-visible (js/script.js, syncFlipBtn).
+
+   Warum er AUSSERHALB von .flip im Markup liegt: er dreht nicht mit und
+   bleibt so auch auf der Rueckseite ansprechbar.
+
+   Warum visibility statt display: der Knopf soll ueberblenden (opacity),
+   im ausgeblendeten Zustand aber aus der Tab-Reihenfolge sein - beides
+   zusammen leistet nur visibility. Zeiger-Ereignisse sind zusaetzlich aus,
+   weil visibility:hidden Treffer weiterhin annehmen kann. */
+.flipbtn {
+  position: absolute;
+  /* Rechts am Rand der Graph-Karte, senkrecht mittig: dort ist im
+     Graph-Ende neben dem Save-Image-Node meist freie Canvas. Der
+     Abstand waechst mit dem Viewport, bleibt aber in beiden Ansichten
+     innerhalb der Karte. */
+  top: 50%;
+  right: clamp(.6rem, 1.2vw, 1.1rem);
+  transform: translateY(-50%);
+  z-index: 3;              /* ueber beiden Flip-Seiten (die tragen keinen z-index) */
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  min-height: 44px;        /* Fingergroesse, wie .live__btn */
+  padding: .6rem .95rem;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  /* Milchglas wie die Menueleiste: der Graph bleibt als Textur sichtbar,
+     das Label bleibt lesbar. */
+  background: rgba(10, 10, 15, .72);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  color: #eaeaf5;
+  font-family: inherit;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .25s ease, visibility 0s .25s, background .2s ease, border-color .2s ease;
+}
+/* Sichtbar: visibility ohne Verzug, sonst waere der Knopf im Moment des
+   Einblendens noch nicht fokussierbar (Tab traefe ihn erst nach .25s). */
+.flipbtn.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity .25s ease, visibility 0s 0s, background .2s ease, border-color .2s ease;
+}
+.flipbtn:hover { border-color: #fff; background: rgba(28, 28, 42, .86); }
+/* Eigener Fokusring: der Standardring ist auf dunklem Glas kaum zu sehen. */
+.flipbtn:focus-visible { outline: 2px solid #8f93e0; outline-offset: 3px; }
+.flipbtn__arrow { color: #8f93e0; font-size: .95em; line-height: 1; }
+/* Rueckseite heisst "Zurueck zum Graphen" und sitzt oben rechts: die
+   .live__card liegt dort mittig (js/script.js setzt is-back), mittig wuerde
+   der Knopf ihren Text und ihre Knoepfe verdecken. */
+.flipbtn.is-back {
+  top: clamp(.6rem, 1.2vh, 1rem);
+  transform: none;
+}
+@media (max-width: 899px) {
+  /* Kleinere Ansicht: der Knopf soll neben dem Graphen nicht die halbe
+     Breite einnehmen. 44px Mindesthoehe bleibt. */
+  .flipbtn {
+    right: .5rem;
+    gap: .4rem;
+    padding: .45rem .7rem;
+    font-size: .64rem;
+    letter-spacing: .1em;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Kein Ueberblenden - wie beim Flip selbst springt der Zustand. */
+  .flipbtn, .flipbtn.is-visible { transition: none; }
+}
+
 /* ---------- Abschnitt 5: Rueckseite – AI Photo Studio live eingebettet ----------
    Frueher lag hier der Screenshot photo-studio.png (jetzt in media/_unused/).
    Jetzt laeuft die

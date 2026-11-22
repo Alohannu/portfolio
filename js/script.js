@@ -869,6 +869,11 @@
       // Der Canvas wird nur von uns bewegt, nie nativ gescrollt.
       canvasEl.style.overflow = "hidden";
       canvasEl.style.cursor = "grab";
+      // Ziehen am Canvas verschiebt ihn ohne Rad-Event (context/nodeview.js,
+      // mousedown/mousemove setzen scrollTop/scrollLeft direkt). Der Knopf am
+      // Graph-Ende muss auch dann nachziehen, deshalb haengt er am
+      // scroll-Ereignis des Canvas, nicht nur am Rad-Handler.
+      canvasEl.addEventListener("scroll", scheduleSyncFlipBtn, { passive: true });
     }
     return canvasEl;
   }
@@ -960,6 +965,9 @@
     } else if (liveStart && !liveStart.disabled) {
       liveStart.focus({ preventScroll: true });
     }
+    // Im Bedienmodus verschwindet der Knopf (er laege ueber der Anwendung),
+    // ausserhalb kommt er zurueck.
+    syncFlipBtn();
   }
 
   if (liveFrame) {
@@ -1066,7 +1074,116 @@
     } else {
       liveSetMode(false);  // verdeckt heisst: nicht bedienbar
     }
+    // Der Knopf am Graph-Ende haengt an flipP; jede Aenderung der Drehung
+    // muss ihn mitziehen (auch die per Rad gescrubbte).
+    syncFlipBtn();
   }
+
+  /* ---------- Knopf am Graph-Ende: Weg zum Photo Studio -------------------
+     Derselbe Flip wie die Laufstrecke weiter unten, nur auf Klick: der
+     Nutzer muss am Graph-Ende nicht erst durch Leerlauf und Laufstrecke
+     scrollen. Er erscheint, sobald der Graph im Canvas am Ende steht
+     (Save-Image-Node vor uns) - und auf der Rueckseite traegt derselbe
+     Knopf den Rueckweg.
+
+     Warum hier eine Animation steht und beim Scrollen nicht: das Rad
+     liefert die Drehung Stueck fuer Stueck, ein Klick liefert nur ein
+     Ereignis. Die Drehung selbst bleibt dieselbe (applyFlip), nur die
+     Quelle der Werte ist eine andere. Jede Rad-Eingabe bricht die
+     Animation ab - danach fuehrt wieder die Scrollposition, damit es an
+     der Nahtstelle keinen Sprung gibt.                                ----- */
+  var flipBtn = document.getElementById("flipBtn");
+  var flipBtnLabel = document.getElementById("flipBtnLabel");
+  var flipBtnArrow = document.getElementById("flipBtnArrow");
+  var FLIP_CLICK_MS = 700;    // Dauer einer vollen Drehung (0 -> 1) per Klick
+  var flipAnimRAF = 0;
+  var flipAnimating = false;
+  var flipSyncQueued = false;
+
+  /* Sichtbar ist der Knopf in drei Lagen: Vorderseite am Graph-Ende,
+     Rueckseite fertig gedreht (aber nicht im Bedienmodus - dort deckt er
+     sonst die eingebettete Anwendung zu) oder mitten in der eigenen
+     Animation. Die Zwischenstaende des Scroll-Scrubbings bleiben
+     ausgeblendet: waehrend der Drehung gibt es nichts zu klicken. */
+  function syncFlipBtn() {
+    if (!flipBtn) return;
+    // tryonIsActive() vor der Messung pruefen: waehrend einer laufenden
+    // Drehung antwortet es ohne Layout-Messung (flipP > 0), und genau dann
+    // wird syncFlipBtn pro Animationsframe gerufen.
+    var active = tryonIsActive();
+    var front = false;
+    if (active && !flipAnimating && flipP <= .001) {
+      var c = findCanvas();
+      front = !!c && atGraphEnd(c);
+    }
+    var back = active && flipP >= .999 && !liveMode;
+    var isBack = flipP >= .5;
+    flipBtn.classList.toggle("is-visible", front || back || flipAnimating);
+    flipBtn.classList.toggle("is-back", isBack);
+    if (flipBtnLabel) flipBtnLabel.textContent = isBack ? "Zurück zum Graphen" : "Zum Photo Studio";
+    if (flipBtnArrow) flipBtnArrow.textContent = isBack ? "←" : "→";
+  }
+
+  /* Ein Rad-Event verschiebt den Canvas sofort, der Handler kehrt aber an
+     vielen Stellen zurueck. Statt jeden Rueckweg einzeln zu bedienen,
+     sammelt dieser Aufruf die Aktualisierung in einem Frame - dann steht
+     die neue Scrollposition schon fest. */
+  function scheduleSyncFlipBtn() {
+    if (flipSyncQueued) return;
+    flipSyncQueued = true;
+    requestAnimationFrame(function () { flipSyncQueued = false; syncFlipBtn(); });
+  }
+
+  function cancelFlipAnim() {
+    if (flipAnimRAF) cancelAnimationFrame(flipAnimRAF);
+    flipAnimRAF = 0;
+    flipAnimating = false;
+  }
+
+  /* Dreht per Klick auf target (0 = Graph, 1 = Photo Studio). Bei reduzierter
+     Bewegung gibt es keine Drehung: dann wird die Zielseite wie beim Scrollen
+     direkt gesetzt. */
+  function animateFlipTo(target) {
+    var from = flipP;
+    cancelFlipAnim();
+    if (reduceMotion || Math.abs(target - from) < .001) {
+      applyFlip(target);
+      // Rueckweg: Leerlauf-Strecke neu anlegen, genau wie wenn man per Rad
+      // bis auf 0 zurueckgedreht haette.
+      if (target === 0) holdArm();
+      syncFlipBtn();
+      return;
+    }
+    flipAnimating = true;
+    var dur = Math.max(1, FLIP_CLICK_MS * Math.abs(target - from));
+    var t0 = 0;
+    function frame(ts) {
+      if (!t0) t0 = ts;
+      var u = clamp((ts - t0) / dur, 0, 1);
+      // ease-in-out: weich anfahren, weich ankommen - in der Mitte, wo die
+      // Flaeche durch die Kante kippt, ist sie am schnellsten.
+      var e = u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+      applyFlip(from + (target - from) * e);
+      if (u < 1) { flipAnimRAF = requestAnimationFrame(frame); return; }
+      flipAnimRAF = 0;
+      flipAnimating = false;
+      applyFlip(target);
+      if (target === 0) holdArm();
+      syncFlipBtn();
+    }
+    flipAnimRAF = requestAnimationFrame(frame);
+    syncFlipBtn();
+  }
+
+  if (flipBtn) {
+    flipBtn.addEventListener("click", function () {
+      // flipP ist das Mass: ab der halben Drehung steht die Rueckseite vorne,
+      // dann heisst der Klick "zurueck". Ein zweiter Klick mitten in der
+      // Animation dreht sie damit um.
+      animateFlipTo(flipP >= .5 ? 0 : 1);
+    });
+  }
+  window.addEventListener("resize", scheduleSyncFlipBtn);
 
   if (tryonSection) {
     findCanvas();
@@ -1076,6 +1193,10 @@
       if (!c) return;
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // horizontal nicht anfassen
       if (!tryonIsActive()) return;
+      // Rad schlaegt Klick: eine laufende Klick-Animation endet hier, damit
+      // die Drehung sofort wieder an der Scrollposition haengt.
+      cancelFlipAnim();
+      scheduleSyncFlipBtn();
       // Bei reduzierter Bewegung gibt es keine Drehung; die Zielseite wird
       // weiter unten direkt gesetzt, ohne das Rad zu kapern.
 
@@ -1177,9 +1298,13 @@
     }, { passive: false });
 
     window.addEventListener("scroll", function () {
+      scheduleSyncFlipBtn();
       if (!tryonIsActive()) {
         pausedAt = 0;
         endReachedAt = 0;
+        // Section verlassen: eine laufende Klick-Animation abbrechen, sonst
+        // drehte sie unsichtbar weiter, waehrend die Seite schon weg ist.
+        cancelFlipAnim();
         // Section verlassen: Flaeche wieder auf den Graphen stellen, damit
         // sie beim naechsten Durchlauf sauber von vorn beginnt. Die
         // Leerlauf-Strecke wird dabei ebenfalls neu angelegt.

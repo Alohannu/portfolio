@@ -196,6 +196,24 @@
               </div>
             </div>
           </div>
+
+          <!-- Weg zum Photo Studio als Knopf: er erscheint, sobald der Graph
+               im Canvas am Ende steht (Save-Image-Node vor uns), und dreht die
+               Flaeche auf die Rueckseite - dieselbe Drehung wie beim
+               Weiterscrollen, nur ohne die Laufstrecke davor.
+
+               Er liegt NEBEN .flip, nicht darin: ausserhalb von .flip__inner
+               dreht er nicht mit und bleibt ueber beiden Seiten ansprechbar.
+               Auf der Rueckseite traegt er denselben Platz und heisst dort
+               "Zurueck zum Graphen".
+
+               Ausgeblendet wird er ueber visibility (nicht display/hidden):
+               so ist er im Grundzustand nicht fokussierbar und trotzdem
+               ueberblendbar. Steuerung: js/script.js, .flipbtn in css/style.css. -->
+          <button class="flipbtn" id="flipBtn" type="button">
+            <span class="flipbtn__label" id="flipBtnLabel">Zum Photo Studio</span>
+            <span class="flipbtn__arrow" id="flipBtnArrow" aria-hidden="true">&rarr;</span>
+          </button>
         </div>
       </div>
     </section>
