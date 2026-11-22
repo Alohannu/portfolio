@@ -11,6 +11,10 @@
    - das Symbol zeigt den naechsten Schritt: "▶" heisst "startet",
      "❚❚" heisst "pausiert gerade"
    - Zeitanzeige und Fortschrittsbalken laufen ueber timeupdate mit
+   - die 2px-Leiste .music__bar ist zugleich Slider: Klick springt an die
+     Stelle, Ziehen scrubbt live, Pfeiltasten +/-5 s, Home/End an den Rand.
+     Das Markup bleibt eine reine Anzeige - Rolle, tabindex und
+     ARIA-Werte setzt dieses Skript.
    - am Ende springt der Player zurueck auf Anfang und zeigt wieder "▶"
 
    Wellenform und Songtext haengen am Song - nicht an CSS-Loops:
@@ -18,8 +22,9 @@
      der Song laeuft. Die Hoehen kommen aus einem AnalyserNode (echte
      Frequenzdaten von Pantomime.mp3), nicht aus einer Animation.
    - der Songtext wird nicht mehr per CSS durchgezogen, sondern seine
-     Position folgt der Abspielzeit (currentTime / duration). Pause haelt
-     ihn an, Seeken springt mit.
+     Position folgt der Abspielzeit. Pause haelt ihn an, Seeken springt
+     mit. Der Text setzt erst mit dem Gesang ein (VOCAL_START = 16,5 s),
+     davor steht er oben still; kein manuelles Scrollen.
    - wer prefers-reduced-motion gesetzt hat, bekommt weder Bewegung noch
      Textwanderung (die Analyse startet dann gar nicht).
 
@@ -39,6 +44,12 @@
     return m + ":" + (r < 10 ? "0" : "") + r;
   }
 
+  /* Gesangseinsatz in Sekunden: davor steht der Songtext oben still. */
+  var VOCAL_START = 16.5;
+
+  /* Schrittweite der Pfeiltasten auf der Fortschrittsleiste. */
+  var SEEK_STEP = 5;
+
   function initPlayer() {
     var audio = document.getElementById("musicSong");
     var button = document.getElementById("musicPlay");
@@ -47,7 +58,10 @@
     var icon = document.getElementById("musicPlayIcon");
     var fill = document.getElementById("musicBarFill");
     var time = document.getElementById("musicTime");
+    var bar = document.querySelector(".music__bar");
     var duration = 0;
+    var english = document.documentElement.lang === "en";
+    var scrubbing = false;
 
     var wave = document.querySelector(".music__wave");
     var bars = wave ? Array.prototype.slice.call(wave.querySelectorAll("span")) : [];
@@ -62,15 +76,33 @@
       button.setAttribute("aria-label", playing ? "Soundtrack pausieren" : "Soundtrack abspielen");
     }
 
-    /* Songtext an die Abspielzeit koppeln: 0 % = oben, 100 % = Ende. Der
-       Text laeuft also genau so weit, wie der Song gespielt hat - Pause
-       haelt ihn an, Seeken springt mit. */
+    /* Songtext an die Abspielzeit koppeln: p = 0 heisst "oben", p = 1
+       "letzte Zeile erreicht". Der Text laeuft erst ab dem Gesangseinsatz
+       (VOCAL_START), vorher bleibt er oben stehen. Kein wheel-/touch-
+       Handler auf der Box: die Position kommt ausschliesslich aus
+       currentTime, also halten Pause und Seeken sie automatisch mit. */
+    function lyricsProgress() {
+      if (!(duration > VOCAL_START)) return 0;
+      var p = (audio.currentTime - VOCAL_START) / (duration - VOCAL_START);
+      return Math.min(1, Math.max(0, p));
+    }
+
     function syncLyrics() {
       if (!lyricsBox || !lyricsInner || reduceMotion) return;
       var travel = lyricsInner.scrollHeight - lyricsBox.clientHeight;
       if (travel <= 0) return;
-      var p = duration ? Math.min(1, Math.max(0, audio.currentTime / duration)) : 0;
+      var p = lyricsProgress();
       lyricsInner.style.transform = "translate3d(0," + (-p * travel).toFixed(1) + "px,0)";
+    }
+
+    /* Die Leiste ist ein Slider: aria-valuenow/max und der Vorlesetext
+       folgen der Abspielzeit (und damit auch jedem Scrub-Schritt). */
+    function syncSliderAria() {
+      if (!bar) return;
+      bar.setAttribute("aria-valuemin", "0");
+      bar.setAttribute("aria-valuemax", duration ? duration.toFixed(1) : "0");
+      bar.setAttribute("aria-valuenow", Math.min(duration || 0, audio.currentTime).toFixed(1));
+      bar.setAttribute("aria-valuetext", fmtTime(audio.currentTime) + " / " + fmtTime(duration));
     }
 
     function render() {
@@ -79,7 +111,86 @@
         var pct = duration ? (audio.currentTime / duration) * 100 : 0;
         fill.style.width = pct.toFixed(2) + "%";
       }
+      syncSliderAria();
       syncLyrics();
+    }
+
+    /* ---- Fortschrittsleiste bedienbar machen ------------------------------
+       Das Markup bleibt eine reine Anzeige (div.music__bar). Rolle, tabindex
+       und ARIA-Werte setzt dieses Skript; die Trefferflaeche liefert
+       css/music.css ueber ein Pseudo-Element (sichtbar bleiben 2px). */
+    function seekTo(seconds) {
+      if (!duration) return;
+      var t = Math.min(duration, Math.max(0, seconds));
+      audio.currentTime = t;
+      /* Sofort zeichnen: waehrend des Ziehens kommt kein timeupdate an. */
+      render();
+    }
+
+    function ratioAt(clientX) {
+      var rect = bar.getBoundingClientRect();
+      if (!rect.width) return 0;
+      return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    }
+
+    function endScrub(e) {
+      if (!scrubbing) return;
+      scrubbing = false;
+      if (bar.releasePointerCapture && e && e.pointerId !== undefined) {
+        try { bar.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+    }
+
+    function initBar() {
+      if (!bar) return;
+      bar.setAttribute("role", "slider");
+      bar.setAttribute("tabindex", "0");
+      bar.setAttribute("aria-orientation", "horizontal");
+      bar.setAttribute("aria-label", english ? "Playback position" : "Wiedergabeposition");
+
+      bar.addEventListener("pointerdown", function (e) {
+        if (!duration) return;
+        /* Nur die primaere Maustaste; Touch/Stift haben button 0. */
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        scrubbing = true;
+        /* Ohne Capture verliert das Ziehen ausserhalb der 2px-Linie den
+           Kontakt; wo setPointerCapture fehlt, bleibt wenigstens der
+           Klick-/Zugbereich direkt ueber der Leiste bedienbar. */
+        if (bar.setPointerCapture) {
+          try { bar.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+        /* Klick setzt den Fokus, damit die Tasten danach greifen. */
+        try { bar.focus({ preventScroll: true }); } catch (err) { bar.focus(); }
+        seekTo(ratioAt(e.clientX) * duration);
+      });
+
+      bar.addEventListener("pointermove", function (e) {
+        if (!scrubbing) return;
+        e.preventDefault();
+        seekTo(ratioAt(e.clientX) * duration);
+      });
+
+      bar.addEventListener("pointerup", endScrub);
+      bar.addEventListener("pointercancel", endScrub);
+      /* Falls die Capture verloren geht (z. B. Element wird ersetzt), darf
+         das Ziehen nicht "haengen" bleiben. */
+      bar.addEventListener("lostpointercapture", endScrub);
+
+      /* Tastatur: Pfeile = +/-5 s, Home/End = Anfang/Ende. stopPropagation,
+         weil js/track.js global auf die Pfeiltasten hoert und sonst
+         zusaetzlich eine Ansicht weiterschiebt (der Slider hat den Fokus,
+         also gehoeren ihm die Tasten). */
+      bar.addEventListener("keydown", function (e) {
+        if (!duration) return;
+        var k = e.key;
+        if (k === "ArrowRight") seekTo(audio.currentTime + SEEK_STEP);
+        else if (k === "ArrowLeft") seekTo(audio.currentTime - SEEK_STEP);
+        else if (k === "Home") seekTo(0);
+        else if (k === "End") seekTo(duration);
+        else return;
+        e.preventDefault();
+        e.stopPropagation();
+      });
     }
 
     /* ---- Wellenform -------------------------------------------------------
@@ -188,6 +299,8 @@
     });
 
     audio.addEventListener("timeupdate", render);
+    /* Nach einem Seek (auch aus dem Scrubben) sofort nachziehen. */
+    audio.addEventListener("seeked", render);
 
     audio.addEventListener("ended", function () {
       audio.currentTime = 0;
@@ -196,6 +309,7 @@
 
     window.addEventListener("resize", syncLyrics);
 
+    initBar();
     setPlaying(false);
     render();
     syncLyrics();

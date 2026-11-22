@@ -260,11 +260,40 @@
   transition: none;
 }
 
+/* Fortschrittsleiste: sichtbar 2px, bedienbar als Slider (js/music.js).
+   Die Trefferflaeche waechst ueber ::before auf 24px Hoehe, ohne die
+   sichtbare Linie oder das Layout zu veraendern. */
 .music__bar {
   position: relative;
   height: 2px;
   border-radius: 2px;
   background: rgba(40, 28, 38, .22);
+  cursor: pointer;
+  /* Beim Ziehen darf die Seite auf Touch nicht mitscrollen. */
+  touch-action: none;
+}
+
+/* Unsichtbare Trefferflaeche: 24px hoch, mittig ueber der Linie. Das
+   Pseudo-Element gehoert zum Element, die Zeiger-Ereignisse landen also
+   beim Slider selbst. */
+.music__bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -11px;
+  bottom: -11px;
+}
+
+.music__bar:hover {
+  background: rgba(40, 28, 38, .34);
+}
+
+/* Fokusring fuer die Tastaturbedienung. */
+.music__bar:focus-visible {
+  outline: 2px solid #6f4fb8;
+  outline-offset: 3px;
+  background: rgba(40, 28, 38, .34);
 }
 
 .music__bar-fill {
@@ -275,6 +304,8 @@
   border-radius: 2px;
   width: 0;
   background: linear-gradient(90deg, #c8aef0, #efe0ff);
+  /* Die Leiste selbst faengt die Zeiger-Ereignisse ab. */
+  pointer-events: none;
 }
 
 .music__labels {

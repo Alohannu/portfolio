@@ -111,12 +111,19 @@
 
       programmaticUntil = Date.now() + dur + 250;
       var t0 = 0;
+      var expected = from;
 
       function frame(ts) {
+        /* Hat jemand anderes gescrollt (Touch, Tastatur, ein Skript), hat
+           diese Animation verloren - sie darf die Position nicht
+           zurueckziehen. */
+        if (Math.abs(scrollTop() - expected) > 3) { scrollAnim = 0; return; }
+
         if (!t0) t0 = ts;
         var u = Math.min(1, (ts - t0) / dur);
         var e = 1 - Math.pow(1 - u, 3);   // ease-out: weich ankommen
-        window.scrollTo(0, Math.round(from + dist * e));
+        expected = Math.round(from + dist * e);
+        window.scrollTo(0, expected);
         if (u < 1) { scrollAnim = requestAnimationFrame(frame); return; }
         scrollAnim = 0;
         window.scrollTo(0, Math.round(target));
@@ -465,6 +472,11 @@
 
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("wheel", onWheel, { passive: false });
+    /* Auch Touch, Tastatur und Klicks uebernehmen sofort die Kontrolle:
+       eine laufende Einrast-Animation wird abgebrochen. */
+    ["touchstart", "pointerdown", "keydown"].forEach(function (evt) {
+      window.addEventListener(evt, cancelScrollAnim, { passive: true });
+    });
 
     window.addEventListener("resize", function () {
       measure();
@@ -496,6 +508,9 @@
       if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
       var t = e.target;
       if (t && t.matches && (t.matches("input, textarea, select") || t.isContentEditable)) return;
+      /* Regler (z. B. die Fortschrittsleiste des Soundtracks) bedienen
+         sich mit den Pfeiltasten selbst. */
+      if (t && t.closest && t.closest('[role="slider"]')) return;
       var k = indexAt(scrollTop());
       if (e.key === "ArrowRight") {
         if (k + 1 >= panels.length) return;
