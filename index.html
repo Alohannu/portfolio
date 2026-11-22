@@ -815,13 +815,24 @@ is all we've got</pre>
            damit die Track-Geometrie (vier Panels) unangetastet bleibt.
            Pflege: E-Mail-Adresse unten im #endcardMail-Span, LinkedIn-URL
            in der LinkedIn-Spalte ersetzen,
-           ebenso die Copyright-Zeile. Wortmarke: id="endcardMark" wird von
+           ebenso die Copyright-Zeile. Der CV-Knopf zeigt auf cv.pdf im
+           Repo-Wurzelverzeichnis (Datei dort ablegen; gleiche Datei gilt
+           fuer die englische Seite). Wortmarke: id="endcardMark" wird von
            js/endcard.js auf die Spaltenbreite eingepasst. -->
       <section class="endcard" id="kontakt" aria-labelledby="endcardTitle">
         <div class="endcard__inner">
           <p class="endcard__label">Kontakt</p>
           <h2 class="endcard__title" id="endcardTitle">Du hast eine Vision, eine Marke oder eine Geschichte?</h2>
-          <p class="endcard__lede">Offen f&uuml;r Kampagnen, Fashion-Filme, AI-Visuals und Markenauftritte.</p>
+          <div class="endcard__lead">
+            <p class="endcard__lede">Offen f&uuml;r Kampagnen, Fashion-Filme, AI-Visuals und Markenauftritte.</p>
+            <!-- CV-Knopf: verweist auf cv.pdf im Repo-Wurzelverzeichnis
+                 (Datei per GitHub hochladen; bis dahin antwortet der Link
+                 mit 404). target="_blank", damit das Portfolio offen
+                 bleibt. -->
+            <div class="endcard__actions">
+              <a class="endcard__cv" href="cv.pdf" target="_blank" rel="noopener"><span>CV ansehen</span><span class="endcard__cv-arrow" aria-hidden="true">&#8599;</span></a>
+            </div>
+          </div>
 
           <div class="endcard__cols">
             <div class="endcard__col">
