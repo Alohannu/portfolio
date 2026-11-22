@@ -14,9 +14,23 @@
   <link rel="stylesheet" href="css/curtain.css">
   <link rel="stylesheet" href="css/imageviewer.css">
   <link rel="stylesheet" href="css/music.css">
+  <link rel="stylesheet" href="css/topbar.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
+
+  <!-- Menüleiste: verschwindet beim Runterscrollen, kommt beim Hochscrollen
+       zurück. Sie liegt außerhalb von #track (dessen transform würde ein
+       position: fixed darin brechen) und außerhalb von <main>, damit sie
+       kein Layout der Ansichten beeinflusst. -->
+  <nav class="topbar" id="topbar" aria-label="Projekte">
+    <ul class="topbar__list">
+      <li><a class="topbar__link" href="#main" data-view="0">nandenmoii</a></li>
+      <li><a class="topbar__link" href="#serum" data-view="1">ai face serum</a></li>
+      <li><a class="topbar__link" href="#curtain-view" data-view="2">eggo</a></li>
+      <li><a class="topbar__link" href="#music-view" data-view="3">ai music</a></li>
+    </ul>
+  </nav>
 
   <main id="main">
    <div class="track" id="track">
@@ -887,6 +901,7 @@ is all we've got</pre>
   <script src="js/showroom.js"></script>
   <script src="js/imageviewer.js"></script>
   <script src="js/track.js"></script>
+  <script src="js/topbar.js"></script>
   <script src="js/curtain.js"></script>
   <script src="js/serum-phases.js"></script>
   <script src="js/serum-campaign.js"></script>

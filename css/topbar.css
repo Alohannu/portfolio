@@ -1,0 +1,126 @@
+/* ==========================================================================
+   Menueleiste: die vier Projekt-Ansichten, oben fest ueber der Seite
+
+   Sie liegt als direktes Kind von <body> VOR <main> (index.html). WARUM
+   nicht innerhalb: #track bekommt beim Schwenk ein transform (js/track.js)
+   und wird dadurch zum Containing Block - ein position: fixed darin haenge
+   dann am Track statt am Viewport und faehre bei jedem Schwenk mit. Und
+   ausserhalb von <main>, damit sie in kein Layout der Ansichten greift:
+   js/track.js misst die Panel-Oberkanten, jede Hoehe hier waere ein
+   Messfehler.
+
+   z-index 800 bewusst UNTER .showroom (900) und .imageviewer (950): die
+   Dialoge sollen die Leiste verdecken, nicht umgekehrt.
+
+   Steuerung: js/topbar.js (is-hidden beim Runterscrollen, is-active an
+   der aktuellen Ansicht).
+   ========================================================================== */
+
+.topbar {
+  position: fixed;
+  /* inset: 0 0 auto 0 = links/rechts auf 0, oben 0, unten automatisch.
+     So bleibt die Leiste im Fluss der Breite des Viewports. */
+  inset: 0 0 auto 0;
+  z-index: 800;
+  /* Geraete mit Notch: sonst laege die Leiste unter der Statusleiste. */
+  padding-top: env(safe-area-inset-top, 0px);
+  background: rgba(10, 10, 12, .62);
+  /* Milchglas statt deckend: der Inhalt darunter bleibt als Textur
+     sichtbar, die Labels bleiben trotzdem lesbar. -webkit- fuer Safari. */
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+  color: #fff;
+  font-family: var(--font);
+  transform: translateY(0);
+  /* visibility wird mitverzogen: beim Einfahren erst nach dem Ausfahren
+     (Delay 0s hier, .3s in .is-hidden), sonst verschwaenden die Links
+     mitten in der Bewegung. */
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1), visibility 0s 0s;
+}
+
+/* Ausgefahren: die Leiste steht ueber dem Viewport. visibility erst nach
+   der Bewegung auf hidden - so sind die Links erst dann aus der
+   Tab-Reihenfolge, wenn sie wirklich weg sind. */
+.topbar.is-hidden {
+  transform: translateY(-100%);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1), visibility 0s .3s;
+}
+
+.topbar__list {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* margin: 0 auto + max-width: die Eintraege stehen auch auf breiten
+     Schirmen in der Mitte statt am linken Rand. */
+  margin: 0 auto;
+  max-width: 1400px;
+  height: 3.4rem;
+  padding: 0 clamp(.9rem, 3vw, 2.5rem);
+  gap: clamp(.5rem, 2.2vw, 2rem);
+  list-style: none;
+  /* Auf schmalen Schirmen passen vier Labels nicht mehr nebeneinander:
+     dann scrollt die Liste seitlich, ohne sichtbare Scrollbar (sonst
+     liefe unter der Leiste eine Leiste). */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.topbar__list::-webkit-scrollbar { display: none; }
+
+.topbar__link {
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: rgba(255, 255, 255, .62);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: .5rem .1rem;
+  /* Transparenter Unterstrich statt border-bottom: 0: der Platz fuer den
+     Indikator steht von Anfang an da, die Leiste springt beim Aktivieren
+     also nicht. */
+  border-bottom: 1px solid transparent;
+  transition: color .2s, border-color .2s;
+}
+
+.topbar__link:hover,
+.topbar__link:focus-visible {
+  color: #fff;
+}
+
+.topbar__link:focus-visible {
+  outline: 2px solid #8f93ff;
+  outline-offset: 3px;
+}
+
+.topbar__link.is-active {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+/* Der Skip-Link erscheint beim Fokus bei top: 1rem (css/style.css) und
+   laege dort genau unter der Leiste. topbar.css laedt als letztes
+   Stylesheet, darum gewinnt dieser Wert bei gleicher Spezifitaet. */
+.skip-link { z-index: 1000; }
+
+/* Schmale Schirme: flachere Leiste, engere Labels, damit alle vier
+   Eintraege ohne Scrollen sichtbar bleiben. */
+@media (max-width: 560px) {
+  .topbar__list {
+    height: 2.9rem;
+    gap: clamp(.35rem, 1.6vw, .9rem);
+  }
+  .topbar__link {
+    font-size: .68rem;
+    letter-spacing: .12em;
+  }
+}
+
+/* Wer Bewegung reduziert haben will, bekommt den Wechsel ohne Animation -
+   die Leiste springt dann statt zu fahren. */
+@media (prefers-reduced-motion: reduce) {
+  .topbar,
+  .topbar.is-hidden { transition: none; }
+}
