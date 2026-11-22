@@ -145,14 +145,20 @@
 
     /* Sprung an die Oberkante von Ansicht i. Der Zielpunkt ist genau
        tops[i] - damit landet jeder Pfeilklick auf der Bildschirmkante
-       (Snap) und nicht irgendwo dazwischen. */
+       (Snap) und nicht irgendwo dazwischen.
+
+       WARUM nachgemessen wird: waehrend des weichen Scrollens laden
+       Bilder nach und Layout aendert sich; das native Smooth-Scrolling
+       kommt dann ein paar Hundert Pixel neben dem Ziel an (gemessen: 232px
+       bei Ansicht 3). Deshalb wird nach dem Ende der Bewegung neu gemessen
+       und exakt auf die gemessene Oberkante gesetzt. */
     function goTo(i) {
       if (i < 0 || i >= panels.length) return;
       var target = tops[i] === undefined ? 0 : tops[i];
       var behavior = reduceMotion ? "auto" : "smooth";
 
       programmatic = true;
-      programmaticUntil = Date.now() + 900;
+      programmaticUntil = Date.now() + 3000;
 
       try {
         window.scrollTo({ top: Math.round(target), behavior: behavior });
@@ -160,14 +166,30 @@
         window.scrollTo(0, Math.round(target));
       }
 
-      /* Weiches Scrollen landet nicht immer exakt: kurz vor Ende
-         nachziehen. (scrollend gibt es nicht ueberall.) */
-      setTimeout(function () {
-        if (Math.abs(scrollTop() - target) > 2) window.scrollTo(0, Math.round(target));
-        programmatic = false;
-        setActive(i);
-        update();
-      }, reduceMotion ? 0 : 700);
+      var lastY = -1;
+      var stable = 0;
+      var deadline = Date.now() + 2200;
+
+      function settle() {
+        var y = scrollTop();
+        if (Math.abs(y - lastY) < 1) stable += 1;
+        else stable = 0;
+        lastY = y;
+
+        if (stable >= 3 || Date.now() > deadline) {
+          measure();
+          var exact = tops[i] === undefined ? target : tops[i];
+          if (Math.abs(scrollTop() - exact) > 1) {
+            window.scrollTo(0, Math.round(exact));
+          }
+          programmatic = false;
+          setActive(i);
+          update();
+          return;
+        }
+        requestAnimationFrame(settle);
+      }
+      requestAnimationFrame(settle);
     }
 
     /* Freies Scrollen: bleibt man kurz vor einer Ansichtsgrenze stehen,
