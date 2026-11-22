@@ -163,7 +163,18 @@
   background: linear-gradient(to bottom, #c3b9b6 0%, #fdfdfd 100%);
 }
 
-.project--serum-phases { height: auto; }
+.project--serum-phases {
+  height: auto;
+  /* Die Phasen-Section ist der letzte Screen von Ansicht 2 und soll die
+     Ansicht deshalb genau fuellen. Auf hohen Fenstern war ihr Inhalt
+     niedriger als der Bildschirm (gemessen: 1008 px bei 1080 px Hoehe) -
+     die letzte Seite zeigte dann 72 px der Sand-Kurve darueber. Mit
+     min-height steht immer ein ganzer Screen, und js/track.js kann die
+     letzte Seite an der Oberkante der Section ausrichten. */
+  min-height: 100vh;
+  min-height: 100svh;
+  box-sizing: border-box;
+}
 
 /* Der Avatar-Stack hat hier nur EINE Spalte; die Stage bleibt sonst
    baugleich zu #projekte. */
@@ -196,7 +207,22 @@
   position: static;
   height: auto;
   overflow: visible;
-  display: block;
+  /* Die Stage fuellt einen ganzen Screen und traegt denselben Verlauf wie
+     die Section. Dadurch liegt der Verlauf immer ueber die volle Hoehe
+     (kein sichtbarer Absatz, wenn der Inhalt kuerzer ist als das Fenster)
+     und der Inhalt steht senkrecht in der Mitte. Ist er hoeher als der
+     Bildschirm, waechst die Stage wie bisher mit. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* .project__stage bringt aus style.css ein gap mit (1rem, ab 900px
+     2rem). Im Block-Layout war es wirkungslos, als Flex-Spalte wuerde es
+     zwischen Titel, Tabs und Panel je eine Luecke setzen (gemessen: +64 px
+     Hoehe) und den Screen wieder ueberlaufen lassen. */
+  gap: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  box-sizing: border-box;
   max-width: 1400px;
   margin: 0 auto;
   padding: clamp(48px, 8vh, 110px) clamp(20px, 4vw, 64px);
@@ -355,6 +381,31 @@
   font-weight: 300;
   color: #3a3634;
   text-wrap: pretty;
+}
+
+/* Flache Fenster (1366x768, 1280x720, 1280x800, 1440x864): dort ist der
+   Phasen-Inhalt hoeher als der Bildschirm (gemessen 884 px bei 768 px
+   Hoehe). Beim Einrasten auf die letzte Seite stehen dann entweder die
+   Bilder unten oder der Titel oben ausserhalb des Bildes.
+   Etwas weniger Luft und eine kleinere Ueberschrift bringen den Inhalt in
+   einen Screen; die Stage bleibt trotzdem genau fensterhoch (der Verlauf
+   deckt die Resthoehe, der Inhalt steht mittig). Schmale Viewports
+   (<= 900px) bleiben aussen vor: dort ist der Screen ohnehin laenger als
+   ein Bildschirm und der Inhalt scrollt wie bisher. */
+@media (min-width: 901px) and (max-height: 880px) {
+  .p2-phases .project__stage { padding: clamp(20px, 5vh, 110px) clamp(20px, 4vw, 64px); }
+  .p2-phases__title {
+    margin-bottom: clamp(12px, 2.2vh, 64px);
+    font-size: clamp(26px, min(4.6vw, 7.2vh), 60px);
+  }
+  .phase-tabs { margin: 0 auto clamp(12px, 2.2vh, 44px); }
+  .phase-panel__head { padding: clamp(10px, 1.7vh, 32px) 0; }
+  .phase-panel__body { padding: clamp(14px, 2.4vh, 52px) 0; }
+  /* Das Bildpaar bestimmt die Hoehe des Panels (Seitenverhaeltnis
+     360/554 bzw. 804/499). Damit der ganze Screen in ein flaches Fenster
+     passt, wird die Bildspalte mit der Fensterhoehe begrenzt; die
+     Textspalte behaelt ihre Breite. */
+  .phase-panel__media { max-width: min(804px, 74vh); }
 }
 
 @media (min-width: 900px) {

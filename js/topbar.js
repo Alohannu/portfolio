@@ -51,6 +51,25 @@
     return window.scrollY || window.pageYOffset || 0;
   }
 
+  /* Hoechste Scrollposition, gecacht. WARUM gekappt: beim Gummiband am
+     Seitenende (Safari, iOS) liefert der Browser Werte hinter dem
+     Dokumentende; die Rueckkehr daraus waere sonst eine Bewegung nach oben.
+     Neu berechnet wird nur bei Anlaessen, die die Dokumenthoehe aendern
+     koennen - ein Lesen pro Scroll-Event wuerde die Seite bei jedem Pixel
+     neu vermessen. */
+  var maxY = 0;
+
+  function syncMaxY() {
+    maxY = Math.max(0, Math.round(document.documentElement.scrollHeight - window.innerHeight));
+  }
+
+  function clampedY() {
+    var y = scrollY();
+    if (y < 0) return 0;
+    if (y > maxY) return maxY;
+    return y;
+  }
+
   /* Ein- und Ausfahren. Schreibt nur bei echter Aenderung: das Scroll-
      Event ruft das bei jedem Pixel auf. aria-hidden raeumt die Leiste
      fuer Screenreader weg, wenn sie ausgefahren ist - sichtbar ist sie
@@ -95,7 +114,7 @@
   }
 
   function onScroll() {
-    var y = scrollY();
+    var y = clampedY();
 
     /* Zuerst die Markierung: sie folgt der Ansicht, nicht der Scroll-
        richtung. Deshalb steht sie VOR der Hysterese - bei langsamem
@@ -133,7 +152,9 @@
 
   window.addEventListener("resize", function () {
     /* Nach einem Resize misst track.js neu und kann die Ansicht wechseln
-       (andere Viewporthoehe = andere Schwenkgrenzen). */
+       (andere Viewporthoehe = andere Schwenkgrenzen); auch die
+       Dokumenthoehe und damit maxY aendern sich. */
+    syncMaxY();
     syncActive();
   });
 
@@ -156,10 +177,24 @@
      Baseline misst die alte Position, und der Sprung kaeme als
      Nutzerscroll (dy > 0) an => Leiste versteckt sich beim Laden. */
   function rebase() {
-    lastY = scrollY();
+    syncMaxY();
+    lastY = clampedY();
     setHidden(false);
     syncActive();
   }
+
+  /* js/track.js setzt die Scrollposition auch selbst: Einrasten,
+     WEITER/ZURUECK-Pfeil, Tief-Link und das Zurueckziehen an der harten
+     Grenze (siehe "track:jump" in js/track.js, Punkt 5). Das alles ist ein
+     Sprung, kein Scrollen des Nutzers: die Leiste bleibt, wie sie ist, und
+     die neue Position wird zur Basis. Ohne diesen Handler las die
+     Hysterese das Zurueckziehen nach oben als Hochscrollen und fuhr beim
+     Gummiband am Seitenende wieder ein - mitten in den Seitentitel
+     ("ai solution") hinein. */
+  document.addEventListener("track:jump", function () {
+    lastY = clampedY();
+    syncActive();
+  });
 
   /* setTimeout statt requestAnimationFrame: scrollTo ist synchron, der
      Timeout laeuft nach dem Dispatch des Events und damit nach

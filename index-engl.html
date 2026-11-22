@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/viewnav.css">
   <link rel="stylesheet" href="css/endcard.css">
   <link rel="stylesheet" href="css/hints.css">
+  <link rel="stylesheet" href="css/scrollhint.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -229,17 +230,19 @@
       <div data-collage></div>
     </section>
 
-    <!-- Abschnitt 7: Outtakes – Überschrift wie "selected works" -->
-    <section class="collage collage--intro" aria-label="Outtakes">
-      <div class="collage__head">
+    <!-- Abschnitt 7: Outtakes – Überschrift und die drei Kacheln sind EIN
+         Screen: der Kopf sitzt im selben Abschnitt wie das Raster. Vorher
+         stand die Überschrift in einer eigenen, nur ~250 px hohen Sektion
+         davor - beim Einrasten war deshalb entweder der Titel weg oder die
+         unteren Teile der Videokacheln waren abgeschnitten. Jetzt passen
+         Titel und alle drei Outtakes auf genau eine Bildschirmhoehe.
+         Links zwei Kacheln uebereinander, rechts eine grosse; sie laufen
+         frei und geloopt (js/outtakes.js). -->
+    <section class="ot-stack" id="outtakes" aria-label="Outtakes">
+      <div class="ot-stack__head">
         <h2 class="collage__title" data-collage-reveal>outtakes</h2>
         <p class="collage__text" data-collage-reveal>Outtakes from the fashion film that didn't make the final cut – unused shots, glitches, and discarded experiments.</p>
       </div>
-    </section>
-
-    <!-- Die drei Outtakes: links zwei uebereinander, rechts eines gross.
-         Alles zusammen auf eine Bildschirmhoehe, laufen frei und geloopt. -->
-    <section class="ot-stack" id="outtakes" aria-label="The three outtakes">
       <div class="ot-stack__grid">
         <div class="ot-stack__col ot-stack__col--left">
           <figure class="ot-tile">
@@ -983,6 +986,7 @@ is all we've got</pre>
   <script src="js/music.js"></script>
   <script src="js/tools.js"></script>
   <script src="js/endcard.js"></script>
+  <script src="js/scrollhint.js"></script>
   <script>
     // ComfyUI-Node-Ansicht (virtual try-on) aus dem normalisierten JSON rendern.
     // Ersetzt das frühere statische comfyui.png in Abschnitt 5.

@@ -201,9 +201,9 @@
        Nur das ist noch an das Scrollen gekoppelt, und zwar wie bei
        "ComfyUI virtual try on": die Ueberschrift faehrt aus einer Maske
        herauf (.reveal / .reveal__inner), der Text folgt mit .fade-in.
-       Ausgeloest wird ueber den Scroll-Fortschritt des Abschnitts, nicht
-       ueber einen Beobachter - so sitzt der Moment reproduzierbar an
-       derselben Stelle. */
+       Ausgeloest wird ueber die Oberkante des Abschnitts - die Screen-Kante
+       des Tracks -, nicht ueber einen Beobachter: so sitzt der Moment
+       reproduzierbar an derselben Stelle. */
     var titleEl = stageInner.querySelector(".reveal");
     var fadeEl = stageInner.querySelector(".fade-in");
 
@@ -215,13 +215,21 @@
     var headTicking = false;
     function updateHead() {
       headTicking = false;
-      var r = wrap.getBoundingClientRect();
-      var dist = wrap.offsetHeight - window.innerHeight;
-      if (dist <= 0) { setHead(r.top <= 0); return; }
-      /* 0 = Abschnitt kommt ins Bild, 1 = komplett durchgescrollt.
-         Ab 15% ist die Ueberschrift da - frueh, aber nicht schon beim
-         ersten Pixel, sonst sieht man die Bewegung nicht. */
-      setHead(-r.top / dist >= 0.15);
+      /* Die Ueberschrift ist da, sobald die Oberkante des Abschnitts die
+         Oberkante des Bildes erreicht hat. Das ist die Screen-Kante, auf
+         die der Track einrastet (js/track.js): dort steht der Screen
+         komplett da, also gehoert der Kopf dazu - nicht erst ein Stueck
+         spaeter. Gemessen wird am Abschnitt, nicht am Wrapper: der
+         Abschnitt traegt oben Padding (.collage, 108px), der Wrapper
+         beginnt erst darunter und stuende an der Kante auf 108. Die 1px
+         Toleranz faengt die Rundung der Snap-Position ab.
+
+         Die Einfahr-Bewegung bleibt sichtbar: .reveal__inner faehrt mit
+         einer .8s-Transition herauf, der Text folgt mit .fade-in
+         (css/style.css). */
+      var sec = wrap.closest ? wrap.closest("section") : null;
+      var top = (sec || wrap).getBoundingClientRect().top;
+      setHead(top <= 1);
     }
 
     function requestHead() {

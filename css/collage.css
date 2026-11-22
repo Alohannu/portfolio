@@ -29,21 +29,11 @@
   flex: none;
 }
 
-/* Der Outtakes-Kopf steht OHNE .collage__stage direkt in der Sektion.
-   Normalerweise kommt der seitliche Einzug von der Buehne
-   (.collage__stage { padding: 0 5vw }); hier fehlt er sonst und die
-   Ueberschrift klebt am linken Rand (gemessen: left 0 statt 72 bei
-   1440px). Deshalb derselbe Einzug wie an der Buehne.
-   Der Einzug sitzt am Kopf, nicht am Kasten: so bleibt die Kante bei
-   jeder Breite gleich (bei 1920px sonst 306 statt 210, weil der
-   zentrierte Kasten und das Padding sich addieren). */
-.collage--intro .collage__head {
-  padding: 0 5vw;
-  max-width: min(1500px, 100%);
-  margin-left: auto;
-  margin-right: auto;
-  box-sizing: content-box;
-}
+/* Der Kopf des Outtakes-Screens steht OHNE .collage__stage direkt in der
+   Sektion .ot-stack (css/outtakes.css). Normalerweise kommt der seitliche
+   Einzug von der Buehne (.collage__stage { padding: 0 5vw }); dort fehlt
+   er sonst und die Ueberschrift klebt am linken Rand (gemessen: left 0
+   statt 72 bei 1440px). Die Regeln dafuer stehen bei .ot-stack__head. */
 
 /* Die Ueberschrift nutzt denselben Effekt wie "ComfyUI virtual try on":
    .reveal als Maske (overflow: hidden) und .reveal__inner, das von unten
@@ -289,19 +279,47 @@
    ========================================================================== */
 .collage--bilder {
   /* Anders als die gepinnten Collagen steht dieser Abschnitt normal im
-     Fluss (kein .collage__scrub) - er braucht deshalb auch unten Luft. */
+     Fluss (kein .collage__scrub) - er braucht deshalb auch unten Luft.
+
+     Er ist ein eigener Screen: mindestens fensterhoch. Vorher war er nur
+     so hoch wie sein Inhalt (bei 1440x900: 767 px). Beim Einrasten auf
+     seine Oberkante schaute dann der naechste Screen (die "ai music"-
+     Titelkarte) unten 133 px herein, als waere die Seite verrutscht.
+     Mit min-height endet der Screen genau an der Bildschirmkante.
+     Die senkrechte Zentrierung (Flex-Spalte) gibt es nur fuer breite
+     Fenster - siehe media query unten. Auf schmalen Bildschirmen ist der
+     Abschnitt ohnehin laenger als ein Screen, und eine Flex-Spalte wuerde
+     hier .imgcollage (auto-Margins, Prozenthoehen der Bilder) auf
+     Inhaltsbreite schrumpfen lassen (gemessen: Kachelhoehe 0). */
   padding: 12vh 0 12vh;
+  min-height: 100vh;
+  min-height: 100svh;
+  box-sizing: border-box;
 }
 
-/* Kopf wie .collage--intro: der seitliche Einzug sitzt am Kopf, nicht am
-   zentrierten Kasten - sonst addieren sich beide bei breiten Fenstern
-   (gemessen dort: 306 statt 210 px bei 1920 px). */
+@media (min-width: 901px) {
+  .collage--bilder {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+/* Kopf wie beim Outtakes-Screen (.ot-stack__head): der seitliche Einzug
+   sitzt am Kopf, nicht am zentrierten Kasten - sonst addieren sich beide
+   bei breiten Fenstern (gemessen dort: 306 statt 210 px bei 1920 px).
+   width/max-width: der Abschnitt ist eine Flex-Spalte (Zentrierung), ein
+   Flex-Element mit auto-Margins wuerde sonst auf Inhaltsbreite schrumpfen
+   und der Titel stuende mittig statt an derselben Kante wie die
+   Bildreihe. calc(1500px + 10vw) haelt die Innenkante bei derselben
+   Position wie .imgcollage (5vw Rand innen, Kasten max. 1500px). */
 .collage--bilder .collage__head {
+  width: 100%;
+  max-width: calc(1500px + 10vw);
   padding: 0 5vw;
-  max-width: min(1500px, 100%);
   margin-left: auto;
   margin-right: auto;
-  box-sizing: content-box;
+  box-sizing: border-box;
 }
 
 .imgcollage {

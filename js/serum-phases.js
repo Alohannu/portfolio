@@ -207,6 +207,54 @@
       panel.setAttribute("aria-labelledby", tabs[index].id);
     }
 
+    /* Die sechs Phasen sind unterschiedlich hoch und verschieden aufgebaut:
+       das Bildpaar (554 hoch) ist hoeher als das Einzelbild von Phase 4,
+       die Ueberschrift bricht auf schmalen Bildschirmen bei langen Titeln
+       um, und die Textspalte ist je nach Phase unterschiedlich lang. Ohne
+       Ausgleich wandert bei jedem Tab-Wechsel
+
+         - die Hoehe der Section (und damit die Scroll-Grenze des Tracks:
+           an der letzten Seite zog die Grenze die Ansicht nach oben), und
+         - die Textspalte selbst: sie ist vertikal zentriert, also haengt
+           ihre Oberkante an der Hoehe von Bild und Text ("die Texte
+           springen beim Phasen-Wechsel").
+
+       Deshalb einmal alle Phasen nacheinander in dasselbe Panel rendern,
+       die hoechste Ueberschrift, das hoechste Bild und den hoechsten
+       Textblock messen und als Min-Hoehen setzen. Danach sind Oberkante
+       von Bild und Text, die Oberkante der Textspalte und die Panel-Hoehe
+       in jeder Phase gleich; der Blick bleibt beim Umschalten stehen.
+       Die Bilder haben feste Seitenverhaeltnisse (width/height + CSS
+       aspect-ratio), die Hoehen stehen also sofort, auch bevor die Dateien
+       geladen sind. */
+    function reserveTextAnchors() {
+      /* Erst ohne Reserven messen - sonst wuerde die Reservierung der
+         vorigen Messung mitgemessen. */
+      heading.style.minHeight = "";
+      media.style.minHeight = "";
+      rows.style.minHeight = "";
+
+      var maxHead = 0, maxMedia = 0, maxRows = 0;
+      for (var i = 0; i < PHASES.length; i++) {
+        heading.textContent = PHASES[i].heading;
+        renderMedia(media, PHASES[i]);
+        renderRows(rows, PHASES[i]);
+        var headH = heading.getBoundingClientRect().height;
+        var mediaH = media.getBoundingClientRect().height;
+        var rowsH = rows.getBoundingClientRect().height;
+        if (headH > maxHead) maxHead = headH;
+        if (mediaH > maxMedia) maxMedia = mediaH;
+        if (rowsH > maxRows) maxRows = rowsH;
+      }
+      show(active);
+
+      /* Aufrunden: sonst bleibt eine halbe Pixelzeile Luft, die die Hoehen
+         wieder minimal wandern laesst. */
+      heading.style.minHeight = maxHead > 0 ? Math.ceil(maxHead) + "px" : "";
+      media.style.minHeight = maxMedia > 0 ? Math.ceil(maxMedia) + "px" : "";
+      rows.style.minHeight = maxRows > 0 ? Math.ceil(maxRows) + "px" : "";
+    }
+
     tabs.forEach(function (tab, n) {
       tab.addEventListener("click", function () { show(n); });
       tab.addEventListener("keydown", function (e) {
@@ -216,13 +264,31 @@
         else if (e.key === "Home") next = 0;
         else if (e.key === "End") next = tabs.length - 1;
         if (next === null) return;
+        /* Die Pfeiltasten gehoeren der Tab-Leiste. Ohne stopPropagation
+           sieht der globale Handler in js/track.js die Taste ebenfalls
+           und blaettert zusaetzlich die ganze Ansicht weiter - der Fokus
+           (und der Blick) landete dann in einem anderen Projekt. */
         e.preventDefault();
+        e.stopPropagation();
         show(next);
         tabs[next].focus();
       });
     });
 
     show(0);
+    reserveTextAnchors();
+
+    /* Breite oder Schriftgroesse aendern die Zeilenhoehen: neu messen.
+       (Die Bilder skalieren mit der Breite, deshalb reicht ein Resize.) */
+    var resizeTimer = 0;
+    window.addEventListener("resize", function () {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(reserveTextAnchors, 180);
+    });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(reserveTextAnchors).catch(function () {});
+    }
+
     return { show: show, get active() { return active; } };
   }
 

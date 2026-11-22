@@ -12,9 +12,19 @@
    Fensterraendern nach innen geklappt (css/tools.css).
 
    Ausserdem haengen hier die Hinweise auf die beiden klickbaren Gruppen
-   (Phasen-Tabs und Tool-Pillen): dezentes Pulsieren plus einmalige
-   Sprechblase, solange in der Gruppe noch nichts angeklickt wurde
-   (Stile in css/hints.css).
+   (Phasen-Tabs und Tool-Pillen): dezentes Pulsieren plus Sprechblase,
+   solange in der Gruppe noch nichts angeklickt wurde (Stile in
+   css/hints.css).
+
+   Die beiden Blasen verhalten sich unterschiedlich:
+     Phasen-Tabs - bleiben stehen, bis wirklich eine Phase angeklickt
+                   wurde, und erscheinen nach jedem Laden neu. Sie sind
+                   die einzige Erklaerung fuer die sechs Knoepfe; laufen
+                   sie nach ein paar Sekunden ab, bleibt nur ein Puls
+                   ohne Text und niemand weiss, was sich hier klicken
+                   laesst.
+     Tool-Pillen - wie bisher einmalig pro Sitzung (nach 8s oder nach dem
+                   ersten Klick weg, sessionStorage merkt sich das).
 
    Texte: TOOLS unten, je Tool deutsch und englisch. Die Texte sind bewusst
    als Sachebeschreibung des Arbeitsablaufs formuliert und duerfen gern
@@ -287,11 +297,18 @@
 
   /* ---------- Hinweise auf klickbare Gruppen ----------
      Solange in einer Gruppe noch nichts angeklickt wurde, pulsiert sie
-     dezent und darueber steht einmalig eine kleine Sprechblase. Der
-     Zustand liegt pro Sitzung in sessionStorage:
-       "clicked" - erster Klick war schon (kein Puls, keine Blase)
-       "timeout" - Blase ist abgelaufen (kein Blase, Puls laeuft weiter)
-     Der Puls endet laut Vorgabe mit dem ersten Klick in der Gruppe. */
+     dezent und darueber steht eine kleine Sprechblase.
+
+     Zwei Verhaltensweisen, je Hinweis in HINTS gesetzt:
+       sticky - Blase und Puls bleiben stehen, bis in der Gruppe geklickt
+                wurde. Kein Timeout, kein Sitzungs-Gedaechtnis: nach jedem
+                Laden ist der Hinweis wieder da. Fuer die Phasen-Tabs die
+                einzige Erklaerung, dass sich die sechs Knoepfe klicken
+                lassen.
+       sonst  - wie bisher einmalig pro Sitzung (sessionStorage):
+                "clicked" - erster Klick war schon (kein Puls, keine Blase)
+                "timeout" - Blase ist abgelaufen (keine Blase, Puls weiter)
+     Der Puls endet mit dem ersten Klick in der Gruppe. */
   var HINT_TIMEOUT = 8000;
 
   var HINTS = [
@@ -301,6 +318,7 @@
       selector: ".phase-tabs",
       item: ".phase-tab",
       align: "center",
+      sticky: true,
       de: "Klick auf eine Phase, um sie zu sehen",
       en: "Click a phase to view it"
     },
@@ -419,7 +437,9 @@
   }
 
   function dismissHint(def, groups) {
-    setHintState(def.key, "clicked");
+    /* Sticky-Hinweise merken sich nichts: nach dem naechsten Laden steht
+       die Blase wieder da (die Gruppe ist dann ja wieder unberuehrt). */
+    if (!def.sticky) setHintState(def.key, "clicked");
     groups.forEach(function (g) {
       g.done = true;
       if (g.timer) { window.clearTimeout(g.timer); g.timer = 0; }
@@ -433,7 +453,8 @@
       var els = document.querySelectorAll(def.selector);
       if (!els.length) return;
 
-      var state = hintState(def.key);
+      /* Sticky-Hinweise gelten pro Seitenaufruf, nicht pro Sitzung. */
+      var state = def.sticky ? null : hintState(def.key);
       if (state === "clicked") return;
 
       var groups = [];
@@ -453,6 +474,10 @@
           if (hit && el.contains(hit)) dismissHint(def, groups);
         }, true);
       });
+
+      /* Sticky: Blase und Puls bleiben stehen, bis geklickt wird - die
+         8s-Frist und der Sichtbarkeits-Wecker entfallen. */
+      if (def.sticky) return;
 
       if (state !== "timeout") watchVisible(groups);
     });

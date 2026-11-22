@@ -1,0 +1,138 @@
+/* ==========================================================================
+   Hinweis "Weiter scrollen" unten rechts
+
+   Der Hinweis klebt als position: fixed in der Ecke unten rechts und
+   begleitet die ganze Seite: er sagt, dass unterhalb noch etwas kommt.
+   Er ist reine Anzeige - pointer-events: none -, denn der Weg nach unten
+   bleibt das Rad, die Pfeiltasten und der Tor-Knopf am Graph-Ende.
+
+   Aufgebaut wird er von js/scrollhint.js (wie die Sprechblaetter aus
+   js/tools.js), hier stehen nur die Stile. Sichtbarkeit schaltet dieselbe
+   Datei ueber .is-visible:
+     - beim Laden sofort, solange es weitergeht
+     - danach erst wieder, wenn die Seite eine Sekunde still stand
+     - gar nicht am Seitenende und nicht, solange der Tor-Knopf am
+       Graph-Ende mit derselben Beschriftung dasteht
+
+   Milchglas, Rundung und Schrift folgen .flipbtn und .viewnav__btn, damit
+   der Hinweis wie ein Teil der Seite wirkt und nicht wie ein Fremdkoerper.
+   ========================================================================== */
+
+.scrollhint {
+  position: fixed;
+  /* Rechtsbuendig in der Ecke: derselbe Rand wie die Projekt-Navigation
+     (.viewnav__btn--next), damit beide Kanten auf einer Linie liegen.
+     --scrollhint-bottom ueberschreibt den Abstand, wenn unten rechts schon
+     etwas steht (Ton-Knopf des Heros, Pfeile der Navigation, "Nach oben"
+     der Endkarte): dann setzt js/scrollhint.js die gemessene Oberkante
+     dieses Elements ein. Gemessen statt gerechnet, weil die Hoehe an der
+     Schriftgroesse der Seite haengt. */
+  right: clamp(12px, 2vw, 28px);
+  bottom: var(--scrollhint-bottom,
+               calc(clamp(14px, 3vh, 26px) + env(safe-area-inset-bottom, 0px)));
+  /* Ueber der Projekt-Navigation (z-index 40), unter der Topbar (800) und
+     den Dialogen (Showroom 900, Bild-Ansicht 950, Tooltip 960): die
+     verdecken den Hinweis, statt von ihm ueberlagert zu werden. */
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  max-width: calc(100vw - 24px);
+  padding: .5rem .85rem;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  background: rgba(10, 10, 15, .72);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  color: #eaeaf5;
+  font-family: inherit;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .14em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  /* Nie im Weg: der Hinweis darf keinen Klick und kein Rad abfangen. */
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  /* Zuruecktreten schnell, Einblenden ruhig: der Hinweis soll die Bewegung
+     nicht begleiten - nach 0,15 s ist er weg -, darf aber nicht hart
+     wegblinken. Welche Transition gilt, entscheidet das ZIEL des Wechsels:
+     beim Ausblenden diese Regel, beim Einblenden .is-visible. Deshalb sind
+     die Dauern hier und dort verschieden. */
+  transition: opacity .15s ease, visibility 0s linear .15s;
+}
+
+.scrollhint.is-visible {
+  opacity: 1;
+  visibility: visible;
+  /* Einblenden in Ruhe, ohne Verzug bei visibility (sonst waere der Hinweis
+     im Moment des Einblendens noch unsichtbar). bottom wird bewusst nicht
+     animiert: der Abstand ist gemessen, er soll sofort stimmen und nicht
+     nachwandern, waehrend unten rechts ein Knopf weiterwandert. */
+  transition: opacity .35s ease, visibility 0s linear 0s;
+  /* Der Puls laeuft nur, solange der Hinweis steht: ein Ring in der
+     Akzentfarbe weitet sich und verblasst dabei. Bewusst nur box-shadow -
+     der Hinweis aendert weder Groesse noch Position, das Label bleibt
+     ruhig und scharf. */
+  animation: scrollhint-ring 2.8s ease-in-out infinite;
+}
+
+/* Pfeil nach unten: er zeigt die Richtung an und nickt dabei. */
+.scrollhint__arrow {
+  color: #9fb4ff;
+  font-size: 1.05em;
+  line-height: 1;
+  animation: scrollhint-bob 1.8s ease-in-out infinite;
+}
+
+@keyframes scrollhint-ring {
+  0%, 100% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .35),
+                0 0 0 0 rgba(143, 147, 224, .34);
+  }
+  50% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .35),
+                0 0 0 9px rgba(143, 147, 224, 0);
+  }
+}
+
+@keyframes scrollhint-bob {
+  0%, 100% { transform: translateY(-2px); }
+  50%      { transform: translateY(2px); }
+}
+
+/* ---------- Schmale Bildschirme ----------
+   Bis 720px sitzen die Pfeile der Projekt-Navigation ebenfalls unten in
+   den Ecken (.viewnav__btn--next rechts, 48px hoch). Der Hinweis rueckt
+   dort darueber, statt den Pfeil zu verdecken. */
+@media (max-width: 720px) {
+  .scrollhint {
+    right: clamp(12px, 2vw, 28px);
+    bottom: var(--scrollhint-bottom,
+                 calc(14px + 48px + 12px + env(safe-area-inset-bottom, 0px)));
+    padding: .45rem .7rem;
+    font-size: .62rem;
+    letter-spacing: .1em;
+  }
+}
+
+/* ---------- Ohne Bewegung ----------
+   Kein Puls und kein Nicken; der Hinweis bekommt einen ruhigen Ring,
+   damit er auch ohne Animation auffaellt (wie .hint-bubble in
+   css/hints.css). */
+@media (prefers-reduced-motion: reduce) {
+  .scrollhint,
+  .scrollhint.is-visible { transition: none; }
+  .scrollhint.is-visible {
+    animation: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .35),
+                0 0 0 3px rgba(143, 147, 224, .22);
+  }
+  .scrollhint__arrow {
+    animation: none;
+    transform: none;
+  }
+}
