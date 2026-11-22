@@ -8,6 +8,13 @@
      .phase-tabs.is-hinting      Pulsieren der Tab-Leiste
      .collage__tools.is-hinting  Pulsieren der Pillen-Zeilen darin
      .hint-bubble                Sprechblase ueber der Gruppe (per JS erzeugt)
+
+   Die Sprechblase pulsiert zusaetzlich selbst: sie atmet (scale) und ihr
+   violetter Saum weitet sich dabei, damit der Hinweis auffaellt und nicht
+   nur als ruhiger schwarzer Kasten dasteht. Sie lebt ohnehin nur bis zum
+   ersten Klick bzw. bis zum Timeout - solange laeuft der Puls. Beide
+   Hinweise (Phasen, Tools) teilen sich diese Stile, damit die Blase
+   ueberall dieselbe Aufmerksamkeit bekommt.
    ========================================================================== */
 
 /* Die Sprechblase wird absolut in der Gruppe verankert, die Gruppe ist
@@ -76,7 +83,12 @@
   text-align: center;
   box-shadow: 0 6px 18px rgba(17, 17, 17, .3);
   pointer-events: none;
-  animation: hint-bubble-in .28s ease-out;
+  /* Erst einblenden, dann (nach dem Einblenden) dauerhaft pulsieren.
+     Die beide Animationen animieren transform - der Puls startet mit
+     genau der Verzoegerung des Einblendens, damit sie sich nicht
+     ueberlagern (sonst wuerde der Puls das Einblenden ueberschreiben). */
+  animation: hint-bubble-in .28s ease-out,
+             hint-bubble-pulse 2.4s ease-in-out .28s infinite;
 }
 
 /* Pfeil nach unten zur Gruppe. */
@@ -105,12 +117,32 @@
 /* Rechtsbuendig ueber der Gruppe (Tool-Zeilen). Ueber den Collage-Zeilen
    steht die Ueberschrift ("kampagnenmotive, ...") links - rechts ist der
    Platz ueber der Gruppe frei, dort verdeckt die Blase keinen Text. */
-.hint-bubble--end { right: 0; }
+.hint-bubble--end { right: 0; transform-origin: 100% 100%; }
 .hint-bubble--end::after { left: auto; right: 20px; margin-left: 0; }
 
 @keyframes hint-bubble-in {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: none; }
+}
+
+/* ---------- Pulsieren der Sprechblase ----------
+   Die Blase atmet (scale) und ihr Saum atmet mit: ein Ring in der
+   Akzentfarbe, der von 2px auf 8px auslaeuft und dabei verblasst. Der
+   Saum ist auch in Ruhe sichtbar - so faellt der dunkle Kasten zwischen
+   den hellen Bildern auf, ohne dass die Blase huepft. Bewusst nur
+   transform und box-shadow: die Blase aendert weder Groesse im Fluss
+   noch Position, der Text bleibt durchgehend scharf und lesbar. */
+@keyframes hint-bubble-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 6px 18px rgba(17, 17, 17, .3),
+                0 0 0 2px rgba(82, 87, 176, .45);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 9px 26px rgba(17, 17, 17, .34),
+                0 0 0 8px rgba(82, 87, 176, .15);
+  }
 }
 
 /* ---------- Schmale Bildschirme ----------
@@ -149,5 +181,11 @@
     animation: none;
     border-color: rgba(255, 255, 255, .3);
   }
-  .hint-bubble { animation: none; }
+  .hint-bubble {
+    /* Kein Puls: stattdessen ein ruhiger Ring, damit der Hinweis auch
+       ohne Bewegung auffaellt (aber nichts wackelt). */
+    animation: none;
+    box-shadow: 0 6px 18px rgba(17, 17, 17, .3),
+                0 0 0 3px rgba(82, 87, 176, .30);
+  }
 }
