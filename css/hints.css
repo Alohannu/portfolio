@@ -1,0 +1,153 @@
+/* ==========================================================================
+   Hinweise auf klickbare Pillen-Gruppen (Phasen-Tabs, Tool-Pillen)
+
+   Wird von js/tools.js aufgebaut (Sprechblase + Pulsieren), damit die
+   Seiten-Markup-Dateien unveraendert bleiben. Hier stehen nur die Stile.
+
+   Zustandsklassen, die js/tools.js setzt:
+     .phase-tabs.is-hinting      Pulsieren der Tab-Leiste
+     .collage__tools.is-hinting  Pulsieren der Pillen-Zeilen darin
+     .hint-bubble                Sprechblase ueber der Gruppe (per JS erzeugt)
+   ========================================================================== */
+
+/* Die Sprechblase wird absolut in der Gruppe verankert, die Gruppe ist
+   dafuer Bezugselement. position: relative allein aendert das Layout
+   nicht (keine Offsets, kein z-index, kein stacking context). */
+.phase-tabs,
+.collage__tools { position: relative; }
+
+/* ---------- Pulsieren ----------
+   Weicher Ring, der nach aussen auslaeuft. Bewusst nur box-shadow bzw.
+   border-color: keine Groessen-/Positionsaenderung, damit die Tabs und
+   Pillen nicht wackeln. */
+.phase-tabs.is-hinting {
+  animation: hint-pulse-phases 2.6s ease-in-out infinite;
+}
+
+@keyframes hint-pulse-phases {
+  0%, 100% {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8),
+                0 0 0 0 rgba(82, 87, 176, .30);
+  }
+  50% {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8),
+                0 0 0 9px rgba(82, 87, 176, 0);
+  }
+}
+
+/* Die Tool-Pillen liegen in Zeilen (.collage__toolrow). Den Ring tragen
+   die Zeilen, nicht das ganze Raster - ein Ring um das Raster wuerde nur
+   leere Flaeche umschliessen. */
+.collage__tools.is-hinting .collage__toolrow {
+  animation: hint-pulse-tools 2.6s ease-in-out infinite;
+}
+
+@keyframes hint-pulse-tools {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, .26);
+    border-color: rgba(255, 255, 255, .12);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
+    border-color: rgba(255, 255, 255, .34);
+  }
+}
+
+/* ---------- Sprechblase ----------
+   Sitzt ueber der Gruppe, zeigt mit dem Pfeil nach unten darauf. Rein
+   visuell: pointer-events: none, damit Klicks auf die Tabs/Pillen
+   darunter durchgehen, und absolut positioniert, damit nichts verrutscht. */
+.hint-bubble {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  z-index: 5;
+  width: -moz-max-content;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  font-family: inherit;
+  font-size: .74rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  line-height: 1.3;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(17, 17, 17, .3);
+  pointer-events: none;
+  animation: hint-bubble-in .28s ease-out;
+}
+
+/* Pfeil nach unten zur Gruppe. */
+.hint-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-top-color: #111;
+  border-bottom-width: 0;
+}
+
+/* Zentriert ueber der Gruppe (Phasen-Tabs). Ueber left/right + auto-Margin
+   statt translateX, damit die Einblend-Animation transform frei nutzen kann. */
+.hint-bubble--center {
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Rechtsbuendig ueber der Gruppe (Tool-Zeilen). Ueber den Collage-Zeilen
+   steht die Ueberschrift ("kampagnenmotive, ...") links - rechts ist der
+   Platz ueber der Gruppe frei, dort verdeckt die Blase keinen Text. */
+.hint-bubble--end { right: 0; }
+.hint-bubble--end::after { left: auto; right: 20px; margin-left: 0; }
+
+@keyframes hint-bubble-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- Schmale Bildschirme ----------
+   Bis 900px ist die Buehne der Collage nicht sticky (css/collage.css:
+   position: static ab max-width 900px): js/collage.js blendet den Kopf
+   erst nach 15% Scrollstrecke ein, dann ist seine Oberkante schon aus
+   dem Bild gescrollt. Eine Blase UEBER der Gruppe waere dort nie zu
+   sehen - sie sitzt deshalb unter der Gruppe, der Pfeil zeigt nach oben.
+   (Betrifft nur die Tool-Zeilen; die Phasen-Tabs stehen ohne Einblendung
+   im Bild und behalten die Blase darueber.) */
+@media (max-width: 900px) {
+  .hint-bubble--tools {
+    top: calc(100% + 10px);
+    bottom: auto;
+  }
+  .hint-bubble--tools::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-top-width: 0;
+    border-bottom-color: #111;
+    border-bottom-width: 6px;
+  }
+}
+
+/* ---------- Ohne Bewegung ----------
+   Kein Pulsieren; die Gruppe bekommt einen statischen Ring, die
+   Sprechblase bleibt ohne Animation sichtbar (bis Klick oder Timeout). */
+@media (prefers-reduced-motion: reduce) {
+  .phase-tabs.is-hinting {
+    animation: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8),
+                0 0 0 3px rgba(82, 87, 176, .22);
+  }
+  .collage__tools.is-hinting .collage__toolrow {
+    animation: none;
+    border-color: rgba(255, 255, 255, .3);
+  }
+  .hint-bubble { animation: none; }
+}

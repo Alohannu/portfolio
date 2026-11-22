@@ -1,10 +1,20 @@
 /* ==========================================================================
-   Tool-Pillen: Klick oeffnet einen Dialog mit Einsatz-Infos
+   Tool-Pillen: Klick oeffnet einen Tooltip mit Einsatz-Infos
 
-   Die Pillen in den Collage-Köpfen (css/collage.css) sind Knoepfe. Ein
-   Klick oeffnet ein <dialog> mit einer kurzen Beschreibung, wofür Tool
-   bzw. Modell im Projekt verwendet wurde. Der Dialog wird erst beim
-   ersten Klick gebaut (js/tools.js).
+   Die Pillen in den Collage-Koepfen (css/collage.css) sind Knoepfe. Ein
+   Klick oeffnet einen kleinen Tooltip mit einer kurzen Beschreibung,
+   wofuer Tool bzw. Modell im Projekt verwendet wurde.
+
+   Der Tooltip ist KEIN Modal: das <dialog> wird mit show() statt
+   showModal() geoeffnet, hat also keinen Backdrop und dunkelt die Seite
+   nicht ab. Er haengt als position: fixed an der Zeigerposition des
+   Klicks (obere linke Ecke TIP_GAP neben dem Zeiger) und wird an den
+   Fensterraendern nach innen geklappt (css/tools.css).
+
+   Ausserdem haengen hier die Hinweise auf die beiden klickbaren Gruppen
+   (Phasen-Tabs und Tool-Pillen): dezentes Pulsieren plus einmalige
+   Sprechblase, solange in der Gruppe noch nichts angeklickt wurde
+   (Stile in css/hints.css).
 
    Texte: TOOLS unten, je Tool deutsch und englisch. Die Texte sind bewusst
    als Sachebeschreibung des Arbeitsablaufs formuliert und duerfen gern
@@ -52,14 +62,25 @@
     }
   };
 
+  /* Abstand der Tooltip-Ecke zum Zeiger bzw. Mindestabstand zum Rand (px).
+     Die Werte spiegeln die Vorgabe: ~10px Abstand zum Zeiger, nie halb
+     ausserhalb des Fensters. */
+  var TIP_GAP = 10;
+  var TIP_EDGE = 8;
+
   var isEn = document.documentElement.lang === "en";
   var dialog = null;
   var nameEl = null;
   var roleEl = null;
   var textEl = null;
   var lastTrigger = null;
+  var bound = false;
 
   function t(de, en) { return isEn ? en : de; }
+
+  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+
+  /* ---------- Tooltip aufbauen ---------- */
 
   function buildDialog() {
     if (dialog) return dialog;
@@ -67,6 +88,10 @@
     dialog = document.createElement("dialog");
     dialog.className = "tool-dialog";
     dialog.setAttribute("aria-labelledby", "toolDialogName");
+    /* Programmatisch fokussierbar: nach show() liegt der Fokus auf dem
+       Tooltip selbst (nicht auf dem Schliessen-Knopf), damit Esc und
+       Tab sinnvoll funktionieren. */
+    dialog.setAttribute("tabindex", "-1");
 
     var inner = document.createElement("div");
     inner.className = "tool-dialog__inner";
@@ -83,7 +108,7 @@
     close.className = "tool-dialog__close";
     close.setAttribute("aria-label", t("Dialog schließen", "Close dialog"));
     close.innerHTML = "&times;";
-    close.addEventListener("click", function () { dialog.close(); });
+    close.addEventListener("click", function () { closeTip(); });
 
     bar.appendChild(kicker);
     bar.appendChild(close);
@@ -110,13 +135,8 @@
     inner.appendChild(foot);
     dialog.appendChild(inner);
 
-    /* Klick auf den Hintergrund schliesst - der Klick landet dann auf
-       dem <dialog>-Element selbst, nicht auf dem Inhalt. */
-    dialog.addEventListener("click", function (e) {
-      if (e.target === dialog) dialog.close();
-    });
-
-    /* Fokus zurück auf die Pille, aus der der Dialog geöffnet wurde. */
+    /* Fokus zurueck auf die Pille, aus der der Tooltip geoeffnet wurde.
+       preventScroll: der Fokus soll die Seite nicht verschieben. */
     dialog.addEventListener("close", function () {
       if (lastTrigger && lastTrigger.focus) lastTrigger.focus({ preventScroll: true });
     });
@@ -125,13 +145,125 @@
     return dialog;
   }
 
+  /* ---------- Position: Tooltip am Zeiger ---------- */
+
+  /* Touch-Geraete (und Tastatur-Aktivierung) haben keinen echten Zeiger:
+     dort wird der Tooltip unter der Pille ausgerichtet, linksbuendig. */
+  function isPointerless(e) {
+    if (e && e.pointerType) return e.pointerType === "touch" || e.pointerType === "pen";
+    return window.matchMedia("(hover: none)").matches;
+  }
+
+  /* Tastatur-Klick (Enter/Leertaste) hat keine Zeigerkoordinaten. */
+  function isKeyboardClick(e) {
+    return !e || (e.detail === 0 && e.clientX === 0 && e.clientY === 0);
+  }
+
+  function anchorFor(pill, e) {
+    if (isPointerless(e) || isKeyboardClick(e)) {
+      return { touch: true, rect: pill.getBoundingClientRect() };
+    }
+    return { touch: false, x: e.clientX, y: e.clientY };
+  }
+
+  /* Setzt left/top und den Ursprung der Einblendung. Gerechnet wird in
+     Fensterkoordinaten (position: fixed), also mit clientX/clientY des
+     Klicks. */
+  function place(anchor) {
+    var w = dialog.offsetWidth;
+    var h = dialog.offsetHeight;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var left, top, ox, oy;
+
+    if (anchor.touch) {
+      var r = anchor.rect;
+      left = r.left;
+      top = r.bottom + TIP_GAP;
+      /* Unten kein Platz: ueber die Pille spiegeln. */
+      if (top + h > vh - TIP_EDGE) top = r.top - TIP_GAP - h;
+      ox = "0%";
+      oy = top < r.top ? "100%" : "0%";
+    } else {
+      /* Obere linke Ecke neben dem Zeiger. */
+      left = anchor.x + TIP_GAP;
+      top = anchor.y + TIP_GAP;
+      var flipX = false;
+      var flipY = false;
+      /* Rechts/Unten kein Platz: nach links/oben spiegeln. */
+      if (left + w > vw - TIP_EDGE) { left = anchor.x - TIP_GAP - w; flipX = true; }
+      if (top + h > vh - TIP_EDGE) { top = anchor.y - TIP_GAP - h; flipY = true; }
+      ox = flipX ? "100%" : "0%";
+      oy = flipY ? "100%" : "0%";
+    }
+
+    /* Letzte Sicherung: nie halb ausserhalb des Fensters. */
+    left = clamp(left, TIP_EDGE, Math.max(TIP_EDGE, vw - w - TIP_EDGE));
+    top = clamp(top, TIP_EDGE, Math.max(TIP_EDGE, vh - h - TIP_EDGE));
+
+    dialog.style.left = Math.round(left) + "px";
+    dialog.style.top = Math.round(top) + "px";
+    dialog.style.transformOrigin = ox + " " + oy;
+  }
+
+  /* ---------- Oeffnen / Schliessen ---------- */
+
+  function closeTip() {
+    if (!dialog || !dialog.open) return;
+    dialog.close();
+    unbindGlobal();
+  }
+
+  function onDocPointerDown(e) {
+    if (!dialog || !dialog.open) return;
+    var el = e.target;
+    if (el && el.nodeType === 1 && dialog.contains(el)) return;
+    /* Klick auf eine andere Pille: der Tooltip wandert nur mit, statt
+       zuzuklappen und neu aufzugehen. */
+    if (el && el.closest && el.closest(".collage__tools .collage__tool[data-tool]")) return;
+    closeTip();
+  }
+
+  function onKeyDown(e) {
+    if (e.key === "Escape" || e.key === "Esc") {
+      e.preventDefault();
+      closeTip();
+    }
+  }
+
+  function onScroll(e) {
+    /* Scrollen im Tooltip selbst (langer Text) soll ihn nicht schliessen. */
+    if (dialog && e.target && e.target.nodeType === 1 && dialog.contains(e.target)) return;
+    closeTip();
+  }
+
+  function onResize() { closeTip(); }
+
+  function bindGlobal() {
+    if (bound) return;
+    bound = true;
+    document.addEventListener("pointerdown", onDocPointerDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    window.addEventListener("resize", onResize);
+  }
+
+  function unbindGlobal() {
+    if (!bound) return;
+    bound = false;
+    document.removeEventListener("pointerdown", onDocPointerDown, true);
+    document.removeEventListener("keydown", onKeyDown, true);
+    window.removeEventListener("scroll", onScroll, { capture: true });
+    window.removeEventListener("resize", onResize);
+  }
+
   function roleOf(pill) {
     var row = pill.closest(".collage__toolrow");
     var use = row ? row.querySelector(".collage__tooluse") : null;
     return use ? use.textContent.replace(/\s+/g, " ").trim() : "";
   }
 
-  function openFor(pill) {
+  function openFor(pill, e) {
     var name = pill.getAttribute("data-tool") || pill.textContent.trim();
     var entry = TOOLS[name];
     buildDialog();
@@ -141,20 +273,203 @@
     textEl.textContent = entry ? (isEn ? entry.en : entry.de)
                                : t("Für dieses Tool ist noch keine Notiz hinterlegt.",
                                    "No note has been added for this tool yet.");
-    if (typeof dialog.showModal === "function") dialog.showModal();
-    else dialog.setAttribute("open", "");
+
+    /* Erst auf 0/0 stellen: show() fokussiert den Tooltip, und ohne feste
+       Position wuerde der Browser zur statischen Position scrollen. */
+    dialog.style.left = "0px";
+    dialog.style.top = "0px";
+
+    if (!dialog.open) dialog.show();
+    if (dialog.focus) dialog.focus({ preventScroll: true });
+    place(anchorFor(pill, e));
+    bindGlobal();
   }
+
+  /* ---------- Hinweise auf klickbare Gruppen ----------
+     Solange in einer Gruppe noch nichts angeklickt wurde, pulsiert sie
+     dezent und darueber steht einmalig eine kleine Sprechblase. Der
+     Zustand liegt pro Sitzung in sessionStorage:
+       "clicked" - erster Klick war schon (kein Puls, keine Blase)
+       "timeout" - Blase ist abgelaufen (kein Blase, Puls laeuft weiter)
+     Der Puls endet laut Vorgabe mit dem ersten Klick in der Gruppe. */
+  var HINT_TIMEOUT = 8000;
+
+  var HINTS = [
+    {
+      id: "phases",
+      key: "hint:phases",
+      selector: ".phase-tabs",
+      item: ".phase-tab",
+      align: "center",
+      de: "Klick auf eine Phase, um sie zu sehen",
+      en: "Click a phase to view it"
+    },
+    {
+      id: "tools",
+      key: "hint:tools",
+      selector: ".collage__tools",
+      item: ".collage__tool",
+      align: "end",
+      de: "Klick für Infos",
+      en: "Click for info"
+    }
+  ];
+
+  function hintState(key) {
+    try { return window.sessionStorage.getItem(key); } catch (err) { return null; }
+  }
+
+  function setHintState(key, value) {
+    try { window.sessionStorage.setItem(key, value); } catch (err) { /* z.B. file:// */ }
+  }
+
+  function buildBubble(def, group) {
+    var bubble = document.createElement("span");
+    bubble.className = "hint-bubble hint-bubble--" + def.align + " hint-bubble--" + def.id;
+    /* Reine Sicht-Hilfe: die Knoepfe selbst sind beschriftet. */
+    bubble.setAttribute("aria-hidden", "true");
+    bubble.textContent = isEn ? def.en : def.de;
+    group.el.appendChild(bubble);
+    return bubble;
+  }
+
+  function removeBubble(group) {
+    if (group.bubble && group.bubble.parentNode) {
+      group.bubble.parentNode.removeChild(group.bubble);
+    }
+    group.bubble = null;
+  }
+
+  /* Frist startet erst, wenn die Gruppe wirklich im Bild ist - sonst
+     laeuft der Hinweis in einer Ansicht ab, die noch niemand gesehen hat. */
+  function armTimer(group) {
+    if (group.timer || group.done) return;
+    group.timer = window.setTimeout(function () {
+      group.timer = 0;
+      if (group.done) return;
+      setHintState(group.def.key, "timeout");
+      removeBubble(group);
+      /* Der Puls bleibt: er endet mit dem ersten Klick. */
+    }, HINT_TIMEOUT);
+  }
+
+  /* Im Fenster? */
+  function inViewport(el) {
+    var r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight &&
+           r.right > 0 && r.left < window.innerWidth;
+  }
+
+  /* Wirklich sichtbar? Die Collage-Koepfe werden erst beim Scrollen
+     eingeblendet (.fade-in ohne .is-visible hat opacity: 0). Ein Treffer
+     im Fenster allein heisst also noch nicht, dass man den Hinweis sieht -
+     deshalb wird die Kette der Elternelemente mitgeprueft. */
+  function isRendered(el) {
+    var n = el;
+    while (n && n.nodeType === 1) {
+      var cs = window.getComputedStyle(n);
+      if (cs.display === "none" || cs.visibility === "hidden") return false;
+      if (parseFloat(cs.opacity) < 0.05) return false;
+      n = n.parentElement;
+    }
+    return true;
+  }
+
+  function watchVisible(groups) {
+    var pending = groups.slice();
+    var timer = 0;
+
+    function stop() {
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      if (timer) { window.clearTimeout(timer); timer = 0; }
+    }
+
+    function check() {
+      timer = 0;
+      var waiting = false;
+      for (var i = pending.length - 1; i >= 0; i--) {
+        var g = pending[i];
+        if (g.done) { pending.splice(i, 1); continue; }
+        if (!inViewport(g.el)) continue;
+        if (isRendered(g.el)) {
+          armTimer(g);
+          pending.splice(i, 1);
+        } else {
+          waiting = true;
+        }
+      }
+      if (!pending.length) { stop(); return; }
+      /* Gruppe ist im Bild, aber noch nicht fertig eingeblendet: gleich
+         noch einmal nachsehen - ein einzelner Treffer waehrend des
+         Einblend-Uebergangs darf die Frist nicht verpassen. */
+      if (waiting) timer = window.setTimeout(check, 400);
+    }
+
+    /* Kurz warten: das Einblenden der Collage-Koepfe laeuft selbst ueber
+       den Scroll-Handler (js/collage.js) - kurz danach steht der Endwert. */
+    function schedule() {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(check, 300);
+    }
+
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    check();
+  }
+
+  function dismissHint(def, groups) {
+    setHintState(def.key, "clicked");
+    groups.forEach(function (g) {
+      g.done = true;
+      if (g.timer) { window.clearTimeout(g.timer); g.timer = 0; }
+      removeBubble(g);
+      g.el.classList.remove("is-hinting");
+    });
+  }
+
+  function initHints() {
+    HINTS.forEach(function (def) {
+      var els = document.querySelectorAll(def.selector);
+      if (!els.length) return;
+
+      var state = hintState(def.key);
+      if (state === "clicked") return;
+
+      var groups = [];
+      Array.prototype.forEach.call(els, function (el) {
+        var group = { def: def, el: el, bubble: null, timer: 0, done: false };
+        el.classList.add("is-hinting");
+        if (state !== "timeout") group.bubble = buildBubble(def, group);
+        groups.push(group);
+      });
+
+      /* Erster Klick in der Gruppe erledigt den Hinweis. Der Schluessel
+         gilt fuer alle Gruppen desselben Typs (Track 1 und 3 teilen sich
+         "hint:tools"). */
+      Array.prototype.forEach.call(els, function (el) {
+        el.addEventListener("click", function (e) {
+          var hit = e.target && e.target.closest ? e.target.closest(def.item) : null;
+          if (hit && el.contains(hit)) dismissHint(def, groups);
+        }, true);
+      });
+
+      if (state !== "timeout") watchVisible(groups);
+    });
+  }
+
+  /* ---------- Start ---------- */
 
   function init() {
     var pills = document.querySelectorAll(".collage__tools .collage__tool[data-tool]");
-    if (!pills.length) return;
-
     Array.prototype.forEach.call(pills, function (pill) {
       pill.addEventListener("click", function (e) {
         e.preventDefault();
-        openFor(pill);
+        openFor(pill, e);
       });
     });
+
+    initHints();
   }
 
   if (document.readyState === "loading") {

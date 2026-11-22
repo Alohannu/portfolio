@@ -37,39 +37,49 @@
 
 .collage__tool:active { transform: translateY(0); }
 
-/* ---------- Dialog ---------- */
+/* ---------- Tooltip am Zeiger ----------
+   Kein Modal und keine Abdunkelung: js/tools.js oeffnet den Dialog mit
+   show() statt showModal(), es gibt also keinen ::backdrop. Der Tooltip
+   haengt als position: fixed an der Zeigerposition des Klicks; linke und
+   obere Kante liegen TIP_GAP (10px) neben dem Zeiger, an den Fensterraendern
+   klappt js/tools.js die Position nach innen/oben. Der transform-origin
+   fuer die Einblendung wird dort ebenfalls gesetzt. */
 .tool-dialog {
-  width: min(520px, calc(100vw - 32px));
-  max-height: calc(100svh - 48px);
+  position: fixed;
+  inset: auto;              /* zentrierende UA-Vorgaben ausschalten */
+  left: 0;
+  top: 0;
+  margin: 0;
+  z-index: 960;             /* ueber Topbar (800) und Showroom (900) */
+  width: min(400px, calc(100vw - 24px));
+  max-height: calc(100vh - 20px);
+  max-height: calc(100dvh - 20px);
   padding: 0;
   border: 1px solid rgba(255, 255, 255, .16);
-  border-radius: 20px;
+  border-radius: 16px;
   background: #121212;
   color: #f2f0ed;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, .55);
-  overflow: hidden;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .5), 0 2px 10px rgba(0, 0, 0, .38);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
-.tool-dialog::backdrop {
-  background: rgba(0, 0, 0, .62);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
-}
-
+/* Sanfte Einblendung (scale/fade) vom Ursprung - transform-origin setzt
+   js/tools.js an die Ecke, an der der Tooltip haengt. */
 .tool-dialog[open] {
-  animation: tool-dialog-in .22s ease-out;
+  animation: tool-tip-in .18s ease-out;
 }
 
-@keyframes tool-dialog-in {
-  from { opacity: 0; transform: translateY(10px) scale(.985); }
-  to   { opacity: 1; transform: none; }
+@keyframes tool-tip-in {
+  from { opacity: 0; transform: scale(.94); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .tool-dialog__inner {
-  padding: clamp(20px, 3vw, 30px);
+  padding: clamp(18px, 2.4vw, 24px);
   display: flex;
   flex-direction: column;
-  gap: .85rem;
+  gap: .7rem;
 }
 
 .tool-dialog__bar {
@@ -121,10 +131,10 @@
 
 .tool-dialog__name {
   margin: 0;
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
   font-weight: 600;
   letter-spacing: -.01em;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .tool-dialog__role {
@@ -152,6 +162,10 @@
 }
 
 @media (max-width: 767px) {
+  /* Auf schmalen Bildschirmen bleibt neben der Pille Platz: sonst wuerde
+     die linksbuendige Ausrichtung unter der Pille sofort an den rechten
+     Rand stossen und der Tooltip muesste zurueckgeklappt werden. */
+  .tool-dialog { width: min(340px, calc(100vw - 24px)); }
   .tool-dialog__inner { gap: .7rem; }
   .tool-dialog__text { font-size: .92rem; }
 }
