@@ -26,6 +26,19 @@
 
 html { -webkit-text-size-adjust: 100%; }
 
+/* --- Smooth-Scroll-Schicht (Lenis, js/smooth-scroll.js) ------------------
+   Standardbegleiter von Lenis. Notwendig, damit der Browser die per
+   window.scrollTo gesetzte Position nicht zusaetzlich weichzieht und
+   Scroll-Inseln (data-lenis-prevent) ihr eigenes Overscroll behalten.
+   Ohne Lenis (?lenis=0) greift keine dieser Regeln, weil dann die Klassen
+   html.lenis / html.has-lenis fehlen. */
+html.has-lenis { scroll-behavior: auto; }
+html.lenis,
+html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
 body {
   margin: 0;
   background: #000;

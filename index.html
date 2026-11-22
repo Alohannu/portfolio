@@ -998,6 +998,10 @@ is all we've got</pre>
   <!-- Graph-Daten als JS statt fetch(): funktioniert auch per file:// -->
   <script src="context/nodeview-data.js"></script>
   <script src="context/nodeview.js"></script>
+  <!-- Smooth Scroll (Lenis) — muss vor script.js/track.js laufen, weil beide
+       window.SmoothScroll beim Laden benutzen. Abschaltbar mit ?lenis=0. -->
+  <script src="js/lenis.min.js"></script>
+  <script src="js/smooth-scroll.js"></script>
   <script src="js/script.js"></script>
   <script src="js/collage.js"></script>
   <script src="js/outtakes.js"></script>

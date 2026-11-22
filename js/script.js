@@ -1020,6 +1020,17 @@
     // Drehung antwortet es ohne Layout-Messung (flipP > 0), und genau dann
     // wird syncFlipBtn pro Animationsframe gerufen.
     var active = tryonIsActive();
+    /* Lenis darf das Rad ueber dem Graphen nicht virtualisieren, solange der
+       Graph aktiv ist - sonst scrollen die Scroll-Schicht und der Rad-Handler
+       unten gleichzeitig. Ausserhalb des Graphen bleibt Lenis zustaendig.
+       Das Attribut wird deshalb hier mitgefuehrt und nicht statisch gesetzt. */
+    var lc = findCanvas();
+    if (lc && active !== lc.hasAttribute("data-lenis-prevent")) {
+      /* Nur bei echter Aenderung schreiben: syncFlipBtn laeuft waehrend einer
+         Drehung in jedem Frame. */
+      if (active) lc.setAttribute("data-lenis-prevent", "");
+      else lc.removeAttribute("data-lenis-prevent");
+    }
     var front = false;
     /* Vorderseite + Graph-Ende = Tor. Ob der Morph ganz offen ist, spielt
        hier keine Rolle - stageOnScreen() sagt, ob der Bereich ueberhaupt vor
@@ -1238,7 +1249,11 @@
         if (now - pausedAt < END_PAUSE_MS) { e.preventDefault(); return; }
         // Pause vorbei: Seite selbst weiterbewegen (das Event ist verbraucht).
         e.preventDefault();
-        window.scrollBy(0, e.deltaY);
+        if (window.SmoothScroll && window.SmoothScroll.enabled) {
+          window.SmoothScroll.by(e.deltaY);
+        } else {
+          window.scrollBy(0, e.deltaY);
+        }
         return;
       }
       if (down && !atEnd) pausedAt = 0;
