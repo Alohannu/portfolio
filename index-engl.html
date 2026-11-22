@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/imageviewer.css">
   <link rel="stylesheet" href="css/music.css">
   <link rel="stylesheet" href="css/tools.css">
+  <link rel="stylesheet" href="css/endcard.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -755,6 +756,45 @@ is all we've got</pre>
           </div>
         </div>
       </section>
+
+      <!-- End page / business card (reference: dejvidkavazovic.com): type
+           only, no images. Last child of panel 4 so the track geometry
+           (four panels) stays untouched. Edit: replace the address in the
+           #endcardMail span and the copyright line; js/endcard.js fits the
+           wordmark (#endcardMark) to the column width. -->
+      <section class="endcard" id="kontakt" aria-labelledby="endcardTitle">
+        <div class="endcard__inner">
+          <p class="endcard__label">Contact</p>
+          <h2 class="endcard__title" id="endcardTitle">Got a vision, a brand or a story?</h2>
+          <p class="endcard__lede">Open for campaigns, fashion films, AI visuals and brand work.</p>
+
+          <div class="endcard__cols">
+            <div class="endcard__col">
+              <p class="endcard__col-head">E-mail</p>
+              <div class="endcard__mail">
+                <!-- TODO: replace with the real address -->
+                <span class="endcard__mail-text" id="endcardMail">mail@example.com</span>
+                <button class="endcard__copy" type="button" data-copy-target="endcardMail"
+                        aria-label="Copy e-mail address">Copy</button>
+              </div>
+            </div>
+            <div class="endcard__col">
+              <p class="endcard__col-head">Focus</p>
+              <p class="endcard__col-body">AI visuals<br>Fashion film<br>Brand identity</p>
+            </div>
+            <div class="endcard__col">
+              <p class="endcard__col-head">Based in</p>
+              <p class="endcard__col-body">Berlin, Germany</p>
+            </div>
+          </div>
+
+          <p class="endcard__mark" id="endcardMark" aria-label="Sylvia Trieu">sylvia trieu</p>
+        </div>
+        <div class="endcard__foot">
+          <span>&copy; 2026 Sylvia Trieu</span>
+          <button class="endcard__top" type="button">Back to top &uarr;</button>
+        </div>
+      </section>
     </div><!-- /Panel 4 -->
 
    </div><!-- /Track -->
@@ -884,6 +924,7 @@ is all we've got</pre>
   <script src="js/serum-campaign.js"></script>
   <script src="js/music.js"></script>
   <script src="js/tools.js"></script>
+  <script src="js/endcard.js"></script>
   <script>
     // ComfyUI-Node-Ansicht (virtual try-on) aus dem normalisierten JSON rendern.
     // Ersetzt das frühere statische comfyui.png in Abschnitt 5.
