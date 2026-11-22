@@ -53,7 +53,14 @@
     '.nv-root .nv-wires{position:absolute;inset:0;pointer-events:none;overflow:visible}',
     '.nv-root .nv-group{position:absolute;border:1px solid var(--nv-group-border);border-radius:10px;background:var(--nv-group-bg)}',
     '.nv-root .nv-group>span{position:absolute;left:14px;top:-11px;padding:2px 8px;border-radius:5px;background:var(--nv-group-label-bg);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--nv-group-label)}',
-    '.nv-root .nv-node{position:absolute;border-radius:var(--nv-node-radius);overflow:hidden;background:var(--nv-node-bg);-webkit-backdrop-filter:var(--nv-node-blur);backdrop-filter:var(--nv-node-blur);border:1px solid var(--nv-node-border);box-shadow:0 12px 30px -18px rgba(0,0,0,.9);transition:box-shadow .25s ease,border-color .25s ease}',
+    /* KEIN backdrop-filter auf den Knoten: die Noodle-Pulse laufen als
+       animierte SVG-Striche HINTER den Knoten. Mit backdrop-filter muss der
+       Browser bei jedem Puls-Frame den Bereich unter allen Knoten neu
+       weichzeichnen - im Test mit sichtbarem Graph fiel das Bild dadurch
+       etwa im Takt der Pulse (1,15 s) fuer 150-1400 ms aus. Ohne den Filter
+       bleiben die Frames stabil; der Knoten-Hintergrund ist ohnehin fast
+       deckend (--nv-node-bg), der Unterschied ist kaum sichtbar. */
+    '.nv-root .nv-node{position:absolute;border-radius:var(--nv-node-radius);overflow:hidden;background:var(--nv-node-bg);border:1px solid var(--nv-node-border);box-shadow:0 12px 30px -18px rgba(0,0,0,.9);transition:box-shadow .25s ease,border-color .25s ease}',
     '.nv-root .nv-node:hover{border-color:rgba(255,255,255,.22);box-shadow:0 16px 34px -16px rgba(0,0,0,1)}',
     '.nv-root .nv-head{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--nv-head-bg);border-bottom:1px solid rgba(255,255,255,.06)}',
     '.nv-root .nv-acc{width:7px;height:7px;border-radius:50%;flex:none}',
@@ -209,7 +216,9 @@
       '--nv-bar-border': theme.barBorder || '#23232f',
       '--nv-dot': theme.dotGridColor || 'rgba(120,120,180,.20)',
       '--nv-dot-size': (theme.dotGridSize || 20) + 'px',
-      '--nv-node-bg': theme.nodeBg || 'rgba(22,22,30,.82)',
+      /* Etwas deckender als frueher (.82), weil der backdrop-blur weg ist:
+         so bleibt der Knoten ruhig ueber dem Punktraster des Canvas. */
+      '--nv-node-bg': theme.nodeBg || 'rgba(22,22,30,.93)',
       '--nv-node-border': theme.nodeBorder || 'rgba(255,255,255,.10)',
       '--nv-node-blur': theme.nodeBlur || 'blur(8px)',
       '--nv-node-radius': (theme.nodeRadius || 9) + 'px',

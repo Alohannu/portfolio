@@ -452,8 +452,11 @@ body {
      Abstand waechst mit dem Viewport, bleibt aber in beiden Ansichten
      innerhalb der Karte. */
   top: 50%;
-  right: clamp(.6rem, 1.2vw, 1.1rem);
-  transform: translateY(-50%);
+  /* Rechtsbuendig ueber left + translate(-100%) statt right: nur so kann
+     die Position spaeter zwischen den Zustaenden animiert werden (top und
+     left sind in allen Zustaenden dieselben Eigenschaften). */
+  left: calc(100% - clamp(.6rem, 1.2vw, 1.1rem));
+  transform: translate(-100%, -50%);
   z-index: 3;              /* ueber beiden Flip-Seiten (die tragen keinen z-index) */
   display: inline-flex;
   align-items: center;
@@ -479,7 +482,13 @@ body {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity .25s ease, visibility 0s .25s, background .2s ease, border-color .2s ease;
+  /* top/left/transform animieren mit: der Knopf wandert sichtbar zwischen
+     den Zustaenden (unten mittig am Tor, oben rechts als "Zurueck"), statt
+     zu springen. Die Kurve laeuft schnell an und bremst weich ab. */
+  transition: opacity .25s ease, visibility 0s .25s, background .2s ease, border-color .2s ease,
+              top .5s cubic-bezier(.22, .8, .2, 1),
+              left .5s cubic-bezier(.22, .8, .2, 1),
+              transform .5s cubic-bezier(.22, .8, .2, 1);
 }
 /* Sichtbar: visibility ohne Verzug, sonst waere der Knopf im Moment des
    Einblendens noch nicht fokussierbar (Tab traefe ihn erst nach .25s). */
@@ -487,7 +496,10 @@ body {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transition: opacity .25s ease, visibility 0s 0s, background .2s ease, border-color .2s ease;
+  transition: opacity .25s ease, visibility 0s 0s, background .2s ease, border-color .2s ease,
+              top .5s cubic-bezier(.22, .8, .2, 1),
+              left .5s cubic-bezier(.22, .8, .2, 1),
+              transform .5s cubic-bezier(.22, .8, .2, 1);
 }
 .flipbtn:hover { border-color: #fff; background: rgba(28, 28, 42, .86); }
 /* Eigener Fokusring: der Standardring ist auf dunklem Glas kaum zu sehen. */
@@ -498,28 +510,30 @@ body {
    der Knopf ihren Text und ihre Knoepfe verdecken. */
 .flipbtn.is-back {
   top: clamp(.6rem, 1.2vh, 1rem);
-  transform: none;
+  transform: translate(-100%, 0);
 }
 
 /* Tor am Graph-Ende: der Knopf sitzt dort unten mittig und heisst
    "Weiter scrollen" - er ist der einzige Weg weiter ins Photo Studio.
    Bewusst unten, damit er als naechster Schritt gelesen wird. */
 .flipbtn.is-gate {
-  top: auto;
-  bottom: clamp(1rem, 3vh, 2rem);
-  right: auto;
+  top: calc(100% - clamp(1rem, 3vh, 2rem));
   left: 50%;
-  transform: translateX(-50%);
+  /* Unterkante des Knopfes liegt clamp(1rem,3vh,2rem) ueber der Kartenkante. */
+  transform: translate(-50%, -100%);
   border-color: rgba(143, 147, 224, .5);
   box-shadow: 0 10px 30px rgba(0, 0, 0, .38);
 }
 .flipbtn.is-gate .flipbtn__arrow { font-size: 1.15em; line-height: 1; }
-.flipbtn.is-gate:hover { transform: translateX(-50%) translateY(-1px); }
+.flipbtn.is-gate:hover { transform: translate(-50%, calc(-100% - 1px)); }
+/* Beim Drehen in die Rueckseite wandert der Knopf vom Tor (unten mittig)
+   nach oben rechts. Der Uebergang kommt von top/left/transform oben - hier
+   nichts weiter noetig. */
 @media (max-width: 899px) {
   /* Kleinere Ansicht: der Knopf soll neben dem Graphen nicht die halbe
      Breite einnehmen. 44px Mindesthoehe bleibt. */
   .flipbtn {
-    right: .5rem;
+    left: calc(100% - .5rem);
     gap: .4rem;
     padding: .45rem .7rem;
     font-size: .64rem;
