@@ -12,26 +12,23 @@
    kommt 1:1 aus der Scrollposition (js/curtain.js), ohne Easing und
    umkehrbar.
 
-   Im Track kommt die Ansicht per Schwenk von rechts herein. Waehrend
-   dieses Schwenks steht Bild 1 still: js/curtain.js zieht die
-   Schwenkstrecke (window.TurnTrack.pan) vom Scrollfortschritt ab - genau
-   wie js/script.js es beim Serum-Hero macht. Sonst waere Bild 2 beim
-   Ankommen bereits hochgefahren.
+   Bild 1 steht still, solange die Buehne noch nicht oben angekommen ist:
+   js/curtain.js rechnet den Fortschritt ab der Oberkante der Section, die
+   Steigungen beginnen erst mit dem Ankommen.
    ========================================================================== */
 
 .curtain {
   position: relative;
   z-index: 9;
   background: #d6d8d5;
-  /* Vier Bildschirmhoehen. Der Referenzstand hatte 300vh (Buehne + zwei
-     Steigungen). Hier kommt eine dazu, weil der Schwenk - genau wie beim
-     Serum-Hero - schon eine Bildschirmhoehe der Ansicht verbraucht, bevor
-     der Vorhang ueberhaupt anfaengt:
+  /* Drei Bildschirmhoehen - wie im Referenzstand:
        100vh Buehne (stehend)
-     + 100vh Schwenk  (js/track.js zieht die Ansicht um pan px hoch)
      + 200vh Vorhang  (Bild 2, dann Bild 3)
-     Ohne die vierte Hoehe waere am Dokumentende erst Bild 2 oben. */
-  height: 400vh;
+     Die frueher vierte Hoehe deckte die Schwenkstrecke ab (die Ansicht
+     wurde beim Seitenwechsel um eine Bildschirmhoehe hoeher in die Spur
+     gesetzt). Mit der vertikalen Navigation gibt es diese Strecke nicht
+     mehr - sie waere reiner Leerlauf vor dem ersten Bild. */
+  height: 300vh;
 }
 
 .curtain__stage {

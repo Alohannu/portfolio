@@ -215,9 +215,8 @@
     }
 
     /* Overlay ausblenden, sobald man den Hero weiterscrollt. Gemessen wird
-       ab der Ankunftsposition von Ansicht 2 (TurnTrack.tops[1]), nicht ab
-       der Flow-Position des Wrappers: durch den Schwenk liegt die Ansicht
-       im Dokument um die Schwenkstrecke hoeher als ihre Ankunft. */
+       ab der Oberkante von Ansicht 2 (TurnTrack.tops[1]) - das ist die
+       Position, an der der Hero im Bild steht. */
     function serumUpdate() {
       if (reduceMotion) {
         if (serumOverlay) serumOverlay.style.opacity = "1";

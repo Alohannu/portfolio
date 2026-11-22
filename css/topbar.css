@@ -1,13 +1,11 @@
 /* ==========================================================================
    Menueleiste: die vier Projekt-Ansichten, oben fest ueber der Seite
 
-   Sie liegt als direktes Kind von <body> VOR <main> (index.html). WARUM
-   nicht innerhalb: #track bekommt beim Schwenk ein transform (js/track.js)
-   und wird dadurch zum Containing Block - ein position: fixed darin haenge
-   dann am Track statt am Viewport und faehre bei jedem Schwenk mit. Und
-   ausserhalb von <main>, damit sie in kein Layout der Ansichten greift:
-   js/track.js misst die Panel-Oberkanten, jede Hoehe hier waere ein
-   Messfehler.
+   Sie liegt als direktes Kind von <body> VOR <main> (index.html), damit
+   sie in kein Layout der Ansichten greift: js/track.js misst die
+   Panel-Oberkanten, jede Hoehe hier waere ein Messfehler. (Frueher war das
+   zusaetzlich noetig, weil #track beim Schwenk ein transform bekam - ein
+   position: fixed darin haette dann am Track gehangen.)
 
    z-index 800 bewusst UNTER .showroom (900) und .imageviewer (950): die
    Dialoge sollen die Leiste verdecken, nicht umgekehrt.

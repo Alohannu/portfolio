@@ -365,10 +365,8 @@
    Hoehe stehen (Section 200svh = 100svh Buehne + 100svh Halten), damit
    die Ansicht als Seite erscheint und nicht nur durchlaeuft.
 
-   Die Section liegt ZWISCHEN Avatar-Abschnitt und Phasen-Section. Sie
-   darf deshalb nicht die Rolle der Auslauf-Buehne erben: letztes Kind
-   von Panel 2 bleibt die Phasen-Section, sonst setzt js/track.js die
-   falsche Section auf die Pin-Strecke (hold + pan). */
+   Die Section liegt ZWISCHEN Avatar-Abschnitt und Phasen-Section; die
+   Panel-Reihenfolge bleibt so, wie sie im Markup steht. */
 .project--serum-repeat {
   height: 200vh;
   height: 200svh;

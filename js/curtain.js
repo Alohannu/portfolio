@@ -4,14 +4,13 @@
    Uebernommen aus dem Referenzstand (portfolio-yytrieu/js/script.js,
    Abschnitt "Vorhang (Scrollfortschritt 1:1, ohne Easing, umkehrbar)").
 
-   Zwei Anpassungen fuer den Track:
+   Anpassungen fuer diese Seite:
 
-   1. HALTEPHASE. Der Schwenk schiebt die Buehne schon eine Schwenkstrecke
-      nach oben, waehrend sie seitlich hereinkommt (js/track.js setzt die
-      Ansicht um `pan` px hoeher in die Spur). Diese Strecke darf den
-      Vorhang nicht mitziehen: die ersten `pan` Pixel halten Bild 1, erst
-      nach dem Ankommen faehrt Bild 2 hoch. Genau dasselbe macht
-      js/script.js mit dem Serum-Hero.
+   1. Die Bilder fahren erst, wenn die Buehne wirklich ankommt: gemessen
+      wird ab ihrer Oberkante am Viewport-Top. (Frueher lag die Ansicht
+      beim Schwenk schon eine Strecke hoeher in der Spur; diese
+      Schwenkstrecke wurde hier abgezogen. Mit der vertikalen Navigation
+      gibt es sie nicht mehr - die Ansicht steht an ihrer Stelle.)
 
    2. Die Buehne wird nicht ueber einen IntersectionObserver stillgelegt,
       sondern nur dann gerechnet, wenn Ansicht 3 ueberhaupt in der Naehe
@@ -38,21 +37,14 @@
     return v < a ? a : (v > b ? b : v);
   }
 
-  /* Schwenkstrecke in px (js/track.js). Ohne track.js: 0, dann faengt der
-     Vorhang direkt beim Hereinkommen an. */
-  function panHold() {
-    var t = window.TurnTrack;
-    return t && typeof t.pan === "number" ? t.pan : 0;
-  }
-
   function update() {
     ticking = false;
 
     var vh = window.innerHeight;
     if (!vh) return;
 
-    /* 0-1: Bild 2 faehrt hoch, 1-2: Bild 3. Der Schwenk ist abgezogen. */
-    var offset = clamp((-curtain.getBoundingClientRect().top - panHold()) / vh, 0, 2);
+    /* 0-1: Bild 2 faehrt hoch, 1-2: Bild 3. */
+    var offset = clamp(-curtain.getBoundingClientRect().top / vh, 0, 2);
     if (offset === last) return;   // nur bei Aenderung schreiben
     last = offset;
 
@@ -78,8 +70,7 @@
     last = -1;
     request();
   });
-  /* Nach dem Messen der Track-Geometrie (js/track.js) und nach load noch
-     einmal rechnen: dann stimmen Buehnenposition und Schwenkstrecke. */
+  /* Nach load noch einmal rechnen: dann stehen die Buehnenhoehen fest. */
   window.addEventListener("load", function () {
     last = -1;
     request();

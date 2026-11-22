@@ -14,9 +14,7 @@
       kein [data-morph] ist.
    2. Es spielt das Kampagnenvideo nur ab, solange die Ansicht sichtbar
       ist. Sonst liefen mehrere Videos gleichzeitig (Serum-Hero, Collage
-      in Ansicht 1) und im Hintergrund der Seite weiter. Der Track
-      schiebt die Ansicht beim Schwenk seitlich aus dem Viewport - auch
-      das erkennt der Beobachter und pausiert.
+      in Ansicht 1) und im Hintergrund der Seite weiter.
 
    Das Video ist stumm und geloopt. Es braucht keinen Ton-Schalter, weil
    es Projektmaterial ist und nicht das Titelvideo des Panels. Unter
