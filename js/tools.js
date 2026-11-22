@@ -297,7 +297,10 @@
 
   /* ---------- Hinweise auf klickbare Gruppen ----------
      Solange in einer Gruppe noch nichts angeklickt wurde, pulsiert sie
-     dezent und darueber steht eine kleine Sprechblase.
+     dezent und dazu steht eine kleine Sprechblase: bei den Phasen-Tabs
+     UNTER der Pille, weil darueber der Titel "ai solution" steht, bei den
+     Tool-Zeilen darueber (css/hints.css: .hint-bubble--phases bzw.
+     .hint-bubble--tools).
 
      Zwei Verhaltensweisen, je Hinweis in HINTS gesetzt:
        sticky - Blase und Puls bleiben stehen, bis in der Gruppe geklickt
@@ -317,6 +320,9 @@
       key: "hint:phases",
       selector: ".phase-tabs",
       item: ".phase-tab",
+      /* "center" richtet die Blase mittig aus; die Hoehe kommt aus
+         .hint-bubble--phases (css/hints.css): unter der Tab-Leiste, damit
+         der Titel "ai solution" darueber frei bleibt. */
       align: "center",
       sticky: true,
       de: "Klick auf eine Phase, um sie zu sehen",

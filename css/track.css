@@ -398,7 +398,14 @@
     margin-bottom: clamp(12px, 2.2vh, 64px);
     font-size: clamp(26px, min(4.6vw, 7.2vh), 60px);
   }
-  .phase-tabs { margin: 0 auto clamp(12px, 2.2vh, 44px); }
+  /* +20px: In flachen Fenstern lagen Tab-Leiste und Panel-Kante nur
+     16-17 px auseinander - zu wenig fuer die Sprechblase "Klick auf eine
+     Phase", die unter der Pille sitzt (css/hints.css,
+     .hint-bubble--phases) und sonst die Ueberschrift "Phase n ..."
+     angeschnitten haette. Der Zuschlag haelt den Platz dauerhaft frei,
+     damit beim ersten Klick nichts springt; er passt weiterhin in einen
+     Screen (freier Platz vorher gemessen: 102 px bei 1280x720). */
+  .phase-tabs { margin: 0 auto calc(clamp(12px, 2.2vh, 44px) + 20px); }
   .phase-panel__head { padding: clamp(10px, 1.7vh, 32px) 0; }
   .phase-panel__body { padding: clamp(14px, 2.4vh, 52px) 0; }
   /* Das Bildpaar bestimmt die Hoehe des Panels (Seitenverhaeltnis
