@@ -137,6 +137,17 @@
     syncActive();
   });
 
+  /* track.js meldet jede neu gesetzte Ansicht ueber "track:screen".
+     WARUM zusaetzlich zum Scroll-Event: bei einem Deep-Link oder einem
+     #-Wechsel springt track.js selbst (jumpForHash). Unser Scroll-Event
+     laeuft dann VOR dem Frame, in dem track.js seinen Index nachzieht -
+     syncActive() sieht dort noch die alte Ansicht, und ein zweites
+     Scroll-Event kommt nicht mehr. Die Markierung bliebe also auf dem
+     alten Eintrag stehen, obwohl die Ziel-Ansicht schon steht.
+     syncActive() steigt bei unveraenderter Ansicht sofort aus, das Event
+     darf deshalb bei jedem Wechsel kommen. */
+  document.addEventListener("track:screen", syncActive);
+
   /* Neubasierung nach einem Sprung, den der Nutzer nicht selbst gescrollt
      hat (Deep-Link #serum/#music-view, Fragmentwechsel). WARUM verzoegert:
      js/track.js registriert seinen load-Handler erst in init() bei
