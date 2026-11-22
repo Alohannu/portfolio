@@ -14,9 +14,23 @@
   <link rel="stylesheet" href="css/curtain.css">
   <link rel="stylesheet" href="css/imageviewer.css">
   <link rel="stylesheet" href="css/music.css">
+  <link rel="stylesheet" href="css/topbar.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
+
+  <!-- Menüleiste: verschwindet beim Runterscrollen, kommt beim Hochscrollen
+       zurück. Sie liegt außerhalb von #track (dessen transform würde ein
+       position: fixed darin brechen) und außerhalb von <main>, damit sie
+       kein Layout der Ansichten beeinflusst. -->
+  <nav class="topbar" id="topbar" aria-label="Projekte">
+    <ul class="topbar__list">
+      <li><a class="topbar__link" href="#main" data-view="0">nandenmoii</a></li>
+      <li><a class="topbar__link" href="#serum" data-view="1">ai face serum</a></li>
+      <li><a class="topbar__link" href="#curtain-view" data-view="2">eggo</a></li>
+      <li><a class="topbar__link" href="#music-view" data-view="3">ai music</a></li>
+    </ul>
+  </nav>
 
   <main id="main">
    <div class="track" id="track">
@@ -182,6 +196,24 @@
               </div>
             </div>
           </div>
+
+          <!-- Weg zum Photo Studio als Knopf: er erscheint, sobald der Graph
+               im Canvas am Ende steht (Save-Image-Node vor uns), und dreht die
+               Flaeche auf die Rueckseite - dieselbe Drehung wie beim
+               Weiterscrollen, nur ohne die Laufstrecke davor.
+
+               Er liegt NEBEN .flip, nicht darin: ausserhalb von .flip__inner
+               dreht er nicht mit und bleibt ueber beiden Seiten ansprechbar.
+               Auf der Rueckseite traegt er denselben Platz und heisst dort
+               "Zurueck zum Graphen".
+
+               Ausgeblendet wird er ueber visibility (nicht display/hidden):
+               so ist er im Grundzustand nicht fokussierbar und trotzdem
+               ueberblendbar. Steuerung: js/script.js, .flipbtn in css/style.css. -->
+          <button class="flipbtn" id="flipBtn" type="button">
+            <span class="flipbtn__label" id="flipBtnLabel">Zum Photo Studio</span>
+            <span class="flipbtn__arrow" id="flipBtnArrow" aria-hidden="true">&rarr;</span>
+          </button>
         </div>
       </div>
     </section>
@@ -887,6 +919,7 @@ is all we've got</pre>
   <script src="js/showroom.js"></script>
   <script src="js/imageviewer.js"></script>
   <script src="js/track.js"></script>
+  <script src="js/topbar.js"></script>
   <script src="js/curtain.js"></script>
   <script src="js/serum-phases.js"></script>
   <script src="js/serum-campaign.js"></script>
