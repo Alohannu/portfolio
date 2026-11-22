@@ -15,6 +15,9 @@
      Stelle, Ziehen scrubbt live, Pfeiltasten +/-5 s, Home/End an den Rand.
      Das Markup bleibt eine reine Anzeige - Rolle, tabindex und
      ARIA-Werte setzt dieses Skript.
+   - liefert der Server keine Range-Requests, ist das <audio> nicht seekbar
+     und der Sprung wuerde den Song neu starten; dann holt der Player die
+     Datei einmal als Blob und tauscht die Quelle (siehe seekTo).
    - am Ende springt der Player zurueck auf Anfang und zeigt wieder "▶"
 
    Wellenform und Songtext haengen am Song - nicht an CSS-Loops:
@@ -119,12 +122,103 @@
        Das Markup bleibt eine reine Anzeige (div.music__bar). Rolle, tabindex
        und ARIA-Werte setzt dieses Skript; die Trefferflaeche liefert
        css/music.css ueber ein Pseudo-Element (sichtbar bleiben 2px). */
+
+    /* Nicht jeder Server beantwortet Range-Requests (python3 -m http.server
+       ist der Klassiker). Dann ist das <audio> nicht seekbar: der Browser
+       verwirft die laufende Wiedergabe und laedt ab Byte 0 neu - der Song
+       startet also von vorn, statt zu springen. Von hier aus laesst sich das
+       nicht abfangen (es ist eine HTTP-Sache), deshalb holt der Player die
+       Datei in dem Fall einmal komplett als Blob und tauscht die Quelle:
+       Blob-URLs sind immer seekbar. Auf Servern MIT Range (GitHub Pages,
+       tools/serve.mjs) passiert nichts davon - dort springt der Klick sofort. */
+    var pendingSeek = null;    // Zielposition, die nach dem Quellentausch greift
+    var rangeOk = null;        // null = unbekannt, true/false = Server-Antwort
+    var upgradePromise = null; // laufender Wechsel auf die Blob-Quelle
+
+    function isSeekable() {
+      var d = duration || audio.duration || 0;
+      if (!d) return false;
+      var s = audio.seekable;
+      if (!s || !s.length) return false;
+      return s.end(s.length - 1) >= d - 1;
+    }
+
+    function serverSupportsRange() {
+      var src = audio.currentSrc || audio.src;
+      return fetch(src, { method: "HEAD", cache: "no-store" })
+        .then(function (r) {
+          var v = r.headers.get("Accept-Ranges") || "";
+          return v.toLowerCase().indexOf("bytes") !== -1;
+        })
+        .catch(function () { return false; });
+    }
+
+    function applyPendingSeek() {
+      if (pendingSeek === null) return;
+      var t = pendingSeek;
+      pendingSeek = null;
+      try { audio.currentTime = t; } catch (err) {}
+      render();
+      /* Kontrolle: hat der Browser den Sprung verworfen und wieder bei 0
+         angefangen, ist der Server doch nicht seekbar -> Blob-Quelle. */
+      setTimeout(function () {
+        if (t > 2 && audio.currentTime < 1) upgradeToBlobSource();
+      }, 700);
+    }
+
+    function upgradeToBlobSource() {
+      if (upgradePromise) return upgradePromise;
+      var src = audio.currentSrc || audio.src;
+      var wasPlaying = !audio.paused;
+      upgradePromise = fetch(src)
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.blob();
+        })
+        .then(function (blob) {
+          var url = URL.createObjectURL(blob);
+          audio.src = url;
+          audio.load();
+          return new Promise(function (res) {
+            if (audio.readyState >= 1) return res();
+            audio.addEventListener("loadedmetadata", res, { once: true });
+            setTimeout(res, 5000);
+          }).then(function () {
+            applyPendingSeek();
+            if (wasPlaying) {
+              var p = audio.play();
+              if (p && p.catch) p.catch(function () {});
+            }
+          });
+        })
+        .catch(function () {
+          /* Kein Blob moeglich: dann bleibt es beim bisherigen Verhalten. */
+        });
+      return upgradePromise;
+    }
+
     function seekTo(seconds) {
       if (!duration) return;
       var t = Math.min(duration, Math.max(0, seconds));
-      audio.currentTime = t;
-      /* Sofort zeichnen: waehrend des Ziehens kommt kein timeupdate an. */
-      render();
+      if (isSeekable()) {
+        audio.currentTime = t;
+        /* Sofort zeichnen: waehrend des Ziehens kommt kein timeupdate an. */
+        render();
+        return;
+      }
+      /* Nicht seekbar: erst klaeren, ob es am Server liegt. */
+      pendingSeek = t;
+      if (rangeOk === null) {
+        serverSupportsRange().then(function (ok) {
+          rangeOk = ok;
+          if (ok) applyPendingSeek();
+          else upgradeToBlobSource();
+        });
+      } else if (rangeOk) {
+        applyPendingSeek();
+      } else {
+        upgradeToBlobSource();
+      }
     }
 
     function ratioAt(clientX) {
