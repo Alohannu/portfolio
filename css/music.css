@@ -250,42 +250,23 @@
 
 .music__wave span {
   flex: 1;
+  /* Ruhezustand: flache Linie. Die Hoehen setzt js/music.js aus den
+     Frequenzdaten des laufenden Songs (AnalyserNode). */
+  height: 3px;
+  min-height: 3px;
   border-radius: 2px;
   background: rgba(255, 255, 255, .72);
-  transform-origin: center;
-  animation: wavePulse 1.8s ease-in-out infinite;
+  transform-origin: bottom;
+  opacity: .42;
+  transition: height .3s ease, opacity .3s ease;
 }
 
-.music__wave span:nth-child(1)  { height: 7px;  animation-delay: 0s; }
-.music__wave span:nth-child(2)  { height: 13px; animation-delay: .16s; }
-.music__wave span:nth-child(3)  { height: 20px; animation-delay: .32s; }
-.music__wave span:nth-child(4)  { height: 11px; animation-delay: .48s; }
-.music__wave span:nth-child(5)  { height: 26px; animation-delay: .64s; }
-.music__wave span:nth-child(6)  { height: 16px; animation-delay: .8s; }
-.music__wave span:nth-child(7)  { height: 9px;  animation-delay: .96s; }
-.music__wave span:nth-child(8)  { height: 22px; animation-delay: 0s; }
-.music__wave span:nth-child(9)  { height: 14px; animation-delay: .16s; }
-.music__wave span:nth-child(10) { height: 28px; animation-delay: .32s; }
-.music__wave span:nth-child(11) { height: 12px; animation-delay: .48s; }
-.music__wave span:nth-child(12) { height: 18px; animation-delay: .64s; }
-.music__wave span:nth-child(13) { height: 8px;  animation-delay: .8s; }
-.music__wave span:nth-child(14) { height: 24px; animation-delay: .96s; }
-.music__wave span:nth-child(15) { height: 15px; animation-delay: 0s; }
-.music__wave span:nth-child(16) { height: 10px; animation-delay: .16s; }
-.music__wave span:nth-child(17) { height: 21px; animation-delay: .32s; }
-.music__wave span:nth-child(18) { height: 13px; animation-delay: .48s; }
-.music__wave span:nth-child(19) { height: 27px; animation-delay: .64s; }
-.music__wave span:nth-child(20) { height: 9px;  animation-delay: .8s; }
-.music__wave span:nth-child(21) { height: 17px; animation-delay: .96s; }
-.music__wave span:nth-child(22) { height: 23px; animation-delay: 0s; }
-.music__wave span:nth-child(23) { height: 11px; animation-delay: .16s; }
-.music__wave span:nth-child(24) { height: 19px; animation-delay: .32s; }
-.music__wave span:nth-child(25) { height: 7px;  animation-delay: .48s; }
-.music__wave span:nth-child(26) { height: 25px; animation-delay: .64s; }
-.music__wave span:nth-child(27) { height: 14px; animation-delay: .8s; }
-.music__wave span:nth-child(28) { height: 12px; animation-delay: .96s; }
-.music__wave span:nth-child(29) { height: 20px; animation-delay: 0s; }
-.music__wave span:nth-child(30) { height: 8px;  animation-delay: .16s; }
+/* Waehrend der Song laeuft: ohne Hoehen-Transition, sonst laufen die
+   Werte des Analysers der Musik hinterher. */
+.music__wave.is-live span {
+  opacity: .92;
+  transition: none;
+}
 
 .music__bar {
   position: relative;
@@ -328,8 +309,8 @@
   white-space: nowrap;
 }
 
-/* Songtext-Fenster: laeuft von selbst durch (lyricsDrift), die Masken oben
-   und unten blenden die Raender weich ab. */
+/* Songtext-Fenster: die Masken oben und unten blenden die Raender weich
+   ab; die Position des Textes folgt der Abspielzeit (js/music.js). */
 .music__lyrics {
   position: relative;
   height: clamp(300px, 34vw, 520px);
@@ -346,7 +327,9 @@
 
 .music__lyrics-inner {
   padding: clamp(20px, 2.4vw, 40px) clamp(18px, 2vw, 32px);
-  animation: lyricsDrift 110s linear infinite;
+  /* Kein CSS-Drift: js/music.js schiebt den Text passend zur Abspielzeit
+     des Songs - er laeuft also nur, wenn der Song laeuft. */
+  will-change: transform;
 }
 
 .music__lyrics-text {
@@ -418,25 +401,14 @@
   line-height: 1;
 }
 
-/* ---------- Animationen (1:1 aus dem Original) ---------- */
-@keyframes wavePulse {
-  0%, 100% { transform: scaleY(.42); opacity: .55; }
-  50%      { transform: scaleY(1);   opacity: 1; }
-}
-
-@keyframes lyricsDrift {
-  from { transform: translateY(0); }
-  to   { transform: translateY(calc(-100% + clamp(300px, 34vw, 520px))); }
-}
-
 /* Wer Bewegung reduziert haben will, bekommt das Standbild: der Songtext
-   bleibt lesbar (dann ohne Wanderung), die Wellenform steht still. */
+   bleibt lesbar (ohne Wanderung), die Wellenform steht still. js/music.js
+   startet dafuer gar keine Visualisierung. */
 @media (prefers-reduced-motion: reduce) {
   /* Ohne Scrubbing gibt es keine Ueberlappung abzufangen (js/track.js setzt
      pan auf 0) - dann soll die Buehne auch nicht 150vh lang stehen
      bleiben. */
   .music__pin { height: auto; }
   .music__stage { position: relative; }
-  .music__lyrics-inner { animation: none; }
-  .music__wave span { animation: none; }
+  .music__lyrics-inner { transform: none; }
 }

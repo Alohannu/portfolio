@@ -13,6 +13,16 @@
    - Zeitanzeige und Fortschrittsbalken laufen ueber timeupdate mit
    - am Ende springt der Player zurueck auf Anfang und zeigt wieder "▶"
 
+   Wellenform und Songtext haengen am Song - nicht an CSS-Loops:
+   - die Wellenform steht im Ruhezustand flach und bewegt sich nur, solange
+     der Song laeuft. Die Hoehen kommen aus einem AnalyserNode (echte
+     Frequenzdaten von Pantomime.mp3), nicht aus einer Animation.
+   - der Songtext wird nicht mehr per CSS durchgezogen, sondern seine
+     Position folgt der Abspielzeit (currentTime / duration). Pause haelt
+     ihn an, Seeken springt mit.
+   - wer prefers-reduced-motion gesetzt hat, bekommt weder Bewegung noch
+     Textwanderung (die Analyse startet dann gar nicht).
+
    Concept-Video:
    - es laeuft stumm in Schleife (autoplay + muted im Markup)
    - der Knopf oben rechts schaltet den Ton um; Beschriftung und Symbol
@@ -39,10 +49,28 @@
     var time = document.getElementById("musicTime");
     var duration = 0;
 
+    var wave = document.querySelector(".music__wave");
+    var bars = wave ? Array.prototype.slice.call(wave.querySelectorAll("span")) : [];
+    var lyricsBox = document.querySelector(".music__lyrics");
+    var lyricsInner = document.querySelector(".music__lyrics-inner");
+
+    var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     function setPlaying(playing) {
       if (icon) icon.textContent = playing ? "\u275A\u275A" : "\u25B6";
       button.setAttribute("aria-pressed", playing ? "true" : "false");
       button.setAttribute("aria-label", playing ? "Soundtrack pausieren" : "Soundtrack abspielen");
+    }
+
+    /* Songtext an die Abspielzeit koppeln: 0 % = oben, 100 % = Ende. Der
+       Text laeuft also genau so weit, wie der Song gespielt hat - Pause
+       haelt ihn an, Seeken springt mit. */
+    function syncLyrics() {
+      if (!lyricsBox || !lyricsInner || reduceMotion) return;
+      var travel = lyricsInner.scrollHeight - lyricsBox.clientHeight;
+      if (travel <= 0) return;
+      var p = duration ? Math.min(1, Math.max(0, audio.currentTime / duration)) : 0;
+      lyricsInner.style.transform = "translate3d(0," + (-p * travel).toFixed(1) + "px,0)";
     }
 
     function render() {
@@ -51,6 +79,87 @@
         var pct = duration ? (audio.currentTime / duration) * 100 : 0;
         fill.style.width = pct.toFixed(2) + "%";
       }
+      syncLyrics();
+    }
+
+    /* ---- Wellenform -------------------------------------------------------
+       AudioContext wird erst beim ersten Abspielen erzeugt (Browser
+       erlauben das ohne Nutzergeste nicht) und das Element nur EINMAL an
+       den Analyser gehaengt - createMediaElementSource darf pro <audio>
+       nicht zweimal aufgerufen werden. */
+    var ctx = null;
+    var analyser = null;
+    var freq = null;
+    var raf = 0;
+    var fallbackT = 0;
+
+    function ensureAnalyser() {
+      if (analyser || !bars.length) return;
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      try {
+        ctx = new AC();
+        var src = ctx.createMediaElementSource(audio);
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;                 // 32 Frequenz-Baender
+        analyser.smoothingTimeConstant = .76;  // ruhigerer Verlauf
+        src.connect(analyser);
+        analyser.connect(ctx.destination);
+        freq = new Uint8Array(analyser.frequencyBinCount);
+      } catch (e) {
+        /* Ohne Analyser (z. B. strenge CORS-Regeln bei file://) bleibt die
+           Wellenform flach - besser als eine Fake-Animation. */
+        analyser = null;
+        ctx = null;
+      }
+    }
+
+    function setBarHeight(i, v) {
+      var h = (4 + Math.pow(v, 1.35) * 96).toFixed(1) + "%";
+      bars[i].style.height = h;
+    }
+
+    function tick() {
+      raf = 0;
+      var n = bars.length;
+      if (analyser && freq) {
+        analyser.getByteFrequencyData(freq);
+        /* Die Baender auf die Balken verteilen: tiefe Frequenzen links,
+           hohe rechts. Die letzten Baender sind meist leer (kein
+           Nutzsignal) und werden deshalb nicht bis zum Rand gestreckt. */
+        var usable = Math.max(6, Math.floor(freq.length * .82));
+        for (var i = 0; i < n; i++) {
+          var bin = Math.min(usable - 1, Math.round((i / (n - 1)) * (usable - 1)));
+          setBarHeight(i, freq[bin] / 255);
+        }
+      } else {
+        /* Kein Analyser verfuegbar: ruhiger, aber erkennbar laufender
+           Puls statt einer eingefrorenen Linie. */
+        fallbackT += .06;
+        for (var j = 0; j < n; j++) {
+          var w = .5 + .5 * Math.sin(fallbackT + j * .55);
+          setBarHeight(j, w * .55);
+        }
+      }
+      if (!audio.paused && !audio.ended) raf = requestAnimationFrame(tick);
+    }
+
+    function startVisuals() {
+      if (reduceMotion) return;
+      if (wave) wave.classList.add("is-live");
+      ensureAnalyser();
+      if (ctx && ctx.state === "suspended") {
+        var pr = ctx.resume();
+        if (pr && pr.catch) pr.catch(function () {});
+      }
+      if (!raf) raf = requestAnimationFrame(tick);
+    }
+
+    function stopVisuals() {
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      if (wave) wave.classList.remove("is-live");
+      /* Ruhezustand: flache Linie (CSS-Hoehe 3px), also Inline-Werte weg. */
+      bars.forEach(function (b) { b.style.height = ""; });
     }
 
     button.addEventListener("click", function () {
@@ -64,8 +173,14 @@
       }
     });
 
-    audio.addEventListener("play", function () { setPlaying(true); });
-    audio.addEventListener("pause", function () { setPlaying(false); });
+    audio.addEventListener("play", function () {
+      setPlaying(true);
+      startVisuals();
+    });
+    audio.addEventListener("pause", function () {
+      setPlaying(false);
+      stopVisuals();
+    });
 
     audio.addEventListener("loadedmetadata", function () {
       duration = audio.duration || 0;
@@ -79,8 +194,11 @@
       render();
     });
 
+    window.addEventListener("resize", syncLyrics);
+
     setPlaying(false);
     render();
+    syncLyrics();
   }
 
   function initVideoAudio() {
