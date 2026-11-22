@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/imageviewer.css">
   <link rel="stylesheet" href="css/music.css">
   <link rel="stylesheet" href="css/topbar.css">
+  <link rel="stylesheet" href="css/tools.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Zum Inhalt springen</a>
@@ -225,7 +226,7 @@
     <section class="collage" id="collage" aria-label="Video-Collage: Arbeiten aus allen Projekten">
       <div class="collage__head" data-collage-head>
         <h2 class="collage__title reveal" data-collage-reveal><span class="reveal__inner">kampagnenmotive, e-commerce, UGC</span></h2>
-        <div class="collage__tools fade-in" data-collage-reveal role="list" aria-label="Eingesetzte Tools"><div class="collage__toolrow" role="listitem"><span class="collage__tool">ChatGPT</span><span class="collage__tool">Midjourney</span><span class="collage__tool">Nano Banana</span><span class="collage__tooluse">concept &amp; image generation</span></div><div class="collage__toolrow" role="listitem"><span class="collage__tool">Suno</span><span class="collage__tool">ElevenLabs</span><span class="collage__tooluse">audio &amp; music generation</span></div><div class="collage__toolrow" role="listitem"><span class="collage__tool">RunwayML</span><span class="collage__tool">Seedance</span><span class="collage__tool">Midjourney</span><span class="collage__tooluse">video generation</span></div><div class="collage__toolrow" role="listitem"><span class="collage__tool">Adobe Premiere Pro</span><span class="collage__tool">CapCut</span><span class="collage__tooluse">video cut</span></div></div>
+        <div class="collage__tools fade-in" data-collage-reveal role="list" aria-label="Eingesetzte Tools"><div class="collage__toolrow" role="listitem"><button type="button" class="collage__tool" data-tool="ChatGPT">ChatGPT</button><button type="button" class="collage__tool" data-tool="Midjourney">Midjourney</button><button type="button" class="collage__tool" data-tool="Nano Banana">Nano Banana</button><span class="collage__tooluse">concept &amp; image generation</span></div><div class="collage__toolrow" role="listitem"><button type="button" class="collage__tool" data-tool="Suno">Suno</button><button type="button" class="collage__tool" data-tool="ElevenLabs">ElevenLabs</button><span class="collage__tooluse">audio &amp; music generation</span></div><div class="collage__toolrow" role="listitem"><button type="button" class="collage__tool" data-tool="RunwayML">RunwayML</button><button type="button" class="collage__tool" data-tool="Seedance">Seedance</button><button type="button" class="collage__tool" data-tool="Midjourney">Midjourney</button><span class="collage__tooluse">video generation</span></div><div class="collage__toolrow" role="listitem"><button type="button" class="collage__tool" data-tool="Adobe Premiere Pro">Adobe Premiere Pro</button><button type="button" class="collage__tool" data-tool="CapCut">CapCut</button><span class="collage__tooluse">video cut</span></div></div>
       </div>
       <!-- Slots werden von js/collage.js aus dem JSON unten gerendert -->
       <div data-collage></div>
@@ -496,7 +497,7 @@
                aria-label="Video-Collage: Arbeiten aus allen Projekten – eggo">
         <div class="collage__head" data-collage-head>
           <h2 class="collage__title reveal" data-collage-reveal><span class="reveal__inner">social media assets</span></h2>
-          <div class="collage__tools fade-in" data-collage-reveal role="list" aria-label="Eingesetzte Tools"><div class="collage__toolrow" role="listitem"><span class="collage__tool">ChatGPT</span><span class="collage__tool">Midjourney</span><span class="collage__tool">Nano Banana</span><span class="collage__tooluse">concept &amp; image generation</span></div><div class="collage__toolrow" role="listitem"><span class="collage__tool">RunwayML</span><span class="collage__tool">Seedance</span><span class="collage__tooluse">video generation</span></div><div class="collage__toolrow" role="listitem"><span class="collage__tool">Adobe Premiere Pro</span><span class="collage__tool">CapCut</span><span class="collage__tooluse">video cut</span></div></div>
+          <div class="collage__tools fade-in" data-collage-reveal role="list" aria-label="Eingesetzte Tools"><div class="collage__toolrow" role="listitem"><button type="button" class="collage__tool" data-tool="ChatGPT">ChatGPT</button><button type="button" class="collage__tool" data-tool="Midjourney">Midjourney</button><button type="button" class="collage__tool" data-tool="Nano Banana">Nano Banana</button><span class="collage__tooluse">concept &amp; image generation</span></div><div class="collage__toolrow" role="listitem"><button type="button" class="collage__tool" data-tool="RunwayML">RunwayML</button><button type="button" class="collage__tool" data-tool="Seedance">Seedance</button><span class="collage__tooluse">video generation</span></div><div class="collage__toolrow" role="listitem"><button type="button" class="collage__tool" data-tool="Adobe Premiere Pro">Adobe Premiere Pro</button><button type="button" class="collage__tool" data-tool="CapCut">CapCut</button><span class="collage__tooluse">video cut</span></div></div>
         </div>
         <!-- Slots werden von js/collage.js aus #collage-data-eggo gerendert -->
         <div data-collage="eggo"></div>
@@ -924,6 +925,7 @@ is all we've got</pre>
   <script src="js/serum-phases.js"></script>
   <script src="js/serum-campaign.js"></script>
   <script src="js/music.js"></script>
+  <script src="js/tools.js"></script>
   <script>
     // ComfyUI-Node-Ansicht (virtual try-on) aus dem normalisierten JSON rendern.
     // Ersetzt das frühere statische comfyui.png in Abschnitt 5.

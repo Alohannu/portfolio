@@ -161,301 +161,120 @@
 
   update();
 
-  /* ---------- Projekt 2: Kampagnenvideo (Scrubbing wie im Hero) ----------
-     Ablauf:
-       1. Waehrend des Schwenks (track.js schiebt die Buehne herein) steht
-          das erste Bild still, die Ueberschrift liegt darueber.
-       2. Sobald die Ansicht angekommen ist, laeuft das Video mit Ton von
-          vorn - nicht erst beim Scrollen. Es laeuft weiter, auch wenn das
-          Scrollen anhaelt ("Ton ist einfach an").
-          Beim Vorwaerts-Scrollen durch die Strecke wird die Abspielzeit am
-          Scrollfortschritt gehalten, aber nur bei groesserer Abweichung
-          (0,8 s) nachgezogen - staendiges Seeking wuerde den Ton abreissen
-          lassen (wie im Original "Ton laeuft mit").
-          Rueckwaerts bleibt es still und das Bild folgt dem Scroll.
-       3. Am Ende der Strecke laeuft das Video mit Ton weiter - nur wenn
-          der Scrub es nicht bis dorthin mitgenommen hat, von vorn.
-
-     Unterschied zum Hero: dort sind es zwei Videos (intro.mp4 wird
-     gescrubbt, intro-video.mp4 spielt danach). Hier gibt es nur ein
-     Kampagnenvideo; es wird gescrubbt und danach abgespielt.
-
-     Damit nie zwei Videos gleichzeitig Ton machen, schaltet der Schwenk
-     das jeweils andere stumm (siehe track.js -> window.SerumVideo).
-
-     WARUM der Ton nicht mehr am Scrollen haengt: der Browser erlaubt Ton
-     ohne Nutzergeste gar nicht (Autoplay-Politik). Haengt er zusaetzlich
-     am Scrollen, ist er praktisch "durchgehend aus" - vor allem, wenn die
-     erste Geste verbraucht ist, bevor diese Ansicht im Bild steht. */
+  /* ---------- Projekt 2: Titelvideo (Aloe Vera / Skincare) ----------------
+     Das Titelvideo laeuft von selbst - nicht mehr am Scrollen haengend.
+     Beim Hereinschwenken der Ansicht startet es stumm und in Schleife,
+     sobald es im Bild steht; beim Verlassen der Ansicht pausiert es.
+     Ton schaltet der Browser ohne Nutzergeste nicht frei, deshalb wird er
+     beim ersten Klick/Tastendruck/Touch nachgeholt (wie im Hero).
+     Die Ueberschrift "face serum" blendet beim Weiterscrollen aus.
+     js/track.js ruft weiterhin window.SerumVideo.setActive/setAudible auf,
+     damit nur die sichtbare Ansicht Ton hat. */
   var serumHero = document.getElementById("serumHero");
   var serumOverlay = document.getElementById("serumOverlay");
   var serumVideo = document.getElementById("serumVideo");
   var serumToggle = document.getElementById("serumSoundToggle");
 
   if (serumVideo) {
-    /* Scrollstrecke des Scrubbings in Viewport-Hoehen - wie SCRUB_VH des
-       Heros oben. Muss zur Hoehe von .hero-wrapper--serum passen
-       (css/track.css: 500vh = 200vh Scrubbing + Halten). */
-    var SERUM_SCRUB_VH = 2;
-
-    var serumProgress = 0;         // 0 = Stillstand, 1 = durchgescrubbt
-    var serumPanelActive = false;  // Ansicht 2 ist eingeschwenkt (track.js)
-    var serumInView = false;       // Hero liegt im Viewport
-    var serumArrived = false;      // Schwenk vorbei: die Ansicht steht still
-    var serumPlaying = false;      // Play-Phase nach dem Scrubbing laeuft
-    var serumLastTime = -1;        // zuletzt gesetzte Scrub-Zeit
+    var serumActive = true;          // Ansicht 2 ist eingeschwenkt (track.js)
+    var serumUserChoseMute = false;  // Nutzer hat selbst stumm geschaltet
     var serumTicking = false;
-    var serumUserChoseMute = false;
-    var serumDir = 0;              // Scrollrichtung: 0 = noch kein Scroll-Event
-    var serumLastY = window.pageYOffset;
-    var serumDirTimer = 0;         // setzt die Richtung nach dem Scrollen zurueck
-    var serumScrubCarried = false; // der Vorwaerts-Scrub hat das Video mitgenommen
-
-    /* So lange nach dem letzten Scroll-Event gilt die Richtung noch. Danach
-       ist sie wieder 0 und das Video laeuft weiter mit Ton - auch wenn
-       zuletzt rueckwaerts gescrollt wurde. */
-    var SERUM_DIR_IDLE_MS = 150;
-
-    /* Hat der Browser schon eine echte Nutzergeste gesehen? Nur dann darf
-       ein play() mit Ton ueberhaupt gelingen - ohne Geste lehnt der Browser
-       es ab. Ohne diese Abfrage wuerde jedes Scroll-Event unnoetig ein
-       stummes play() versuchen und gleich wieder stumm schalten. */
-    var serumActivated = false;
-
-    function serumUserActivated() {
-      if (serumActivated) return true;
-      var ua = navigator.userActivation;
-      if (ua && ua.hasBeenActive) { serumActivated = true; return true; }
-      return false;
-    }
-
-    /* Ton nachholen, wenn er nur wegen der Autoplay-Politik aus ist (der
-       Nutzer hat ihn nie selbst abgeschaltet). WARUM nicht nur einmal beim
-       ersten Klick: der stumme Rueckfall in serumPlay() kann eintreten,
-       BEVOR diese Ansicht aktiv ist - dann war die erste Geste schon
-       verbraucht und der Ton blieb fuer den Rest des Besuchs aus
-       ("das Video laeuft, der Ton geht nicht los"). */
-    function serumTryUnmute() {
-      if (serumUserChoseMute || !serumVideo.muted) return false;
-      if (!serumUserActivated()) return false;
-      serumVideo.muted = false;
-      serumSyncToggle();
-      return true;
-    }
 
     function serumSyncToggle() {
-      if (serumToggle) {
-        serumToggle.setAttribute("aria-pressed", serumVideo.muted ? "true" : "false");
-      }
+      if (serumToggle) serumToggle.setAttribute("aria-pressed", serumVideo.muted ? "true" : "false");
     }
 
-    /* Stumm schalten darf nur ein echtes Autoplay-Verbot (NotAllowedError).
-       Ein AbortError dagegen heisst: das eigene pause() hat den play()-
-       Versuch unterbrochen (der Scrub pausiert bei jedem Rueckwaerts-Schritt
-       und beim Scrollstopp). Wird auch das als Autoplay-Verbot gewertet,
-       bleibt das Video dauerhaft stumm - auf 390x844 war der Ton am
-       Streckenende genau deshalb aus, obwohl das Video lief und im Bild
-       stand. */
-    function serumPlay() {
-      var pr = serumVideo.play();
-      if (pr && pr.catch) {
-        pr.catch(function (e) {
-          if (e && e.name && e.name !== "NotAllowedError") return;
-          if (!serumVideo.muted) {
-            serumVideo.muted = true;
-            serumSyncToggle();
-            safePlay(serumVideo);
-          }
-        });
-      }
+    /* Ton erst, wenn der Browser eine echte Nutzergeste gesehen hat. */
+    function serumTryUnmute() {
+      if (serumUserChoseMute || !serumVideo.muted) return;
+      var ua = navigator.userActivation;
+      if (!(ua && ua.hasBeenActive)) return;
+      serumVideo.muted = false;
+      serumSyncToggle();
     }
 
-    /* Vorwaerts mitten in der Scrub-Strecke: die Abspielzeit wird hier am
-       Scrollfortschritt gehalten (Ton laeuft dabei weiter). */
-    function serumScrubbing() {
-      return serumDir > 0 && serumProgress > 0 && serumProgress < 1;
+    function serumInViewport() {
+      if (!serumHero) return false;
+      var r = serumHero.getBoundingClientRect();
+      return r.bottom > 0 && r.top < (window.innerHeight || document.documentElement.clientHeight);
     }
 
-    /* Ton und Bild laufen, sobald die Ansicht angekommen ist - auch ohne
-       Scrollen und auch nach einem Scrollstopp ("Ton ist einfach an").
-       Waehrend des Schwenks (noch nicht angekommen) und beim Rueckwaerts-
-       Scrollen bleibt das Bild stehen bzw. folgt still dem Scroll. */
-    function serumShouldPlay() {
-      if (!serumPanelActive || !serumInView || document.hidden) return false;
-      if (!serumArrived) return false;
-      /* Nur beim Vorwaerts-Scrollen: Stopp = Bild und Ton halten an,
-         rueckwaerts folgt das Bild still dem Scroll (Scrub, kein Ton). */
-      return serumDir > 0;
-    }
-
+    /* Spielt nur, wenn die Ansicht aktiv ist und der Hero im Bild steht -
+       sonst wuerde das Video unsichtbar weiterlaufen, waehrend Track 1 zu
+       sehen ist. */
     function serumSyncPlayback() {
-      if (serumShouldPlay()) {
-        serumTryUnmute();
-        if (serumVideo.paused) serumPlay();
+      var shouldPlay = serumActive && serumInViewport() && !document.hidden;
+      if (shouldPlay) {
+        if (serumVideo.paused) {
+          var pr = serumVideo.play();
+          if (pr && pr.catch) pr.catch(function () {});
+        }
       } else if (!serumVideo.paused) {
         serumVideo.pause();
       }
     }
 
+    /* Overlay ausblenden, sobald man den Hero weiterscrollt. Gemessen wird
+       ab der Ankunftsposition von Ansicht 2 (TurnTrack.tops[1]), nicht ab
+       der Flow-Position des Wrappers: durch den Schwenk liegt die Ansicht
+       im Dokument um die Schwenkstrecke hoeher als ihre Ankunft. */
     function serumUpdate() {
-      serumTicking = false;
-
-      /* Eine Layout-Abfrage fuer alles: Fortschritt und Sichtbarkeit. */
-      var rect = serumHero ? serumHero.getBoundingClientRect() : null;
-      var top = rect ? rect.top : 0;
       if (reduceMotion) {
-        serumProgress = top <= -1 ? 1 : 0;
-        serumArrived = top <= -1;
-      } else {
-        /* Der Schwenk (js/track.js) schiebt die Buehne schon eine
-           Schwenkstrecke weit nach oben, waehrend sie noch seitlich
-           hereinkommt. Diese Strecke darf das Video nicht mit-scrubben:
-           sonst waere das Titelbild beim Ankommen der Ansicht bereits zur
-           Haelfte ausgeblendet. Die ersten `pan` Pixel halten deshalb das
-           erste Bild - erst danach ist die Ansicht "angekommen" und das
-           Video startet mit Ton. */
-        var panHold = window.TurnTrack && typeof window.TurnTrack.pan === "number"
-          ? window.TurnTrack.pan
-          : 0;
-        var travelled = -top - panHold;
-        serumArrived = travelled >= -4;
-        serumProgress = clamp(travelled / (window.innerHeight * SERUM_SCRUB_VH), 0, 1);
+        if (serumOverlay) serumOverlay.style.opacity = "1";
+        return;
       }
-      serumInView = !!rect && rect.bottom > 0 && top < window.innerHeight;
-
-      /* Ueberschrift wie im Hero ueber die ersten 60 % des Weges ausblenden */
       if (serumOverlay) {
-        serumOverlay.style.opacity = reduceMotion
-          ? (serumProgress >= 1 ? "0" : "1")
-          : String(1 - clamp(serumProgress / FADE_END, 0, 1));
-      }
-
-      if (serumProgress >= 1) {
-        if (!serumPlaying) {
-          /* Scrub-Weg zu Ende: das Video laeuft mit Ton weiter. Nur wenn es
-             noch steht (Sprung, Deep-Link oder rueckwaerts gescrollt),
-             beginnt es von vorn - laeuft es schon, waere der Sprung auf 0
-             ein hoerbarer Aussetzer. */
-          serumPlaying = true;
-          serumScrubCarried = false;
-        }
-      } else {
-        serumPlaying = false;
-        var d = serumVideo.duration;
-        if (d && isFinite(d)) {
-          var t = serumProgress * d;
-          if (serumScrubbing()) {
-            /* Vorwaerts: Ton laeuft mit. Die Abspielzeit folgt dem Scroll
-               nur bei groesserer Abweichung - staendiges Seeking wuerde den
-               Ton abreissen lassen (wie im Original: erst ab 0,8 s). */
-            serumScrubCarried = true;
-            if (Math.abs(t - serumVideo.currentTime) > 0.8) {
-              serumVideo.currentTime = t;
-            }
-            serumLastTime = t;
-          } else if (serumDir < 0) {
-            /* Rueckwaerts: kein Ton, das Bild folgt dem Scroll Frame fuer
-               Frame (wie bisher). Steht der Scroll wieder (serumDir 0),
-               laeuft das Video an dieser Stelle weiter - mit Ton. */
-            if (!serumVideo.paused) serumVideo.pause();
-            if (Math.abs(t - serumLastTime) > 0.01) {
-              serumVideo.currentTime = t;
-              serumLastTime = t;
-            }
-          }
-        } else if (!serumVideo.paused) {
-          serumVideo.pause();
-        }
-      }
-      serumSyncPlayback();
-    }
-
-    function serumRequestUpdate() {
-      if (!serumTicking) {
-        serumTicking = true;
-        requestAnimationFrame(serumUpdate);
+        var h = window.innerHeight || document.documentElement.clientHeight;
+        var arrival = 0;
+        var tops = window.TurnTrack && window.TurnTrack.instance && window.TurnTrack.instance.tops;
+        if (tops && tops.length > 1) arrival = tops[1];
+        var p = Math.min(1, Math.max(0, ((window.pageYOffset || 0) - arrival) / (h * 0.5)));
+        serumOverlay.style.opacity = String(1 - p);
       }
     }
 
-    /* Scrollrichtung merken: vorwaerts haelt die Abspielzeit am Scroll,
-       rueckwaerts folgt das Bild still dem Scroll. Ohne Scroll-Event bleibt
-       serumDir 0 - dann laeuft das Video trotzdem, sobald die Ansicht
-       angekommen ist ("Ton ist einfach an"). */
     function serumOnScroll() {
-      var y = window.pageYOffset;
-      if (y !== serumLastY) {
-        serumDir = y > serumLastY ? 1 : -1;
-        serumLastY = y;
-      }
-      /* Richtung nach dem Scrollen zuruecksetzen: sonst bliebe der Ton aus,
-         nur weil zuletzt rueckwaerts gescrollt wurde - die Ansicht steht
-         dann sichtbar da und das Video waere still. */
-      clearTimeout(serumDirTimer);
-      serumDirTimer = setTimeout(function () {
-        serumDir = 0;
-        serumRequestUpdate();
-      }, SERUM_DIR_IDLE_MS);
-      serumRequestUpdate();
-    }
-
-    window.addEventListener("scroll", serumOnScroll, { passive: true });
-    window.addEventListener("resize", serumRequestUpdate);
-    serumVideo.addEventListener("loadedmetadata", serumRequestUpdate);
-
-    /* iOS liefert beim currentTime-Seeking erst Frames, wenn das Video
-       einmal angespielt wurde - wie beim Hero-Video. */
-    if (!reduceMotion) {
-      window.addEventListener("touchstart", function () {
-        var pr = serumVideo.play();
-        if (pr && pr.then) {
-          pr.then(function () { serumVideo.pause(); serumRequestUpdate(); }).catch(function () {});
-        }
-      }, { passive: true, once: true });
-    }
-
-    if (serumToggle) {
-      serumToggle.addEventListener("click", function () {
-        serumVideo.muted = !serumVideo.muted;
-        /* "selbst stumm geschaltet" gilt nur, wenn der Klick wirklich stumm
-           macht. Dreht der Klick den Ton ein, bleibt das automatische
-           Einschalten scharf - sonst waere der Ton nach einem Klick, der
-           ihn einschalten sollte, fuer den Rest des Besuchs aus. */
-        serumUserChoseMute = serumVideo.muted;
-        serumSyncToggle();
+      if (serumTicking) return;
+      serumTicking = true;
+      requestAnimationFrame(function () {
+        serumTicking = false;
+        serumUpdate();
+        serumSyncPlayback();
       });
     }
 
-    /* Ton ist Standard - genau wie beim Hero-Video in Track 1: das Video
-       wird sofort auf muted = false gesetzt und nicht erst beim Einschwenken
-       der Ansicht. Blockiert der Browser Ton ohne Nutzergeste, laeuft es
-       stumm und wird beim ersten Klick/Tastendruck/Touch eingeschaltet. */
     serumVideo.muted = true;
     serumSyncToggle();
-    serumTryUnmute();
 
-    /* Wie in Track 1, aber nicht nur beim allerersten Mal: der Ton wird bei
-       JEDER Geste nachgeholt. Sonst blieb er stumm, wenn die erste Geste
-       verbraucht war, bevor diese Ansicht im Bild stand. */
+    /* Ton bei jeder Geste nachholen - nicht nur beim ersten Mal: die erste
+       Geste kann verbraucht sein, bevor diese Ansicht im Bild steht. */
     ["pointerdown", "keydown", "touchend"].forEach(function (evt) {
       window.addEventListener(evt, function serumEnableSound(e) {
-        serumActivated = true;
         if (serumToggle && serumToggle.contains(e.target)) return;
         serumTryUnmute();
       }, { passive: true });
     });
 
+    if (serumToggle) {
+      serumToggle.addEventListener("click", function () {
+        serumVideo.muted = !serumVideo.muted;
+        serumUserChoseMute = serumVideo.muted;
+        serumSyncToggle();
+      });
+    }
+
+    window.addEventListener("scroll", serumOnScroll, { passive: true });
+    window.addEventListener("resize", serumOnScroll);
     document.addEventListener("visibilitychange", serumSyncPlayback);
+    if (serumVideo.readyState >= 2) serumSyncPlayback();
+    else serumVideo.addEventListener("loadeddata", serumSyncPlayback, { once: true });
 
-    serumSyncToggle();
-
-    /* Von track.js aufgerufen, wenn die Ansicht gewechselt wird: die
-       sichtbare Ansicht darf spielen und Ton haben, die andere nicht. */
+    /* Von track.js aufgerufen, wenn die Ansicht gewechselt wird. */
     window.SerumVideo = {
       setActive: function (on) {
-        serumPanelActive = !!on;
-        /* Position sofort neu messen: der Schwenk setzt scrollY auf 0,
-           serumProgress stammte aber noch von der alten Scrollposition. */
+        serumActive = !!on;
         serumUpdate();
+        serumSyncPlayback();
       },
       setAudible: function (on) {
         if (!on && !serumVideo.muted) {
@@ -468,6 +287,7 @@
     };
 
     serumUpdate();
+    serumSyncPlayback();
   }
 
   /* ---------- Morph-Reveal (wiedervereinbar, Initialisierung über [data-morph]) ---------- */

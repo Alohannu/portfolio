@@ -383,7 +383,14 @@
        Ansicht 1 daneben. Ein resize-Event laesst sie neu rechnen. */
     try { window.dispatchEvent(new Event("resize")); } catch (e) {}
 
-    var api = { goTo: goTo, get index() { return current; } };
+    var api = {
+      goTo: goTo,
+      get index() { return current; },
+      /* Oberkante jeder Ansicht in Dokumentkoordinaten: js/script.js
+         braucht sie fuer die Einblend-Logik der Titel-Overlays (die
+         Ansichten liegen wegen des Schwenks nicht auf ihrer Flow-Position). */
+      get tops() { return tops.slice(); }
+    };
 
     /* Kennzahlen der laufenden Instanz auch am Namensraum: praktisch fuer
        Debug und Verifikation (window.TurnTrack.index). */

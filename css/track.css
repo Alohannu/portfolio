@@ -137,11 +137,11 @@
    schwarzen Flaeche. Jetzt: skincare.mp4 (1112x834, quer) mit cover. */
 .hero-wrapper--serum {
   position: relative;
-  /* Dieselbe Strecke wie .hero-wrapper in Track 1: 200vh Scrubbing
-     (SCRUB_VH in js/script.js) + 300vh, in denen die Stage gepinnt
-     bleibt, waehrend das Video laeuft und die naechste Section
-     darueberfaehrt. */
-  height: 500vh;
+  /* Kein Scrubbing mehr: das Titelvideo laeuft von selbst (js/script.js).
+     100vh Stage + 100vh, in denen die gepinnte Stage stehen bleibt, bis
+     die naechste Section darueberfaehrt - genug, um Titel und Video zu
+     sehen, ohne die Seite zu strecken. */
+  height: 200vh;
 }
 
 /* Wie der Hero in Track 1: die Stage bleibt stehen, waehrend die Seite
@@ -267,21 +267,35 @@
   letter-spacing: -.02em;
 }
 
-/* ---------- Tab-Leiste ---------- */
+/* ---------- Tab-Leiste ----------
+   Die sechs Phasen sind klickbar - das soll man auch sehen. Die Leiste
+   steht deshalb als eigener "Schalter-Block" (heller Grund, Rahmen,
+   Innenabstand) vom Text ab, und jeder Tab hat eine sichtbare Pille mit
+   Schatten. Aktive Phase: schwarz gefuellt mit farbigem Ring (Akzent aus
+   der Marke), Hover/Fokus: Tab hebt sich leicht an. */
 .phase-tabs {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: clamp(24px, 4vh, 44px);
+  width: -moz-fit-content;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto clamp(24px, 4vh, 44px);
+  padding: 10px 12px;
+  background: #f5f2ee;
+  border: 1px solid #e3ded8;
+  border-radius: 26px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
 }
 
 .phase-tab {
-  border: 1px solid #ddd9d5;
-  background: transparent;
-  color: #8d857c;
+  position: relative;
+  border: 1px solid #d0cac3;
+  background: #fff;
+  color: #554f48;
   border-radius: 999px;
-  padding: 8px 17px;
+  padding: 9px 18px;
   font-family: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -289,14 +303,38 @@
   text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color .2s ease, color .2s ease, background .2s ease;
+  box-shadow: 0 1px 2px rgba(17, 17, 17, .06);
+  transition: border-color .2s ease, color .2s ease, background .2s ease,
+              box-shadow .2s ease, transform .2s ease;
 }
 .phase-tab:hover,
-.phase-tab:focus-visible { border-color: #111; color: #111; }
+.phase-tab:focus-visible {
+  border-color: #111;
+  color: #111;
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(17, 17, 17, .12);
+}
+.phase-tab:focus-visible {
+  outline: 2px solid #5257b0;
+  outline-offset: 2px;
+}
+.phase-tab:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(17, 17, 17, .08); }
 .phase-tab.is-active {
   border-color: #111;
   background: #111;
   color: #fff;
+  box-shadow: 0 4px 12px rgba(17, 17, 17, .22), 0 0 0 3px rgba(82, 87, 176, .28);
+}
+.phase-tab.is-active:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(17, 17, 17, .26), 0 0 0 3px rgba(82, 87, 176, .34); }
+
+@media (prefers-reduced-motion: reduce) {
+  .phase-tab,
+  .phase-tab.is-active:hover { transition: none; transform: none; }
+}
+@media (max-width: 767px) {
+  .phase-tabs { border-radius: 20px; padding: 8px 10px; }
+  .phase-tab { padding: 8px 14px; font-size: 10px; }
 }
 
 /* ---------- Panel ---------- */
@@ -530,5 +568,5 @@
      js/script.js springt beim Hero direkt auf das Ende; der Serum-Hero
      braucht deshalb nur die Pin-Strecke wie der Hero in Track 1
      (style.css: .hero-wrapper { height: 300vh }). */
-  .hero-wrapper--serum { height: 300vh; }
+  .hero-wrapper--serum { height: 200vh; }
 }

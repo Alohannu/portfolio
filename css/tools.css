@@ -1,0 +1,164 @@
+/* ==========================================================================
+   Tool-Pillen: klickbar + Dialog mit Einsatz-Infos
+
+   Die Pillen in den Collage-Abschnitten ("ChatGPT", "Midjourney", ...)
+   sehen aus wie Etiketten, sind aber Knoepfe: ein Klick oeffnet einen
+   Dialog mit einer kurzen Beschreibung, wofuer das Tool bzw. Modell im
+   Projekt verwendet wurde (js/tools.js).
+
+   Die Grundform der Pille kommt aus css/collage.css; hier nur der
+   Button-Reset und die Interaktionszustaende, damit die Pille beim
+   Ueberfahren/Fokussieren sichtbar "klickbar" wirkt.
+   ========================================================================== */
+
+.collage__tool {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid transparent;
+  font-family: inherit;
+  line-height: 1.15;
+  cursor: pointer;
+  transition: background-color .18s ease, color .18s ease,
+              border-color .18s ease, transform .18s ease;
+}
+
+.collage__tool:hover,
+.collage__tool:focus-visible {
+  background: #f4f1ee;
+  border-color: #f4f1ee;
+  color: #111;
+  transform: translateY(-1px);
+}
+
+.collage__tool:focus-visible {
+  outline: 2px solid #9fb4ff;
+  outline-offset: 2px;
+}
+
+.collage__tool:active { transform: translateY(0); }
+
+/* ---------- Dialog ---------- */
+.tool-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100svh - 48px);
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 20px;
+  background: #121212;
+  color: #f2f0ed;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .55);
+  overflow: hidden;
+}
+
+.tool-dialog::backdrop {
+  background: rgba(0, 0, 0, .62);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.tool-dialog[open] {
+  animation: tool-dialog-in .22s ease-out;
+}
+
+@keyframes tool-dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+.tool-dialog__inner {
+  padding: clamp(20px, 3vw, 30px);
+  display: flex;
+  flex-direction: column;
+  gap: .85rem;
+}
+
+.tool-dialog__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tool-dialog__kicker {
+  margin: 0;
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .55);
+}
+
+.tool-dialog__close {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 999px;
+  background: transparent;
+  color: #f2f0ed;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .18s ease, border-color .18s ease;
+}
+
+.tool-dialog__close:hover,
+.tool-dialog__close:focus-visible {
+  background: rgba(255, 255, 255, .1);
+  border-color: rgba(255, 255, 255, .42);
+}
+
+.tool-dialog__close:focus-visible {
+  outline: 2px solid #9fb4ff;
+  outline-offset: 2px;
+}
+
+.tool-dialog__name {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+}
+
+.tool-dialog__role {
+  margin: 0;
+  font-size: .66rem;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #9fb4ff;
+}
+
+.tool-dialog__text {
+  margin: 0;
+  font-size: clamp(.92rem, 1.1vw, 1rem);
+  line-height: 1.6;
+  color: rgba(242, 240, 237, .84);
+}
+
+.tool-dialog__foot {
+  margin: .2rem 0 0;
+  font-size: .68rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .42);
+}
+
+@media (max-width: 767px) {
+  .tool-dialog__inner { gap: .7rem; }
+  .tool-dialog__text { font-size: .92rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-dialog[open] { animation: none; }
+  .collage__tool { transition: none; }
+  .collage__tool:hover,
+  .collage__tool:focus-visible { transform: none; }
+}
