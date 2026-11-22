@@ -947,8 +947,12 @@
        Klick gibt den Weg zum Photo Studio frei, damit man die Drehung nicht
        beim Durchscrollen verpasst. */
     flipBtn.classList.toggle("is-gate", front);
-    if (flipBtnLabel) flipBtnLabel.textContent = isBack ? "Zurück zum Graphen"
-                                                        : (front ? "Weiter scrollen" : "Zum Photo Studio");
+    /* Die Sprachseite entscheidet ueber die Beschriftung: index-engl.html
+       setzt <html lang="en">. */
+    var isEn = document.documentElement.lang === "en";
+    if (flipBtnLabel) flipBtnLabel.textContent = isBack ? (isEn ? "Back to graph" : "Zurück zum Graphen")
+                                                        : (front ? (isEn ? "Continue scrolling" : "Weiter scrollen")
+                                                                 : (isEn ? "To Photo Studio" : "Zum Photo Studio"));
     if (flipBtnArrow) flipBtnArrow.textContent = isBack ? "←" : (front ? "↓" : "→");
     /* Verlaesst man den Graph-Ende-Zustand, wird das Tor wieder geschlossen
        (zurueck im Graphen oder auf der anderen Seite: beim naechsten

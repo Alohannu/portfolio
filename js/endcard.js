@@ -9,6 +9,7 @@
   "use strict";
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var isEn = document.documentElement.lang === "en";
 
   /* ---------- Wortmarke auf die Spaltenbreite einpassen ------------------
      Die Referenz setzt ihre Wortmarke per JS auf 98 % der Spaltenbreite
@@ -71,7 +72,7 @@
 
       button.addEventListener("click", function () {
         var value = target.textContent.trim();
-        var done = function () { feedback("Kopiert", true); };
+        var done = function () { feedback(isEn ? "Copied" : "Kopiert", true); };
         var fail = function () {
           /* Fallback: Text markieren, dann execCommand. */
           try {
@@ -82,7 +83,7 @@
             sel.addRange(range);
             if (document.execCommand("copy")) { done(); return; }
           } catch (e) {}
-          feedback("Bitte manuell kopieren", false);
+          feedback(isEn ? "Please copy manually" : "Bitte manuell kopieren", false);
         };
 
         if (navigator.clipboard && navigator.clipboard.writeText) {
