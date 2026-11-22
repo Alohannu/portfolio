@@ -424,6 +424,70 @@
   line-height: 1;
 }
 
+/* ---------- Schmale Viewports: Mobile und Tablet --------------------------
+   Unter ~900px passen die drei Spalten nicht mehr nebeneinander: das Raster
+   ist mindestens 240+300+240px breit, dazu zwei Abstaende und das Padding -
+   die Buehne schneidet den Rest mit overflow:hidden ab (bei 390px lag die
+   Fortschrittsleiste zu 82 % ausserhalb des Viewports, der Songtext war
+   halb zu sehen). Deshalb wird hier einspaltig gestapelt: Werkzeug-Pillen,
+   Player mit Songtext, Concept-Video untereinander.
+
+   Zugleich faellt die Pin-Strecke weg - dieselbe Loesung wie bei
+   prefers-reduced-motion weiter unten. Eine gepinnte Buehne, die hoeher ist
+   als der Viewport, haelt ihren unteren Teil beim Scrollen fest: Leiste und
+   Songtext waeren dann nicht mehr erreichbar. Mit position:relative bleibt
+   die Section im normalen Fluss; js/track.js misst die neue Hoehe selbst
+   (measure() laeuft bei jedem Resize) und die Snap-Kanten bleiben gueltig.
+   Auf Viewports ueber 900px aendert das nichts. */
+@media (max-width: 900px) {
+  .music__pin { height: auto; }
+  .music__stage { position: relative; }
+
+  .music__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(18px, 3vw, 32px);
+    /* Oben Luft fuer die feste Topbar (bei 390px rund 47px hoch), sonst
+       liegt die erste Pillen-Reihe darunter. */
+    padding: clamp(62px, 12vw, 84px) clamp(16px, 4vw, 32px) clamp(28px, 6vw, 48px);
+  }
+
+  .music__tools {
+    gap: 10px;
+  }
+
+  /* Pillen etwas kompakter: Player und Songtext ruecken hoeher. */
+  .music__tool {
+    padding: 6px 16px 6px 6px;
+  }
+
+  .music__tool-name {
+    padding: 6px 12px;
+  }
+
+  /* Songtext-Fenster: feste, mobile-taugliche Hoehe statt 34vw. */
+  .music__lyrics {
+    height: clamp(240px, 46svh, 380px);
+  }
+
+  /* Hochformat-Video nicht auf volle Bildschirmhoehe laufen lassen
+     (object-fit: cover beschneidet, das Seitenverhaeltnis bleibt). */
+  .music__video {
+    max-height: 56svh;
+  }
+}
+
+/* Knapp ueber dem Umbruch: die drei Spalten brauchen 240+300+240px plus
+   Gaps und Padding, also rund 907px. Zwischen 901 und 960px passen sie
+   nur mit kleineren Abstaenden - sonst schneidet overflow:hidden die
+   dritte Spalte an. */
+@media (min-width: 901px) and (max-width: 960px) {
+  .music__grid {
+    gap: 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
 /* Wer Bewegung reduziert haben will, bekommt das Standbild: der Songtext
    bleibt lesbar (ohne Wanderung), die Wellenform steht still. js/music.js
    startet dafuer gar keine Visualisierung. */
