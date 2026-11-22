@@ -1,24 +1,32 @@
 /* ==========================================================================
-   Projekt-Ansichten: vier Sektionen untereinander, Pfeile statt Schwenk
+   Projekt-Track: vier Ansichten nebeneinander, Pfeile schieben seitlich
 
-   Aufbau (frueher anders, deshalb hier die Begruendung):
+   Aufbau:
 
-   Frueher lagen die vier Ansichten NEBENEINANDER im vierfach breiten
-   Track und wurden per transform: translateX() seitlich verschoben - die
-   Verschiebung haing an der Scrollposition, sodass Runterscrollen einen
-   horizontalen Schwenk ausloeste. Das war irritierend ("man scrollt runter
-   und die Seite faehrt zur Seite").
+     [ Ansicht 1 ][ Ansicht 2 ][ Ansicht 3 ][ Ansicht 4 ]   <- 400vw breite Spur
 
-   Jetzt stehen die vier Ansichten als normale Bloecke untereinander:
-   vertikal scrollen = durch die Projekte lesen, ohne jede Seitenbewegung.
-   Der Wechsel zum naechsten Projekt geht ueber die Pfeile links/rechts
-   (js/track.js -> goTo). Sie erscheinen nur an den Uebergaengen:
-     - Zurueck-Pfeil links: auf der ERSTEN Bildschirmseite eines Projekts
-       (nicht im ersten Projekt)
-     - Weiter-Pfeil rechts: auf der LETZTEN Bildschirmseite eines Projekts
-   Ein Klick springt weich an die Oberkante der Zielansicht und landet
-   dort exakt (Snap). Bleibt man beim freien Scrollen wenige Pixel vor
-   einer Ansichtsgrenze stehen, wird auf die Kante nachgezogen.
+   Die vier Ansichten stehen wie in der Live-Version nebeneinander in einer
+   400vw breiten Spur. Sichtbar ist immer genau eine: die Spur wird per
+   transform: translate3d(-i * 100vw, 0, 0) verschoben.
+
+   Was ANDERS ist als frueher: Die Verschiebung haengt NICHT mehr an der
+   Scrollposition (scroll-gescrubbter Schwenk). Frueher fuhr die Spur
+   mit, wenn man runterscrollte - dadurch wirkte das Scrollen wie eine
+   Seitwaertsbewegung. Jetzt scrollt die Seite nur noch vertikal, und die
+   Ansicht wechselt nur, wenn man es ausloest:
+
+     - Pfeil-Knoepfe links/rechts (css/viewnav.css)
+     - Pfeiltasten links/rechts
+     - freies Scrollen ueber eine Ansichtsgrenze hinweg
+
+   In allen drei Faellen faehrt die Spur animiert zur Zielansicht
+   (CSS-Transition auf .track, css/track.css) und rastet dort exact ein.
+
+   Damit die Scrollposition weiterhin eindeutig sagt, welche Ansicht
+   "dran" ist, bekommt jede Ansicht in der Scrollspur ihren eigenen
+   vertikalen Platz: Die Ansichten stehen im Dokument untereinander
+   (margin-top setzt dieses Script), obwohl sie visuell nebeneinander
+   liegen. So bleiben die sticky-Pins der Abschnitte unberuehrt.
 
    Oeffentliche API (unveraendert, damit topbar.js und die Pruef-Skripte
    weiterlaufen):
@@ -26,7 +34,7 @@
      window.TurnTrack.index            - aktive Ansicht (0 ... 3)
      window.TurnTrack.pan / .hold      - immer 0 (Reste der alten Mechanik;
                                           curtain.js und script.js lesen sie)
-     window.TurnTrack.instance.goTo(i) - Sprung in eine Ansicht
+     window.TurnTrack.instance.goTo(i) - Wechsel in eine Ansicht
      window.TurnTrack.instance.tops    - Oberkanten in Dokumentkoordinaten
    ========================================================================== */
 (function () {
@@ -43,11 +51,9 @@
   var END_ZONE = 0.85;
 
   /* Freies Scrollen: bleibt man innerhalb dieser Distanz vor einer
-     Grenze stehen, zieht die Seite auf die Kante nach. Die Distanz haengt
-     an der Fensterhoehe (etwa ein Drittel), damit sich das Nachziehen auch
-     auf grossen Bildschirmen anfuehlt wie ein Screen-Wechsel - ein fester
-     Wert von 84px war praktisch unsichtbar. */
-  var SNAP_RATIO = 0.32;
+     Ansichtsgrenze stehen, zieht die Seite auf die Kante nach (und die
+     Spur faehrt dabei zur naechsten Ansicht). */
+  var SNAP_RATIO = 0.28;
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
 
@@ -58,15 +64,10 @@
     var panels = Array.prototype.slice.call(track.querySelectorAll(".track__panel"));
     if (!panels.length) return null;
 
-    var current = 0;
+    var current = -1;
     var tops = [];
-    /* Alle Grenzen, auf die freies Scrollen einrasten darf: die Oberkanten
-       der vier Ansichten UND die Oberkanten der Sektionen darin (jeder
-       Projekt-Teil, Seam, Collage, ... ist ein "Screen"). */
-    var snapLines = [];
     var rafPending = false;
     var snapTimer = 0;
-    var programmatic = false;
     var programmaticUntil = 0;
 
     var prevBtn = document.querySelector('[data-viewnav="prev"]');
@@ -85,33 +86,32 @@
       return r.bottom > 0 && r.top < vh();
     }
 
-    /* Oberkanten der Ansichten in Dokumentkoordinaten. Gemessen wird bei
-       Init, load, Resize und wenn ein Panel seine Groesse aendert. */
-    function measure() {
-      for (var i = 0; i < panels.length; i++) {
-        var r = panels[i].getBoundingClientRect();
-        tops[i] = Math.round(r.top + scrollTop());
-      }
+    /* Oberkanten der Ansichten in Dokumentkoordinaten.
 
-      /* Rastpunkte: Sektionen und Ansichts-Oberkanten, sortiert und ohne
-         Dubletten (eine Ansicht beginnt meist mit einer Sektion).
-         Der Seitenanfang (0) ist bewusst KEIN Rastpunkt: der Hero hat eine
-         lange Scroll-Strecke, auf der man auch mal 200px stehen bleiben will -
-         ein Rueckzug nach ganz oben waere dort nur laestig. */
-      var lines = [];
-      Array.prototype.forEach.call(track.querySelectorAll("section"), function (el) {
-        var sr = el.getBoundingClientRect();
-        if (sr.height < 2) return;
-        lines.push(Math.round(sr.top + scrollTop()));
-      });
-      for (var j = 0; j < tops.length; j++) {
-        if (tops[j] > 0) lines.push(tops[j]);
+       Die Ansichten liegen visuell nebeneinander; in der Scrollspur
+       muessen sie untereinander liegen, sonst waere die Scrollposition
+       nicht eindeutig. Deshalb bekommt Ansicht i den Versatz, den die
+       Ansichten davor zusammen an Hoehe haben (margin-top, nicht
+       transform: ein transform wuerde die sticky-Pins darin verschieben).
+
+       Die Margins werden vor dem Messen zurueckgesetzt, damit die
+       natuerlichen Hoehen gemessen werden. */
+    function measure() {
+      for (var i = 0; i < panels.length; i++) panels[i].style.marginTop = "0px";
+
+      var y = 0;
+      for (var j = 0; j < panels.length; j++) {
+        tops[j] = Math.round(y);
+        panels[j].style.marginTop = Math.round(y) + "px";
+        y += panels[j].offsetHeight;
       }
-      lines.sort(function (a, b) { return a - b; });
-      snapLines = [];
-      for (var k = 0; k < lines.length; k++) {
-        if (k === 0 || lines[k] - snapLines[snapLines.length - 1] > 4) snapLines.push(lines[k]);
-      }
+    }
+
+    /* Horizontale Verschiebung der Spur: Ansicht 0 = "none", sonst
+       -i * 100vw. Die Transition auf .track laesst das Gleiten animieren. */
+    function applyPan(i) {
+      var next = i <= 0 ? "none" : "translate3d(" + (-i * 100) + "vw, 0, 0)";
+      if (track.style.transform !== next) track.style.transform = next;
     }
 
     /* Nur die sichtbare Ansicht darf spielen und Ton haben: sonst laufen
@@ -123,6 +123,8 @@
       panels.forEach(function (el, n) {
         el.classList.toggle("is-current", n === i);
       });
+
+      applyPan(i);
 
       if (window.SerumVideo) {
         window.SerumVideo.setAudible(i === 1);
@@ -170,79 +172,57 @@
       }
     }
 
-    /* Sprung an die Oberkante von Ansicht i. Der Zielpunkt ist genau
-       tops[i] - damit landet jeder Pfeilklick auf der Bildschirmkante
-       (Snap) und nicht irgendwo dazwischen.
+    /* Wechsel in Ansicht i. Die Scrollposition springt sofort an die
+       Oberkante der Zielansicht (damit deren Inhalt ab dem ersten Pixel
+       stimmt), sichtbar bewegt sich nur die Spur nach links - der
+       Projektwechsel ist also eine reine Seitenbewegung.
 
-       WARUM nachgemessen wird: waehrend des weichen Scrollens laden
-       Bilder nach und Layout aendert sich; das native Smooth-Scrolling
-       kommt dann ein paar Hundert Pixel neben dem Ziel an (gemessen: 232px
-       bei Ansicht 3). Deshalb wird nach dem Ende der Bewegung neu gemessen
-       und exakt auf die gemessene Oberkante gesetzt. */
+       Warum ohne weiches Scrollen: die Zielansicht ist beim Sprung noch
+       ausserhalb des Bildes; ein animiertes Scrollen waere als
+       vertikales Rutschen zu sehen und genau das soll der Wechsel nicht
+       sein. */
     function goTo(i) {
       if (i < 0 || i >= panels.length) return;
-      var target = tops[i] === undefined ? 0 : tops[i];
-      var behavior = reduceMotion ? "auto" : "smooth";
 
-      programmatic = true;
-      /* Nach dem Sprung soll das Nachziehen nicht sofort wieder greifen. */
-      programmaticUntil = Date.now() + 1200;
+      programmaticUntil = Date.now() + 700;
 
+      var target = Math.round(tops[i] === undefined ? 0 : tops[i]);
       try {
-        window.scrollTo({ top: Math.round(target), behavior: behavior });
+        window.scrollTo({ top: target, behavior: "auto" });
       } catch (e) {
-        window.scrollTo(0, Math.round(target));
+        window.scrollTo(0, target);
       }
 
-      var lastY = -1;
-      var stable = 0;
-      var deadline = Date.now() + 2200;
-
-      function settle() {
-        var y = scrollTop();
-        if (Math.abs(y - lastY) < 1) stable += 1;
-        else stable = 0;
-        lastY = y;
-
-        if (stable >= 3 || Date.now() > deadline) {
-          measure();
-          var exact = tops[i] === undefined ? target : tops[i];
-          if (Math.abs(scrollTop() - exact) > 1) {
-            window.scrollTo(0, Math.round(exact));
-          }
-          programmatic = false;
-          setActive(i);
-          update();
-          return;
-        }
-        requestAnimationFrame(settle);
-      }
-      requestAnimationFrame(settle);
+      setActive(i);
+      syncArrows(i);
+      update();
     }
 
     /* Freies Scrollen: bleibt man kurz vor einer Ansichtsgrenze stehen,
-       auf die Kante nachziehen. Nur ausserhalb von Pfeilsprüngen und nur
-       in der Naehe - sonst wuerde das normale Lesen stoeren. */
+       auf die Kante nachziehen. Nur in der Naehe, damit das Lesen
+       innerhalb einer Ansicht nicht gestoert wird. */
     function maybeSnap() {
-      if (programmatic || Date.now() < programmaticUntil) return;
+      if (Date.now() < programmaticUntil) return;
       var y = scrollTop();
-      /* Ganz unten nicht nachziehen: die letzte Sektion ist niedriger als der
-         Bildschirm, ihr Rastpunkt laege oberhalb des tatsaechlichen Endes -
-         das wuerde einen wieder von der Fusszeile wegziehen. */
+      /* Ganz unten nicht nachziehen: die letzte Sektion ist niedriger als
+         der Bildschirm - das wuerde vom Seitenende wegziehen. */
       if (y >= document.documentElement.scrollHeight - vh() - 2) return;
+
       var reach = Math.max(120, Math.min(320, vh() * SNAP_RATIO));
       var best = -1;
       var bestD = reach + 1;
-      for (var i = 0; i < snapLines.length; i++) {
-        var d = Math.abs(snapLines[i] - y);
+      for (var i = 1; i < tops.length; i++) {
+        var d = Math.abs(tops[i] - y);
         if (d <= reach && d < bestD) {
           bestD = d;
           best = i;
         }
       }
       if (best < 0 || bestD < 1) return;
+
+      programmaticUntil = Date.now() + 700;
       window.scrollTo({
-        top: Math.round(snapLines[best]),
+        top: Math.round(tops[best]),
         behavior: reduceMotion ? "auto" : "smooth"
       });
     }
@@ -266,9 +246,7 @@
       snapTimer = setTimeout(maybeSnap, 160);
     }
 
-    /* Tief-Links (#serum, #curtain-view, ...) sollen weiterhin funktionieren:
-       die Ansicht selbst steht schon an ihrer Stelle, also reicht es, das
-       Element zu finden und dorthin zu scrollen. */
+    /* Tief-Links (#serum, #curtain-view, ...) sollen weiterhin funktionieren. */
     function jumpForHash() {
       var hash = window.location.hash;
       if (!hash || hash.length < 2) return;
@@ -324,14 +302,17 @@
       goTo(next);
     });
 
-    panels.forEach(function (el, n) {
-      el.classList.toggle("is-current", n === 0);
-    });
-    if (window.SerumVideo) window.SerumVideo.setActive(false);
-
     measure();
     jumpForHash();
+
+    /* Beim Laden (auch mit wiederhergestellter Scrollposition) soll die
+       Spur sofort an der richtigen Stelle stehen und nicht erst
+       hereingleiten. */
+    track.style.transition = "none";
     update();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { track.style.transition = ""; });
+    });
 
     var api = {
       goTo: goTo,

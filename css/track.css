@@ -1,24 +1,29 @@
 /* ==========================================================================
-   Projekt-Track: vier Ansichten untereinander
+   Projekt-Track: vier Ansichten nebeneinander, Pfeile schieben seitlich
 
    Die Seite besteht aus vier Ansichten:
 
-     [ Ansicht 1: Hero, Projekt 1, Collage, Outtakes, Notizen ]
-     [ Ansicht 2: Projekt 2 (Serum) ]
-     [ Ansicht 3: Projekt 3 (eggo) ]
-     [ Ansicht 4: Musik-Teil "ai music" + Endseite ]
+     [ Ansicht 1 ][ Ansicht 2 ][ Ansicht 3 ][ Ansicht 4 ]
 
-   Frueher lagen sie nebeneinander in einer 400vw-Spur und wurden per
-   transform: translateX() von der Scrollposition verschoben (Schwenk).
-   Jetzt stehen sie als normale Bloecke untereinander: Runterscrollen
-   bewegt nur noch vertikal. Der Wechsel zum naechsten Projekt laeuft
-   ueber die Pfeil-Knoepfe links/rechts (js/track.js, css/viewnav.css);
-   ein Klick springt weich an die Oberkante der Zielansicht und landet
-   dort exakt.
+   Sie liegen wie in der Live-Version nebeneinander in einer 400vw breiten
+   Spur; sichtbar ist immer genau eine. Verschoben wird per transform:
+   translate3d(-i * 100vw, 0, 0) (js/track.js).
 
-   Wichtig: Der Track darf KEINEN eigenen Containing Block fuer die
-   sticky-Pins erzeugen - kein transform, kein filter, keine
-   perspektivische Eigenschaft auf .track.
+   Anders als frueher haengt die Verschiebung NICHT an der Scrollposition:
+   runterscrollen schiebt die Spur nicht mehr seitlich mit, sondern
+   scrollt nur den Inhalt der aktuellen Ansicht. Der Wechsel passiert per
+   Pfeil-Knopf, Pfeiltaste oder wenn man ueber eine Ansichtsgrenze
+   scrollt - dann faehrt die Spur animiert zur naechsten Ansicht
+   (transition auf .track) und rastet dort ein.
+
+   Der Track ist 400vw breit; #main schneidet den Ueberstand mit
+   overflow: clip ab (kein Scroll-Container, sonst brechen die
+   sticky-Pins). Die sticky-Pins vertragen das transform auf .track
+   (nachgemessen: rect.top bleibt waehrend der Pin-Strecke 0).
+
+   Die Ansichten liegen visuell nebeneinander, in der Scrollspur aber
+   untereinander: js/track.js setzt dafuer margin-top, damit die
+   Scrollposition eindeutig sagt, welche Ansicht vorne ist.
    ========================================================================== */
 
 #main {
@@ -29,37 +34,41 @@
 
 .track {
   position: relative;
-  /* Die vier Ansichten stehen als normale Bloecke untereinander (frueher:
-     nebeneinander in einer 400vw-Spur mit scroll-gescrubbtem Schwenk).
-     Vertikal scrollen bewegt die Seite also nur nach oben, nie zur Seite;
-     der Projektwechsel laeuft ueber die Pfeile (js/track.js).
-     overflow: clip ist hier NICHT noetig - es gaebe keinen Ueberstand
-     abzuschneiden, und die sticky-Pins der Abschnitte bleiben so
-     unberuehrt. */
-  display: block;
-  width: 100%;
+  /* Vier Ansichten nebeneinander. Die Hoehe kommt aus dem Inhalt; die
+     Scrollspur ordnet die Ansichten per margin-top untereinander an
+     (js/track.js) - margin, nicht transform, damit die sticky-Pins
+     unberuehrt bleiben. */
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  width: 400vw;
   min-width: 0;
+  /* Der Wechsel ist eine reine Seitenbewegung: die Spur gleitet animiert
+     zur Zielansicht. */
+  transition: transform .7s cubic-bezier(.22, .8, .2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track { transition: none; }
 }
 
 .track__panel {
-  /* Jede Ansicht ist ein normaler Block in voller Breite. overflow:hidden
-     ist hier NICHT erlaubt - es wuerde die sticky-Positionierung der
-     Abschnitte einsperren und den Pin ausschalten. */
+  /* Jede Ansicht ist genau einen Viewport breit. overflow:hidden ist hier
+     NICHT erlaubt - es wuerde die sticky-Positionierung der Abschnitte
+     einsperren und den Pin ausschalten. */
   position: relative;
-  width: 100%;
+  flex: 0 0 100vw;
+  width: 100vw;
+  max-width: 100vw;
   min-width: 0;
 }
 
-/* Panel-Reihenfolge in der Scrollspur: die Ansichten liegen untereinander.
-   z-index trennt sie nur, falls sich Kanten beruehren. */
+/* In der Scrollspur liegen die Ansichten untereinander, visuell
+   nebeneinander - der z-index entscheidet, welche Ansicht beim Gleiten
+   oben liegt. */
 .track__panel { z-index: 1; }
 .track__panel.is-current { z-index: 2; }
 .track__panel--2 { background: #000; }
-
-/* Frueher pinnte diese Regel die Auslauf-Buehne (letztes Kind einer
-   Ansicht), damit beim Schwenk nur die seitliche Bewegung zu sehen war.
-   Ohne Schwenk braucht sie das nicht mehr - die letzte Section scrollt
-   normal mit. */
 
 /* ---------- Panel 2: Projekt 2 (Serum) ---------- */
 
