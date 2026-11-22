@@ -89,12 +89,20 @@
 }
 
 @media (max-width: 720px) {
+  /* Auf schmalen Bildschirmen lagen die Knoepfe mitten im Text (z. B. auf
+     dem Songtext-Fenster des Musik-Abschnitts). Unten in den Ecken
+     stoeren sie weniger - dort ist der Rand ohnehin frei. */
   .viewnav__btn {
+    top: auto;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     min-height: 48px;
     padding: .55rem .8rem;
     font-size: 10px;
     letter-spacing: .1em;
   }
+  .viewnav__btn--prev { transform: translateX(-8px); }
+  .viewnav__btn--next { transform: translateX(8px); }
+  .viewnav__btn.is-visible { transform: none; }
   .viewnav__label { display: none; }
   .viewnav__arrow { font-size: 1.3em; }
 }
