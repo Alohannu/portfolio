@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Projekt-Track: vier Ansichten nebeneinander, Pfeile schieben seitlich
+   Projekt-Track: vier Ansichten nebeneinander, Screens rasten ein
 
    Aufbau:
 
@@ -7,53 +7,61 @@
 
    Die vier Ansichten stehen wie in der Live-Version nebeneinander in einer
    400vw breiten Spur. Sichtbar ist immer genau eine: die Spur wird per
-   transform: translate3d(-i * 100vw, 0, 0) verschoben.
+   transform: translate3d(-i * 100vw, 0, 0) verschoben (CSS-Transition in
+   css/track.css laesst sie gleiten).
 
-   Was ANDERS ist als frueher: Die Verschiebung haengt NICHT mehr an der
-   Scrollposition (scroll-gescrubbter Schwenk). Frueher fuhr die Spur
-   mit, wenn man runterscrollte - dadurch wirkte das Scrollen wie eine
-   Seitwaertsbewegung. Jetzt scrollt die Seite nur noch vertikal, und die
-   Ansicht wechselt nur, wenn man es ausloest:
+   Was diese Datei macht:
 
-     - Pfeil-Knoepfe links/rechts (css/viewnav.css)
-     - Pfeiltasten links/rechts
-     - freies Scrollen ueber eine Ansichtsgrenze hinweg
+   1. SCREENS - ein Screen ist eine Sektionsgrenze (plus der Seitenanfang).
+      Nachdem das Scrollen ruht, rastet die Seite auf die naechste Kante ein
+      (bis zur halben Fensterhoehe Abstand). Innerhalb langer gepinnter
+      Strecken (Hero, Graph, Curtain, Musik) gibt es keine Kante, dort steht
+      der Inhalt frei.
 
-   In allen drei Faellen faehrt die Spur animiert zur Zielansicht
-   (CSS-Transition auf .track, css/track.css) und rastet dort exact ein.
+   2. TRACK-ENDE - die letzte Sektion eines Tracks ist die letzte Seite.
+      Weiterscrollen nach unten ist dort hart gesperrt (Mausrad wird
+      abgefangen, sonst wird die Position zurueckgezogen). Der WEITER-Pfeil
+      erscheint auf dieser Seite und gleitet zur ersten Seite des naechsten
+      Tracks. Der ZURUECK-Pfeil auf der ersten Seite springt auf die letzte
+      Seite des vorigen Tracks.
 
-   Damit die Scrollposition weiterhin eindeutig sagt, welche Ansicht
-   "dran" ist, bekommt jede Ansicht in der Scrollspur ihren eigenen
-   vertikalen Platz: Die Ansichten stehen im Dokument untereinander
-   (margin-top setzt dieses Script), obwohl sie visuell nebeneinander
-   liegen. So bleiben die sticky-Pins der Abschnitte unberuehrt.
+   3. SCROLL-TECHNIK - die Ansichten liegen visuell nebeneinander, in der
+      Scrollspur aber untereinander: js setzt margin-top, damit die
+      Scrollposition eindeutig sagt, welche Ansicht vorne ist. Die
+      sticky-Pins der Abschnitte bleiben davon unberuehrt (nachgemessen).
 
-   Oeffentliche API (unveraendert, damit topbar.js und die Pruef-Skripte
-   weiterlaufen):
+   4. SCREEN-EVENT - bei jedem Screenwechsel schickt diese Datei
+      "track:screen" mit { top }. js/script.js haengt daran das Abspielen der
+      Titelsequenzen: sie laufen nur, solange ihr eigener Screen aktiv ist,
+      und enden sofort beim Wechsel.
+
+   Oeffentliche API:
      window.TurnTrack.init()
-     window.TurnTrack.index            - aktive Ansicht (0 ... 3)
-     window.TurnTrack.pan / .hold      - immer 0 (Reste der alten Mechanik;
-                                          curtain.js und script.js lesen sie)
-     window.TurnTrack.instance.goTo(i) - Wechsel in eine Ansicht
-     window.TurnTrack.instance.tops    - Oberkanten in Dokumentkoordinaten
+     window.TurnTrack.index              - aktive Ansicht (0 ... 3)
+     window.TurnTrack.pan / .hold        - immer 0 (Reste der alten Mechanik)
+     window.TurnTrack.instance.goTo(i, "next"|"prev")
+     window.TurnTrack.instance.nextScreen()  - eine Screen-Kante weiter
+     window.TurnTrack.instance.tops      - Oberkanten der Ansichten
+     window.TurnTrack.instance.screenTop - Oberkante des aktiven Screens
    ========================================================================== */
 (function () {
   "use strict";
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* So viele Pixel unterhalb einer Ansichtsgrenze gelten als "auf der
-     ersten Bildschirmseite" - der Zurueck-Pfeil erscheint dann. */
+  /* So viele Pixel unterhalb der Ansichtsgrenze gelten als "erste Seite" -
+     dort erscheint der Zurueck-Pfeil. */
   var START_ZONE = 0.45;
 
-  /* Ab hier gilt die letzte Bildschirmseite eines Projekts als erreicht -
-     der Weiter-Pfeil erscheint. */
-  var END_ZONE = 0.85;
+  /* Einrasten: Abstand bis zur naechsten Kante, der noch eingezogen wird
+     (Anteil der Fensterhoehe). */
+  var SNAP_RATIO = 0.5;
 
-  /* Freies Scrollen: bleibt man innerhalb dieser Distanz vor einer
-     Ansichtsgrenze stehen, zieht die Seite auf die Kante nach (und die
-     Spur faehrt dabei zur naechsten Ansicht). */
-  var SNAP_RATIO = 0.28;
+  /* Ruhezeit nach dem letzten Scroll-Event, bevor eingerastet wird. */
+  var SNAP_IDLE = 150;
+
+  /* Solange laeuft kein Einrasten (programmatische Spruenge). */
+  var PROGRAMMATIC = 1000;
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
 
@@ -65,57 +73,193 @@
     if (!panels.length) return null;
 
     var current = -1;
-    var tops = [];
+    var currentScreen = null;
+    var tops = [];        // Oberkanten der Ansichten (Dokumentkoordinaten)
+    var lastPage = [];    // Oberkante der letzten Sektion je Ansicht
+    var limits = [];      // Scroll-Grenze je Ansicht (letzte Seite)
+    var lines = [];       // Snap-Kanten (absolute y), sortiert
+
     var rafPending = false;
     var snapTimer = 0;
     var programmaticUntil = 0;
+    var scrollAnim = 0;      // laufende eigene Scroll-Animation (Snap)
 
     var prevBtn = document.querySelector('[data-viewnav="prev"]');
     var nextBtn = document.querySelector('[data-viewnav="next"]');
 
-    function vh() {
-      return window.innerHeight || document.documentElement.clientHeight;
+    function vh() { return window.innerHeight || document.documentElement.clientHeight; }
+    function scrollTop() { return window.scrollY || window.pageYOffset || 0; }
+
+    /* Eigene Scroll-Animation statt behavior:"smooth": die native Animation
+       laesst sich nicht zuverlaessig abbrechen, und ein Sprung (goTo)
+       waehrend einer laufenden weichen Bewegung landet neben dem Ziel. Hier
+       wird pro Frame gescrollt - abbrechbar, exakt, ohne Nachlauf. */
+    function cancelScrollAnim() {
+      if (scrollAnim) cancelAnimationFrame(scrollAnim);
+      scrollAnim = 0;
     }
 
-    function scrollTop() {
-      return window.scrollY || window.pageYOffset || 0;
+    function animateTo(target, dur) {
+      cancelScrollAnim();
+      var from = scrollTop();
+      var dist = target - from;
+
+      if (Math.abs(dist) < 2 || reduceMotion) {
+        window.scrollTo(0, Math.round(target));
+        return;
+      }
+
+      programmaticUntil = Date.now() + dur + 250;
+      var t0 = 0;
+
+      function frame(ts) {
+        if (!t0) t0 = ts;
+        var u = Math.min(1, (ts - t0) / dur);
+        var e = 1 - Math.pow(1 - u, 3);   // ease-out: weich ankommen
+        window.scrollTo(0, Math.round(from + dist * e));
+        if (u < 1) { scrollAnim = requestAnimationFrame(frame); return; }
+        scrollAnim = 0;
+        window.scrollTo(0, Math.round(target));
+      }
+
+      scrollAnim = requestAnimationFrame(frame);
     }
 
-    function isInViewport(el) {
-      var r = el.getBoundingClientRect();
-      return r.bottom > 0 && r.top < vh();
+    /* Exakt auf eine Position setzen: ein einzelnes scrollTo kann waehrend
+       einer laufenden Scroll-Animation um ein paar Pixel daneben landen,
+       deshalb wird in den naechsten Frames nachgezogen. */
+    function landOn(target) {
+      cancelScrollAnim();
+      var goal = Math.round(target);
+      window.scrollTo(0, goal);
+
+      var tries = 0;
+      function check() {
+        if (tries++ > 6) return;
+        if (Math.abs(scrollTop() - goal) <= 1) return;
+        window.scrollTo(0, goal);
+        requestAnimationFrame(check);
+      }
+      requestAnimationFrame(check);
     }
 
-    /* Oberkanten der Ansichten in Dokumentkoordinaten.
+    /* ---------- messen --------------------------------------------------- */
 
-       Die Ansichten liegen visuell nebeneinander; in der Scrollspur
-       muessen sie untereinander liegen, sonst waere die Scrollposition
-       nicht eindeutig. Deshalb bekommt Ansicht i den Versatz, den die
-       Ansichten davor zusammen an Hoehe haben (margin-top, nicht
-       transform: ein transform wuerde die sticky-Pins darin verschieben).
-
-       Die Margins werden vor dem Messen zurueckgesetzt, damit die
-       natuerlichen Hoehen gemessen werden. */
+    /* Oberkanten, Snap-Kanten und Scroll-Grenzen. Die Ansichten bekommen
+       ihren vertikalen Platz per margin-top (nicht transform - ein
+       transform wuerde die sticky-Pins verschieben); die Margins werden
+       vorher zurueckgesetzt, damit die echten Hoehen gemessen werden. */
     function measure() {
-      for (var i = 0; i < panels.length; i++) panels[i].style.marginTop = "0px";
+      var i, j;
+
+      for (i = 0; i < panels.length; i++) panels[i].style.marginTop = "0px";
 
       var y = 0;
-      for (var j = 0; j < panels.length; j++) {
-        tops[j] = Math.round(y);
-        panels[j].style.marginTop = Math.round(y) + "px";
-        y += panels[j].offsetHeight;
+      for (i = 0; i < panels.length; i++) {
+        tops[i] = Math.round(y);
+        panels[i].style.marginTop = tops[i] + "px";
+        y += panels[i].offsetHeight;
       }
+
+      var st = scrollTop();
+      var lineSet = {};
+      lines = [];
+      var pageEnd = [];
+
+      /* Seitenanfang ist auch ein Screen (Hero). */
+      lineSet[0] = 1;
+      lines.push(0);
+
+      for (i = 0; i < panels.length; i++) {
+        var secs = panels[i].querySelectorAll("section");
+        var top = tops[i];
+        var end = tops[i];
+
+        for (j = 0; j < secs.length; j++) {
+          var r = secs[j].getBoundingClientRect();
+          var sTop = Math.round(r.top + st);
+          var sEnd = Math.round(r.bottom + st);
+          if (!lineSet[sTop]) { lineSet[sTop] = 1; lines.push(sTop); }
+          if (sTop > top) top = sTop;
+
+          /* Inhaltsende der Sektion: das Ende des letzten sichtbaren
+             Kindes. Sektionen haben oft unten Luft (Padding) - die wuerde
+             den letzten Screen schwarz auslaufen lassen. Sticky-/fixed-
+             Kinder zaehlen nicht: ihr Rechteck zeigt die gepinnte Position,
+             nicht die Stelle im Dokument; eine Sektion, die nur aus einem
+             gepinnten Kind besteht, faellt auf ihre eigene Unterkante
+             zurueck. */
+          var kids = secs[j].children;
+          var sContent = null;
+          for (var c = 0; c < kids.length; c++) {
+            var ck = kids[c];
+            var cpos = window.getComputedStyle(ck).position;
+            if (cpos === "sticky" || cpos === "fixed") continue;
+            var ckr = ck.getBoundingClientRect();
+            if (ckr.height <= 1) continue;
+            var cEnd = Math.round(ckr.bottom + st);
+            if (sContent === null || cEnd > sContent) sContent = cEnd;
+          }
+          if (sContent !== null && sContent > tops[i]) {
+            if (sContent > end) end = sContent;
+          } else if (sEnd > end) {
+            end = sEnd;
+          }
+        }
+
+        if (!lineSet[tops[i]]) { lineSet[tops[i]] = 1; lines.push(tops[i]); }
+
+        lastPage[i] = top;
+        pageEnd[i] = end;
+      }
+
+      /* Scroll-Grenze: die letzte Seite ist die Stelle, an der das untere
+         Ende des Track-Inhalts genau am unteren Bildschirmrand steht
+         (pageEnd - Fensterhoehe). Dadurch ist der letzte Screen voll mit
+         Inhalt - kein schwarzer Leerraum wie beim blossen Sprung an die
+         Oberkante der letzten Sektion (die kuerzer sein kann als der
+         Bildschirm). Im letzten Track begrenzt das Dokument selbst. */
+      for (i = 0; i < panels.length; i++) {
+        if (i === panels.length - 1) {
+          limits[i] = Infinity;
+          continue;
+        }
+        limits[i] = pageEnd[i] - vh();
+        /* Nie vor den Anfang des Tracks und nie hinter das Track-Ende. */
+        limits[i] = Math.max(limits[i], tops[i]);
+        if (tops[i + 1] !== undefined) limits[i] = Math.min(limits[i], tops[i + 1] - 1);
+      }
+
+      /* Snap-Kanten jenseits der Grenze sind unerreichbar (die Grenze zieht
+         zurueck) - sie wuerden nur gegen die Grenze ruckeln. Die Grenze
+         selbst ist dagegen eine Kante: dort steht die letzte Seite. */
+      var trackOf = function (y) {
+        var k = 0;
+        for (var n = 0; n < tops.length; n++) if (tops[n] <= y + 2) k = n;
+        return k;
+      };
+      lines = lines.filter(function (y) {
+        var k = trackOf(y);
+        return limits[k] === Infinity || y <= limits[k];
+      });
+      for (i = 0; i < panels.length; i++) {
+        if (limits[i] !== Infinity && !lineSet[limits[i]]) {
+          lines.push(limits[i]);
+        }
+      }
+
+      lines.sort(function (a, b) { return a - b; });
     }
 
+    /* ---------- Ansicht / Screen ---------------------------------------- */
+
     /* Horizontale Verschiebung der Spur: Ansicht 0 = "none", sonst
-       -i * 100vw. Die Transition auf .track laesst das Gleiten animieren. */
+       -i * 100vw. Die Transition auf .track animiert das Gleiten. */
     function applyPan(i) {
       var next = i <= 0 ? "none" : "translate3d(" + (-i * 100) + "vw, 0, 0)";
       if (track.style.transform !== next) track.style.transform = next;
     }
 
-    /* Nur die sichtbare Ansicht darf spielen und Ton haben: sonst laufen
-       Hero und Serum gleichzeitig. */
     function setActive(i) {
       if (i === current) return;
       current = i;
@@ -126,24 +270,12 @@
 
       applyPan(i);
 
-      if (window.SerumVideo) {
-        window.SerumVideo.setAudible(i === 1);
-        window.SerumVideo.setActive(i === 1);
-      }
-
-      var heroVideo = document.getElementById("video-2");
-      if (heroVideo) {
-        if (i > 0) {
-          if (!heroVideo.paused) heroVideo.pause();
-        } else if (heroVideo.paused && !heroVideo.ended && isInViewport(heroVideo)) {
-          var pr = heroVideo.play();
-          if (pr && pr.catch) pr.catch(function () {});
-        }
-      }
+      /* Nur die sichtbare Ansicht darf Ton haben. */
+      if (window.SerumVideo) window.SerumVideo.setAudible(i === 1);
     }
 
     /* Welche Ansicht ist aktiv? Die, deren Oberkante als letzte ueber der
-       aktuellen Scrollposition liegt (2px Toleranz). */
+       aktuellen Scrollposition liegt. */
     function indexAt(y) {
       var k = 0;
       for (var i = 0; i < tops.length; i++) {
@@ -152,86 +284,134 @@
       return k;
     }
 
-    /* Pfeile: links nur auf der ersten Bildschirmseite eines Projekts
-       (und nicht im ersten Projekt), rechts nur auf der letzten
-       Bildschirmseite (und nicht im letzten Projekt). */
-    function syncArrows(k) {
-      var y = scrollTop();
-      var startZone = k > 0 && y <= tops[k] + vh() * START_ZONE;
-      var endZone = k < panels.length - 1 && y >= tops[k + 1] - vh() * END_ZONE;
+    /* Aktiver Screen = letzte Snap-Kante ueber der Scrollposition. */
+    function screenAt(y) {
+      var s = lines[0];
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i] <= y + 2) s = lines[i];
+        else break;
+      }
+      return s;
+    }
+
+    function syncScreen(y) {
+      var s = screenAt(y);
+      if (s === currentScreen) return;
+      currentScreen = s;
+      document.dispatchEvent(new CustomEvent("track:screen", { detail: { top: s } }));
+    }
+
+    /* ---------- Pfeile --------------------------------------------------- */
+
+    function syncArrows(k, y) {
+      var h = vh();
+      var firstPage = k > 0 && y <= tops[k] + h * START_ZONE;
+      /* Der WEITER-Pfeil erscheint, sobald die letzte Seite des Tracks
+         erreicht ist - das ist die Scroll-Grenze dieses Tracks. */
+      var lastPageReached = k < panels.length - 1 &&
+                            limits[k] !== Infinity &&
+                            y >= limits[k] - 1;
 
       if (prevBtn) {
-        prevBtn.classList.toggle("is-visible", startZone);
-        prevBtn.setAttribute("aria-hidden", startZone ? "false" : "true");
-        prevBtn.tabIndex = startZone ? 0 : -1;
+        prevBtn.classList.toggle("is-visible", firstPage);
+        prevBtn.setAttribute("aria-hidden", firstPage ? "false" : "true");
+        prevBtn.tabIndex = firstPage ? 0 : -1;
       }
       if (nextBtn) {
-        nextBtn.classList.toggle("is-visible", endZone);
-        nextBtn.setAttribute("aria-hidden", endZone ? "false" : "true");
-        nextBtn.tabIndex = endZone ? 0 : -1;
+        nextBtn.classList.toggle("is-visible", lastPageReached);
+        nextBtn.setAttribute("aria-hidden", lastPageReached ? "false" : "true");
+        nextBtn.tabIndex = lastPageReached ? 0 : -1;
       }
     }
 
-    /* Wechsel in Ansicht i. Die Scrollposition springt sofort an die
-       Oberkante der Zielansicht (damit deren Inhalt ab dem ersten Pixel
-       stimmt), sichtbar bewegt sich nur die Spur nach links - der
-       Projektwechsel ist also eine reine Seitenbewegung.
+    /* ---------- Wechsel --------------------------------------------------- */
 
-       Warum ohne weiches Scrollen: die Zielansicht ist beim Sprung noch
-       ausserhalb des Bildes; ein animiertes Scrollen waere als
-       vertikales Rutschen zu sehen und genau das soll der Wechsel nicht
-       sein. */
-    function goTo(i) {
+    /* Wechsel in Ansicht i. "next" landet auf der ersten Seite, "prev" auf
+       der letzten Seite des Ziel-Tracks. Die Scrollposition springt sofort
+       (die Zielseite ist beim Sprung noch ausserhalb des Bildes), sichtbar
+       gleitet nur die Spur. */
+    function goTo(i, dir) {
       if (i < 0 || i >= panels.length) return;
 
-      programmaticUntil = Date.now() + 700;
+      var target = (dir === "prev" && limits[i] !== Infinity) ? limits[i] : tops[i];
 
-      var target = Math.round(tops[i] === undefined ? 0 : tops[i]);
-      try {
-        window.scrollTo({ top: target, behavior: "auto" });
-      } catch (e) {
-        window.scrollTo(0, target);
-      }
+      programmaticUntil = Date.now() + PROGRAMMATIC;
+      landOn(target);
 
       setActive(i);
-      syncArrows(i);
+      syncArrows(i, target);
+      syncScreen(target);
       update();
     }
 
-    /* Freies Scrollen: bleibt man kurz vor einer Ansichtsgrenze stehen,
-       auf die Kante nachziehen. Nur in der Naehe, damit das Lesen
-       innerhalb einer Ansicht nicht gestoert wird. */
+    /* Eine Screen-Kante weiter (Weiter-scrollen-Knopf am Graph-Ende). */
+    function nextScreen() {
+      var y = scrollTop();
+      var k = indexAt(y);
+      var target = null;
+
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i] > y + 2) { target = lines[i]; break; }
+      }
+      if (target === null) return;
+
+      var lim = limits[k];
+      if (lim !== Infinity && target > lim) target = lim;
+
+      programmaticUntil = Date.now() + 1200;
+      animateTo(target, 520);
+    }
+
+    /* ---------- Einrasten ------------------------------------------------ */
+
     function maybeSnap() {
       if (Date.now() < programmaticUntil) return;
+
       var y = scrollTop();
-      /* Ganz unten nicht nachziehen: die letzte Sektion ist niedriger als
-         der Bildschirm - das wuerde vom Seitenende wegziehen. */
-      if (y >= document.documentElement.scrollHeight - vh() - 2) return;
-
-      var reach = Math.max(120, Math.min(320, vh() * SNAP_RATIO));
-      var best = -1;
+      var k = indexAt(y);
+      var lim = limits[k];
+      var reach = vh() * SNAP_RATIO;
+      var best = null;
       var bestD = reach + 1;
-      for (var i = 1; i < tops.length; i++) {
-        var d = Math.abs(tops[i] - y);
-        if (d <= reach && d < bestD) {
-          bestD = d;
-          best = i;
-        }
-      }
-      if (best < 0 || bestD < 1) return;
 
-      programmaticUntil = Date.now() + 700;
-      window.scrollTo({
-        top: Math.round(tops[best]),
-        behavior: reduceMotion ? "auto" : "smooth"
-      });
+      for (var i = 0; i < lines.length; i++) {
+        var d = Math.abs(lines[i] - y);
+        if (d <= reach && d < bestD) { bestD = d; best = lines[i]; }
+      }
+      if (best === null) return;
+
+      if (lim !== Infinity && best > lim) best = lim;
+      if (Math.abs(best - y) < 2) return;
+
+      programmaticUntil = Date.now() + PROGRAMMATIC;
+      animateTo(best, 320);
     }
+
+    /* ---------- Scroll-Zustand ------------------------------------------ */
 
     function update() {
       rafPending = false;
-      var k = indexAt(scrollTop());
+
+      var y = scrollTop();
+      var k = indexAt(y);
+      var lim = limits[k];
+
+      /* Harte Grenze am Ende eines Tracks: keine Position hinter der
+         letzten Seite. Beim Hochscrollen ueber eine Track-Grenze zieht das
+         auf die letzte Seite des vorigen Tracks (die Spur gleitet dabei
+         nach links). */
+      if (lim !== Infinity && y > lim + 0.5) {
+        y = lim;
+        try {
+          window.scrollTo({ top: Math.round(lim), behavior: "auto" });
+        } catch (e) {
+          window.scrollTo(0, Math.round(lim));
+        }
+      }
+
       setActive(k);
-      syncArrows(k);
+      syncArrows(k, y);
+      syncScreen(y);
     }
 
     function schedule() {
@@ -243,10 +423,28 @@
     function onScroll() {
       schedule();
       clearTimeout(snapTimer);
-      snapTimer = setTimeout(maybeSnap, 160);
+      snapTimer = setTimeout(maybeSnap, SNAP_IDLE);
     }
 
-    /* Tief-Links (#serum, #curtain-view, ...) sollen weiterhin funktionieren. */
+    /* Mausrad am Track-Ende abfangen: sonst wuerde der Browser weiter-
+       scrollen und die Position erst im naechsten Frame zurueckziehen. */
+    function onWheel(e) {
+      if (e.defaultPrevented || e.ctrlKey) return;
+      /* Eigene Snap-Animation hat Vorrang: sie laeuft nur wenige
+         hundert Millisekunden und wird vom naechsten Rad-Ereignis
+         abgebrochen, damit der Nutzer sofort wieder die Kontrolle hat. */
+      cancelScrollAnim();
+      var y = scrollTop();
+      var k = indexAt(y);
+      var lim = limits[k];
+      if (lim === Infinity) return;
+      if (e.deltaY > 0 && y >= lim - 1) {
+        e.preventDefault();
+        syncArrows(k, y);
+      }
+    }
+
+    /* Tief-Links (#serum, #curtain-view, ...) sollen weiter funktionieren. */
     function jumpForHash() {
       var hash = window.location.hash;
       if (!hash || hash.length < 2) return;
@@ -256,14 +454,17 @@
       window.scrollTo(0, Math.max(0, Math.round(y)));
     }
 
-    prevBtn && prevBtn.addEventListener("click", function () {
-      goTo(indexAt(scrollTop()) - 1);
+    /* ---------- Verdrahtung --------------------------------------------- */
+
+    if (prevBtn) prevBtn.addEventListener("click", function () {
+      goTo(indexAt(scrollTop()) - 1, "prev");
     });
-    nextBtn && nextBtn.addEventListener("click", function () {
-      goTo(indexAt(scrollTop()) + 1);
+    if (nextBtn) nextBtn.addEventListener("click", function () {
+      goTo(indexAt(scrollTop()) + 1, "next");
     });
 
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: false });
 
     window.addEventListener("resize", function () {
       measure();
@@ -294,21 +495,28 @@
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
       var t = e.target;
-      if (t && (t.matches && (t.matches("input, textarea, select") || t.isContentEditable))) return;
+      if (t && t.matches && (t.matches("input, textarea, select") || t.isContentEditable)) return;
       var k = indexAt(scrollTop());
-      var next = k + (e.key === "ArrowRight" ? 1 : -1);
-      if (next < 0 || next >= panels.length) return;
-      e.preventDefault();
-      goTo(next);
+      if (e.key === "ArrowRight") {
+        if (k + 1 >= panels.length) return;
+        e.preventDefault();
+        goTo(k + 1, "next");
+      } else {
+        if (k <= 0) return;
+        e.preventDefault();
+        goTo(k - 1, "prev");
+      }
     });
+
+    /* ---------- Start ---------------------------------------------------- */
 
     measure();
     jumpForHash();
 
     /* Beim Laden (auch mit wiederhergestellter Scrollposition) soll die
-       Spur sofort an der richtigen Stelle stehen und nicht erst
-       hereingleiten. */
+       Spur sofort stehen und nicht erst hereingleiten. */
     track.style.transition = "none";
+    syncScreen(scrollTop());
     update();
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { track.style.transition = ""; });
@@ -316,27 +524,27 @@
 
     var api = {
       goTo: goTo,
+      nextScreen: nextScreen,
       get index() { return current; },
-      /* Oberkanten in Dokumentkoordinaten (js/script.js braucht sie fuer
-         die Einblend-Logik des Serum-Titel-Overlays). */
-      get tops() { return tops.slice(); }
+      get tops() { return tops.slice(); },
+      get lastPage() { return lastPage.slice(); },
+      get limits() { return limits.slice(); },
+      get screenTop() { return currentScreen; }
     };
 
     window.TurnTrack.instance = api;
+
     try {
       Object.defineProperty(window.TurnTrack, "index", {
-        get: function () { return current; },
-        configurable: true
+        get: function () { return current; }, configurable: true
       });
-      /* Reste der alten Schwenk-Mechanik: curtain.js und js/script.js
+      /* Reste der alten Schwenk-Mechanik: js/script.js und js/curtain.js
          lesen sie als Versatz. Ohne Schwenk sind sie 0. */
       Object.defineProperty(window.TurnTrack, "pan", {
-        get: function () { return 0; },
-        configurable: true
+        get: function () { return 0; }, configurable: true
       });
       Object.defineProperty(window.TurnTrack, "hold", {
-        get: function () { return 0; },
-        configurable: true
+        get: function () { return 0; }, configurable: true
       });
     } catch (e) {}
 

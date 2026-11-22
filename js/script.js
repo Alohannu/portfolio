@@ -51,10 +51,20 @@
     }
   }
 
-  /* Video 2: spielt nur, wenn gestartet, nicht beendet, Video 1 am Ende und Stage sichtbar */
+  /* Aktiver Screen: Oberkante der Sektion, die gerade oben steht. js/track.js
+     schickt bei jedem Wechsel "track:screen"; die Titelvideos laufen nur,
+     solange ihr eigener Screen aktiv ist, und enden sofort beim Wechsel. */
+  var activeScreenTop = 0;
+  document.addEventListener("track:screen", function (e) {
+    activeScreenTop = (e.detail && typeof e.detail.top === "number") ? e.detail.top : 0;
+  });
+
+  /* Video 2: spielt nur, wenn gestartet, nicht beendet, Video 1 am Ende und
+     Stage sichtbar - und nur, solange der Hero-Screen (Seitenanfang) aktiv
+     ist. Beim Screenwechsel endet es sofort. */
   function syncVideo2() {
     if (!heroState.videoTwoStarted || heroState.videoTwoEnded) return;
-    var shouldPlay = progress >= 1 && stageVisible && !coveredByNext;
+    var shouldPlay = progress >= 1 && stageVisible && !coveredByNext && activeScreenTop === 0;
     if (shouldPlay && video2.paused) {
       heroState.videoTwoPausedByLeave = false;
       safePlay(video2);
@@ -178,6 +188,7 @@
   if (serumVideo) {
     var serumActive = true;          // Ansicht 2 ist eingeschwenkt (track.js)
     var serumUserChoseMute = false;  // Nutzer hat selbst stumm geschaltet
+    var serumOnOwn = false;          // Video steht auf seinem eigenen Screen
     var serumTicking = false;
 
     function serumSyncToggle() {
@@ -191,6 +202,7 @@
       if (!(ua && ua.hasBeenActive)) return;
       serumVideo.muted = false;
       serumSyncToggle();
+      serumSyncPlayback();
     }
 
     function serumInViewport() {
@@ -199,20 +211,60 @@
       return r.bottom > 0 && r.top < (window.innerHeight || document.documentElement.clientHeight);
     }
 
-    /* Spielt nur, wenn die Ansicht aktiv ist und der Hero im Bild steht -
-       sonst wuerde das Video unsichtbar weiterlaufen, waehrend Track 1 zu
-       sehen ist. */
+    /* Screen-Kante des Titelvideos: die Oberkante seiner eigenen Buehne
+       (der Hero-Wrapper ist das erste Element von Ansicht 2, also genau die
+       Track-Oberkante). Nicht per closest('section') - der Hero steht vor
+       der ersten Sektion, nicht darin. */
+    function serumScreenTop() {
+      if (!serumHero) return null;
+      return Math.round(serumHero.getBoundingClientRect().top + (window.pageYOffset || 0));
+    }
+
+    /* Das Video laeuft EINMAL (kein Loop mehr) und nur, solange sein Screen
+       oben steht: sobald auf den naechsten Screen gesnappt wird, endet es
+       sofort. Kommt man auf die Seite zurueck, startet es von vorn. */
     function serumSyncPlayback() {
-      var shouldPlay = serumActive && serumInViewport() && !document.hidden;
+      var screen = (window.TurnTrack && window.TurnTrack.instance)
+        ? window.TurnTrack.instance.screenTop
+        : null;
+      var ownScreen = serumScreenTop();
+      var shouldPlay = serumActive && !document.hidden && screen !== null &&
+                       ownScreen !== null && screen === ownScreen;
+
       if (shouldPlay) {
-        if (serumVideo.paused) {
+        /* Screen neu betreten: von vorn. Bleibt man auf dem Screen, laeuft
+           das Video nach seinem Ende nicht wieder los (kein Loop). */
+        if (!serumOnOwn) {
+          serumOnOwn = true;
+          try { serumVideo.currentTime = 0; } catch (e) {}
+          var pr0 = serumVideo.play();
+          if (pr0 && pr0.catch) pr0.catch(function () {});
+          return;
+        }
+        if (serumVideo.paused && !serumVideo.ended) {
           var pr = serumVideo.play();
           if (pr && pr.catch) pr.catch(function () {});
         }
-      } else if (!serumVideo.paused) {
-        serumVideo.pause();
+      } else {
+        serumOnOwn = false;
+        if (!serumVideo.paused) serumVideo.pause();
       }
     }
+
+    /* Screenwechsel sofort beantworten (nicht erst im naechsten Frame):
+       verlaesst man den Screen, endet das Video auf der Stelle. */
+    document.addEventListener("track:screen", function () {
+      var screen = (window.TurnTrack && window.TurnTrack.instance)
+        ? window.TurnTrack.instance.screenTop
+        : null;
+      var ownScreen = serumScreenTop();
+      if (screen === null || ownScreen === null || screen !== ownScreen) {
+        serumOnOwn = false;
+        if (!serumVideo.paused) serumVideo.pause();
+      } else {
+        serumSyncPlayback();
+      }
+    });
 
     /* Overlay ausblenden, sobald man den Hero weiterscrollt. Gemessen wird
        ab der Oberkante von Ansicht 2 (TurnTrack.tops[1]) - das ist die
@@ -914,6 +966,11 @@
   var flipBtn = document.getElementById("flipBtn");
   var flipBtnLabel = document.getElementById("flipBtnLabel");
   var flipBtnArrow = document.getElementById("flipBtnArrow");
+  /* Zweiter Knopf am Graph-Ende: scrollt eine Seite weiter, unabhaengig vom
+     Studio-Knopf. Beide erscheinen gemeinsam. */
+  var scrollBtn = document.getElementById("scrollBtn");
+  var scrollBtnLabel = document.getElementById("scrollBtnLabel");
+  var scrollBtnArrow = document.getElementById("scrollBtnArrow");
   var FLIP_CLICK_MS = 700;    // Dauer einer vollen Drehung (0 -> 1) per Klick
   var flipAnimRAF = 0;
   var flipAnimating = false;
@@ -939,11 +996,17 @@
      der Knopf sichtbar sein. Er wird hier direkt eingeschaltet, damit eine
      verpasste Zustandsmessung nie zu einer Sackgasse fuehrt. */
   function forceGateBtn() {
-    if (!flipBtn) return;
-    flipBtn.classList.add("is-visible", "is-gate");
-    flipBtn.classList.remove("is-back");
-    if (flipBtnLabel) flipBtnLabel.textContent = isEnglish ? "Continue scrolling" : "Weiter scrollen";
-    if (flipBtnArrow) flipBtnArrow.textContent = "↓";
+    if (flipBtn) {
+      flipBtn.classList.add("is-visible");
+      flipBtn.classList.remove("is-back", "is-gate");
+      if (flipBtnLabel) flipBtnLabel.textContent = isEnglish ? "To Photo Studio" : "Zum Photo Studio";
+      if (flipBtnArrow) flipBtnArrow.textContent = "→";
+    }
+    if (scrollBtn) {
+      scrollBtn.classList.add("is-visible", "is-gate");
+      if (scrollBtnLabel) scrollBtnLabel.textContent = isEnglish ? "Continue scrolling" : "Weiter scrollen";
+      if (scrollBtnArrow) scrollBtnArrow.textContent = "↓";
+    }
   }
 
   /* Sichtbar ist der Knopf in drei Lagen: Vorderseite am Graph-Ende,
@@ -970,15 +1033,22 @@
     var isBack = flipP >= .5;
     flipBtn.classList.toggle("is-visible", front || back || flipAnimating);
     flipBtn.classList.toggle("is-back", isBack);
-    /* front = Graph steht am Ende, Flaeche noch nicht gedreht: das ist das
-       Tor. Es sitzt unten mittig und heisst "Weiter scrollen" - erst der
-       Klick gibt den Weg zum Photo Studio frei, damit man die Drehung nicht
-       beim Durchscrollen verpasst. */
-    flipBtn.classList.toggle("is-gate", front);
+    /* Der Studio-Knopf sitzt rechts am Rand (bzw. oben rechts auf der
+       Rueckseite). Der Tor-Knopf unten mittig ist der zweite Knopf
+       (#scrollBtn) und scrollt weiter. */
+    flipBtn.classList.remove("is-gate");
     if (flipBtnLabel) flipBtnLabel.textContent = isBack ? (isEnglish ? "Back to graph" : "Zurück zum Graphen")
-                                                        : (front ? (isEnglish ? "Continue scrolling" : "Weiter scrollen")
-                                                                 : (isEnglish ? "To Photo Studio" : "Zum Photo Studio"));
-    if (flipBtnArrow) flipBtnArrow.textContent = isBack ? "←" : (front ? "↓" : "→");
+                                                        : (isEnglish ? "To Photo Studio" : "Zum Photo Studio");
+    if (flipBtnArrow) flipBtnArrow.textContent = isBack ? "←" : "→";
+    if (scrollBtn) {
+      scrollBtn.classList.toggle("is-visible", front);
+      scrollBtn.setAttribute("aria-hidden", front ? "false" : "true");
+      scrollBtn.tabIndex = front ? 0 : -1;
+      if (front) {
+        if (scrollBtnLabel) scrollBtnLabel.textContent = isEnglish ? "Continue scrolling" : "Weiter scrollen";
+        if (scrollBtnArrow) scrollBtnArrow.textContent = "↓";
+      }
+    }
     /* Verlaesst man den Graph-Ende-Zustand, wird das Tor wieder geschlossen
        (zurueck im Graphen oder auf der anderen Seite: beim naechsten
        Ankommen muss neu geklickt werden). */
@@ -1041,12 +1111,23 @@
       // flipP ist das Mass: ab der halben Drehung steht die Rueckseite vorne,
       // dann heisst der Klick "zurueck". Ein zweiter Klick mitten in der
       // Animation dreht sie damit um.
-      // Vorderseite, Graph-Ende: der Klick oeffnet das Tor und dreht
-      // gleichzeitig ins Photo Studio.
-      if (flipP <= .001) gateOpen = true;
+      // Der Studio-Knopf dreht nur. Das Scrollen am Graph-Ende gibt
+      // ausschliesslich #scrollBtn frei - so bleiben die beiden Wege
+      // unabhaengig voneinander.
       animateFlipTo(flipP >= .5 ? 0 : 1);
     });
   }
+  if (scrollBtn) {
+    scrollBtn.addEventListener("click", function () {
+      gateOpen = true;
+      scrollBtn.classList.remove("is-visible");
+      scrollBtn.setAttribute("aria-hidden", "true");
+      scrollBtn.tabIndex = -1;
+      var t = window.TurnTrack && window.TurnTrack.instance;
+      if (t && typeof t.nextScreen === "function") t.nextScreen();
+    });
+  }
+
   window.addEventListener("resize", scheduleSyncFlipBtn);
 
   if (tryonSection) {

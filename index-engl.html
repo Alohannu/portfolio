@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/tools.css">
   <link rel="stylesheet" href="css/viewnav.css">
   <link rel="stylesheet" href="css/endcard.css">
+  <link rel="stylesheet" href="css/hints.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -189,6 +190,13 @@
             <span class="flipbtn__label" id="flipBtnLabel">To Photo Studio</span>
             <span class="flipbtn__arrow" id="flipBtnArrow" aria-hidden="true">&rarr;</span>
           </button>
+          <!-- Zweiter Knopf am Graph-Ende: scrollt eine Seite weiter. Er
+               erscheint gemeinsam mit dem Studio-Knopf und gibt das
+               Scrollen fuer diesen Durchlauf frei. Steuerung: js/script.js. -->
+          <button class="flipbtn flipbtn--scroll is-gate" id="scrollBtn" type="button">
+            <span class="flipbtn__label" id="scrollBtnLabel">Continue scrolling</span>
+            <span class="flipbtn__arrow" id="scrollBtnArrow" aria-hidden="true">&darr;</span>
+          </button>
         </div>
       </div>
     </section>
@@ -296,7 +304,7 @@
 
           <video class="serum-video" id="serumVideo" src="media/projects/projekt-3/skincare.mp4"
                  poster="media/projects/projekt-3/skincare-poster.webp"
-                 muted playsinline preload="auto" loop
+                 muted playsinline preload="auto"
                  aria-label="Campaign video skincare serum"></video>
 
           <!-- Eigene ID statt der des Track-1-Overlays: script.js steuert
@@ -774,7 +782,8 @@ is all we've got</pre>
       <!-- End page / business card (reference: dejvidkavazovic.com): type
            only, no images. Last child of panel 4 so the track geometry
            (four panels) stays untouched. Edit: replace the address in the
-           #endcardMail span and the copyright line; js/endcard.js fits the
+           #endcardMail span, the LinkedIn link and the copyright line;
+           js/endcard.js fits the
            wordmark (#endcardMark) to the column width. -->
       <section class="endcard" id="kontakt" aria-labelledby="endcardTitle">
         <div class="endcard__inner">
@@ -786,11 +795,14 @@ is all we've got</pre>
             <div class="endcard__col">
               <p class="endcard__col-head">E-mail</p>
               <div class="endcard__mail">
-                <!-- TODO: replace with the real address -->
-                <span class="endcard__mail-text" id="endcardMail">mail@example.com</span>
+                <span class="endcard__mail-text" id="endcardMail">yy.trieu@gmail.com</span>
                 <button class="endcard__copy" type="button" data-copy-target="endcardMail"
                         aria-label="Copy e-mail address">Copy</button>
               </div>
+            </div>
+            <div class="endcard__col">
+              <p class="endcard__col-head">LinkedIn</p>
+              <p class="endcard__col-body"><a class="endcard__link" href="https://www.linkedin.com/in/sylviatrieu/" target="_blank" rel="noopener">sylviatrieu</a></p>
             </div>
             <div class="endcard__col">
               <p class="endcard__col-head">Focus</p>
