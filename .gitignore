@@ -5,3 +5,6 @@
 /*.ttf
 /.claude/
 /*.avif
+
+# macOS-Finder-Metadaten
+.DS_Store

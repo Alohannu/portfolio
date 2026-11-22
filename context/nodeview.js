@@ -187,6 +187,10 @@
     if (!data || !Array.isArray(data.nodes)) throw new Error('renderNodeView: { nodes: [...] } erwartet');
     var opts = options || {};
     var pal = data.palette || {};
+    /* Zweisprachige Notiz-Texte: index-engl.html setzt <html lang="en">, dann
+       gelten die *En-Felder aus nodeview.json (headingEn/textEn). Fehlen sie,
+       bleibt der deutsche Text stehen. */
+    var isEn = document.documentElement.lang === "en";
     var cs = data.canvas || {};
     var theme = data.theme || {};
     var assetBase = opts.assetBase != null ? opts.assetBase : '';
@@ -292,12 +296,14 @@
          Breite kommt aus den Daten (w), Hoehe bleibt auto: der Knoten waechst
          mit seinem Text, statt in eine feste Hoehe hineinzulaufen. */
       if (n.type === 'Note') {
+        var heading = (isEn && n.headingEn) ? n.headingEn : n.heading;
+        var noteText = (isEn && n.textEn) ? n.textEn : n.text;
         return '<div class="nv-node nv-note nv-mono" data-node="' + esc(n.id) + '" style="left:' + n.x + 'px;top:' + n.y + 'px;width:' + n.w + 'px">' +
           '<div class="nv-head"><span class="nv-acc" style="background:' + esc(accent) + ';box-shadow:0 0 8px ' + esc(accent) + '"></span>' +
             '<span class="nv-title">' + esc(n.title || n.type) + '</span></div>' +
           '<div class="nv-body nv-note__body">' +
-            (n.heading ? '<h2 class="nv-note__title">' + esc(n.heading) + '</h2>' : '') +
-            (n.text ? '<p class="nv-note__text">' + esc(n.text) + '</p>' : '') +
+            (heading ? '<h2 class="nv-note__title">' + esc(heading) + '</h2>' : '') +
+            (noteText ? '<p class="nv-note__text">' + esc(noteText) + '</p>' : '') +
           '</div></div>';
       }
 

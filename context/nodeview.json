@@ -71,7 +71,9 @@
       "y": 24.0,
       "w": 276.0,
       "heading": "ComfyUI virtual try on",
-      "text": "Entwicklung einer reproduzierbaren ComfyUI-Pipeline zur automatisierten Erstellung fotorealistischer E-Commerce-Visuals auf Basis mehrerer unabhängiger Referenzen für Models, Produkte, Posen und Umgebungen."
+      "text": "Entwicklung einer reproduzierbaren ComfyUI-Pipeline zur automatisierten Erstellung fotorealistischer E-Commerce-Visuals auf Basis mehrerer unabhängiger Referenzen für Models, Produkte, Posen und Umgebungen.",
+      "headingEn": "ComfyUI virtual try on",
+      "textEn": "Development of a reproducible ComfyUI pipeline for the automated creation of photorealistic e-commerce visuals using multiple independent references for models, products, poses, and environments."
     },
     {
       "id": "61",
