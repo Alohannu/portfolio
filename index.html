@@ -110,13 +110,18 @@
       </div>
     </section>
 
-    <!-- Abschnitt 5: ComfyUI virtual try on – Vollbild-Graph, im Graphen bis Save Image scrollen -->
+    <!-- Abschnitt 5: ComfyUI virtual try on – Vollbild-Graph, im Graphen bis Save Image scrollen.
+         Keine Ueberschrift ueber dem Graphen mehr: Ueberschrift und Untertitel
+         stehen als Notiz-Node (id "note-tryon") IM Graphen und werden mit ihm
+         geschoben und gezoomt (context/nodeview.js, Zweig type === "Note").
+         Die Notiz liegt in der freien Spalte links oben auf der Canvas
+         (x 24, y 24, Breite 276) - dort steht kein anderer Node. Dadurch
+         braucht oben keine Zeile mehr frei zu bleiben und die Graph-Karte
+         fuellt die ganze Stage-Hoehe (css/style.css, .project--try).
+         Die Abschnitts-Ueberschrift fuer Screenreader ist der h2 in der Notiz;
+         der Canvas traegt dafuer role="group" statt role="img". -->
     <section class="project project--try morph-reveal" id="tryon" data-morph aria-label="ComfyUI virtual try on">
       <div class="project__stage morph-reveal__stage">
-        <div class="try__head">
-          <h2 class="project__title reveal"><span class="reveal__inner">ComfyUI virtual try on</span></h2>
-          <p class="project__text fade-in">Entwicklung einer reproduzierbaren ComfyUI-Pipeline zur automatisierten Erstellung fotorealistischer E-Commerce-Visuals auf Basis mehrerer unabhängiger Referenzen für Models, Produkte, Posen und Umgebungen.</p>
-        </div>
         <!-- ComfyUI-Node-Ansicht: aus context/nodeview.json gerendert.
              Am Ende des Graphen dreht die ganze Flaeche um 180 Grad und zeigt
              die eingebettete Live-Anwendung (AI Photo Studio). Aufbau wie im

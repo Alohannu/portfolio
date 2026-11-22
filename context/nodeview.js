@@ -89,6 +89,22 @@
     '.nv-root .nv-hint{display:block;margin:5px 8px 0;font-size:9px;letter-spacing:.08em;text-transform:uppercase;text-align:center;color:#9fb4ff}',
     '.nv-root .nv-img-btn:hover .nv-hint,.nv-root .nv-img-btn:focus-visible .nv-hint{color:#fff}',
     '.nv-root .nv-caption{text-align:center;font-size:9px;color:#8b8ba6;margin-top:4px}',
+    /* Notiz-Knoten: er traegt die Ueberschrift der Sektion IM Graphen, statt als
+       HTML darueber zu stehen - so gehoert der Text sichtbar zum Workflow und
+       wird mit ihm geschoben und gezoomt.
+       Die Schriftgroesse der Ueberschrift ist bewusst in festen px angegeben
+       (kein clamp/vw): die Notiz liegt im per transform skalierten Canvas, ihre
+       Groesse muss also deterministisch sein und darf nicht zusaetzlich an der
+       Viewport-Breite haengen. Die Hoehe bleibt auto (kein fester Wert), damit
+       der Text nicht abgeschnitten wird.
+       Schrift: der Knoten traegt .nv-mono (ComfyUI-Look der Kopfzeile), damit
+       wuerden Ueberschrift und Text die Monospace-Schrift erben. Beide setzen
+       deshalb ausdruecklich die Seiten-Schrift (.nv-root) - die Vorlage zeigt
+       den Fliesstext in Jost, nur die Kopfzeile "Note" ist mono. */
+    '.nv-root .nv-note{border-color:rgba(159,180,255,.28);background:linear-gradient(180deg,rgba(82,87,176,.16),rgba(22,22,30,.86))}',
+    '.nv-root .nv-note .nv-body{padding:16px 16px 18px}',
+    '.nv-root .nv-note__title{margin:0;font-family:Jost,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:40px;line-height:1.05;font-weight:600;letter-spacing:-.02em;color:var(--nv-title)}',
+    '.nv-root .nv-note__text{margin:12px 0 0;font-family:Jost,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.5;font-weight:300;color:#c3c3d8}',
     '@media (prefers-reduced-motion:reduce){.nv-root .nv-pulse{animation:none!important;opacity:0}}'
   ].join('\n');
 
@@ -236,7 +252,12 @@
           '<button type="button" data-nv="reset">Reset</button>' +
         '</div>' +
       '</div>' +
-      '<div class="nv-canvas" tabindex="0" role="img" aria-label="ComfyUI-Workflow-Graph. Ziehen zum Verschieben, Strg+Mausrad zum Zoomen.">' +
+      // role="group" statt role="img": mit role="img" gilt der Canvas als ein
+      // einziges Bild, alle Kinder sind fuer Screenreader unsichtbar. Die
+      // Ueberschrift der Sektion steckt aber als h2 im Notiz-Knoten und muss
+      // als Dokument-Ueberschrift lesbar bleiben. aria-label und tabindex
+      // bleiben unveraendert, der Canvas ist weiterhin fokussierbar.
+      '<div class="nv-canvas" tabindex="0" role="group" aria-label="ComfyUI-Workflow-Graph. Ziehen zum Verschieben, Strg+Mausrad zum Zoomen.">' +
         '<div class="nv-stage"><div class="nv-inner">' +
           '<svg class="nv-wires" viewBox="0 0 ' + cs.width + ' ' + cs.height + '" width="' + cs.width + '" height="' + cs.height + '"></svg>' +
           '<div class="nv-nodes"></div>' +
@@ -260,6 +281,26 @@
     // Nodes
     nodeHost.innerHTML = data.nodes.map(function (n) {
       var accent = n.accent || pal.model || '#b57bff';
+
+      /* Notiz-Knoten (ComfyUI "Note") tragen keinen Datenfluss: keine Pins,
+         keine Widgets, keine Draehte. Sie bekommen deshalb eigenes Markup mit
+         Ueberschrift (h2) und Text (p) statt der IO-Zeilen - die Ueberschrift
+         ist gleichzeitig die Abschnitts-Ueberschrift des Dokuments (siehe
+         role="group" am Canvas).
+         Der Zweig steht VOR dem generischen, weil pairedRows() fuer einen
+         Knoten ohne Ein-/Ausgaenge sonst eine leere IO-Zeile rendern wuerde.
+         Breite kommt aus den Daten (w), Hoehe bleibt auto: der Knoten waechst
+         mit seinem Text, statt in eine feste Hoehe hineinzulaufen. */
+      if (n.type === 'Note') {
+        return '<div class="nv-node nv-note nv-mono" data-node="' + esc(n.id) + '" style="left:' + n.x + 'px;top:' + n.y + 'px;width:' + n.w + 'px">' +
+          '<div class="nv-head"><span class="nv-acc" style="background:' + esc(accent) + ';box-shadow:0 0 8px ' + esc(accent) + '"></span>' +
+            '<span class="nv-title">' + esc(n.title || n.type) + '</span></div>' +
+          '<div class="nv-body nv-note__body">' +
+            (n.heading ? '<h2 class="nv-note__title">' + esc(n.heading) + '</h2>' : '') +
+            (n.text ? '<p class="nv-note__text">' + esc(n.text) + '</p>' : '') +
+          '</div></div>';
+      }
+
       return '<div class="nv-node nv-mono" data-node="' + esc(n.id) + '" style="left:' + n.x + 'px;top:' + n.y + 'px;width:' + n.w + 'px">' +
         '<div class="nv-head"><span class="nv-acc" style="background:' + esc(accent) + ';box-shadow:0 0 8px ' + esc(accent) + '"></span>' +
           '<span class="nv-title">' + esc(n.title || n.type || n.id) + '</span></div>' +

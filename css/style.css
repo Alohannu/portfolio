@@ -364,13 +364,17 @@ body {
   .project__specs { font-size: 1.15rem; }
 }
 
-/* ---------- Abschnitt 5: ComfyUI virtual try on (Vollbild-Graph) ---------- */
+/* ---------- Abschnitt 5: ComfyUI virtual try on (Vollbild-Graph) ----------
+   Nur EINE Rasterzeile: der Graph selbst. Ueberschrift und Untertitel stehen
+   als Notiz-Node IM Graphen, oben bleibt also nichts mehr frei - die
+   Graph-Karte bekommt die ganze Stage-Hoehe. Der obere Rand ist deshalb
+   kleiner als bei den Text-Abschnitten (4.5rem), dort sass die Ueberschrift. */
 .project--try .project__stage {
-  grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  padding-top: 1.5rem;
 }
-.try__head { min-width: 0; }
 .comfy { position: relative; width: 100%; height: 100%; min-height: 0; }
 /* ComfyUI-Node-Ansicht (context/nodeview.js) füllt den Slot; eigenes CSS kommt gescoped mit. */
 #comfy-slot { width: 100%; height: 100%; min-height: 0; }
@@ -646,13 +650,13 @@ body {
 .project__col--face .face.is-away { visibility: hidden; }
 @media (min-width: 900px) {
   .project--try .project__stage {
-    /* Vollbild: Kopf oben, Graph füllt den Rest. */
+    /* Vollbild: der Graph allein fuellt die Stage. Frueher sass oben der Kopf
+       (Ueberschrift + Text), jetzt steckt er als Notiz-Node im Graphen. */
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-    padding: 3rem 4vw 2rem;
+    grid-template-rows: minmax(0, 1fr);
+    padding: 1.5rem 4vw;
   }
-  .project--try .try__head { grid-column: 1; grid-row: 1; min-width: 0; }
-  .project--try .comfy { grid-column: 1; grid-row: 2; margin-top: 1.25rem; min-width: 0; }
+  .project--try .comfy { grid-column: 1; grid-row: 1; min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .comfy__face { visibility: visible; }

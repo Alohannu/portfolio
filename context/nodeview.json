@@ -4,7 +4,7 @@
     "title": "virtual try-on",
     "subtitle": "ComfyUI Node Explorer",
     "source": "native ComfyUI export",
-    "note": "Aus context/comfyui_workflow.json konvertiert. Koordinaten bewusst NICHT normalisiert: der Graph ist 1112 x 5414 px und erzaehlt den Datenfluss vertikal."
+    "note": "Aus context/comfyui_workflow.json konvertiert. Koordinaten bewusst NICHT normalisiert: der Graph ist 1112 x 5414 px und erzaehlt den Datenfluss vertikal. Der Knoten note-tryon traegt Ueberschrift und Untertitel der Sektion (bewusst als Note im Graphen, nicht als HTML ueber der Canvas)."
   },
   "canvas": {
     "width": 1112,
@@ -62,6 +62,17 @@
     }
   ],
   "nodes": [
+    {
+      "id": "note-tryon",
+      "type": "Note",
+      "title": "Note",
+      "accent": "#9fb4ff",
+      "x": 24.0,
+      "y": 24.0,
+      "w": 276.0,
+      "heading": "ComfyUI virtual try on",
+      "text": "Entwicklung einer reproduzierbaren ComfyUI-Pipeline zur automatisierten Erstellung fotorealistischer E-Commerce-Visuals auf Basis mehrerer unabhängiger Referenzen für Models, Produkte, Posen und Umgebungen."
+    },
     {
       "id": "61",
       "type": "CLIPLoader",

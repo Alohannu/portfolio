@@ -819,13 +819,18 @@
 
   // Morph-Reveal für alle [data-morph]-Wrapper; Headline-Reveal, sobald die Maske (fast) offen ist
   Array.prototype.slice.call(document.querySelectorAll("[data-morph]")).forEach(function (el) {
+    // #tryon hat seit dem Umbau keine .reveal/.fade-in-Elemente mehr: seine
+    // Ueberschrift und der Untertitel stehen als Notiz-Node im Graphen
+    // (context/nodeview.js). Beide Griffe sind deshalb null-sicher - ohne das
+    // wirft der Handler bei jedem Scrollframe und reisst faceFlight() mit,
+    // der Morph 4 -> 5 bliebe dann stehen.
     var title = el.querySelector(".reveal"), fade = el.querySelector(".fade-in");
     initMorphReveal(el, {
       // #tryon pinnt sofort; der Morph muss über den Weg durch die Section
       // laufen, sonst bleibt er auf raw = 0 stehen (siehe progressOffset).
       progressMode: el.id === "tryon" ? "section" : "top",
       onProgress: function (raw) {
-        title.classList.toggle("is-visible", raw >= 0.9);
+        if (title) title.classList.toggle("is-visible", raw >= 0.9);
         if (el.id === "tryon") faceFlight(raw);
         // Abschnitte mit .avatar-stack steuern ihren Text selbst über den
         // Bildwechsel (makeAvatarSwitcher, Kriterium idx >= 1). Ohne diese
@@ -835,7 +840,7 @@
         // sichtbar als kurzes Aufblitzen des Projekttextes beim Uebergang.
         // Vorher stand hier "el !== project": das traf nur #projekte und liess
         // den Serum-Abschnitt (ebenfalls mit .avatar-stack) aussen vor.
-        if (!el.querySelector(".avatar-stack")) fade.classList.toggle("is-visible", raw >= 1);
+        if (fade && !el.querySelector(".avatar-stack")) fade.classList.toggle("is-visible", raw >= 1);
       }
     });
   });
