@@ -922,6 +922,30 @@
      weiter. Erst der Klick auf den Knopf unten oeffnet es. */
   var gateOpen = false;
 
+  /* Die Sprachseite entscheidet ueber die Beschriftungen der Knoepfe. */
+  var isEnglish = document.documentElement.lang === "en";
+
+  /* Steht die Buehne (der gedrehte Bereich) ueberhaupt im Bild? Bewusst nur
+     ein Rechteck-Test statt tryonIsActive(): der prueft den Morph-Fortschritt
+     und kann in Randlagen false liefern, obwohl der Graph vor uns liegt -
+     dann ware der Tor-Knopf unsichtbar, waehrend das Rad schon blockt. */
+  function stageOnScreen() {
+    if (!tryonStage) return false;
+    var r = tryonStage.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight;
+  }
+
+  /* Sicherheitsnetz fuer das Tor: Wenn das Rad am Graph-Ende blockt, muss
+     der Knopf sichtbar sein. Er wird hier direkt eingeschaltet, damit eine
+     verpasste Zustandsmessung nie zu einer Sackgasse fuehrt. */
+  function forceGateBtn() {
+    if (!flipBtn) return;
+    flipBtn.classList.add("is-visible", "is-gate");
+    flipBtn.classList.remove("is-back");
+    if (flipBtnLabel) flipBtnLabel.textContent = isEnglish ? "Continue scrolling" : "Weiter scrollen";
+    if (flipBtnArrow) flipBtnArrow.textContent = "↓";
+  }
+
   /* Sichtbar ist der Knopf in drei Lagen: Vorderseite am Graph-Ende,
      Rueckseite fertig gedreht (aber nicht im Bedienmodus - dort deckt er
      sonst die eingebettete Anwendung zu) oder mitten in der eigenen
@@ -934,7 +958,11 @@
     // wird syncFlipBtn pro Animationsframe gerufen.
     var active = tryonIsActive();
     var front = false;
-    if (active && !flipAnimating && flipP <= .001) {
+    /* Vorderseite + Graph-Ende = Tor. Ob der Morph ganz offen ist, spielt
+       hier keine Rolle - stageOnScreen() sagt, ob der Bereich ueberhaupt vor
+       uns steht. So haengt der Knopf nicht an einer zweiten Bedingung, die
+       der Block-Pruefung im Rad-Handler fehlt. */
+    if (!flipAnimating && flipP <= .001 && stageOnScreen()) {
       var c = findCanvas();
       front = !!c && atGraphEnd(c);
     }
@@ -947,12 +975,9 @@
        Klick gibt den Weg zum Photo Studio frei, damit man die Drehung nicht
        beim Durchscrollen verpasst. */
     flipBtn.classList.toggle("is-gate", front);
-    /* Die Sprachseite entscheidet ueber die Beschriftung: index-engl.html
-       setzt <html lang="en">. */
-    var isEn = document.documentElement.lang === "en";
-    if (flipBtnLabel) flipBtnLabel.textContent = isBack ? (isEn ? "Back to graph" : "Zurück zum Graphen")
-                                                        : (front ? (isEn ? "Continue scrolling" : "Weiter scrollen")
-                                                                 : (isEn ? "To Photo Studio" : "Zum Photo Studio"));
+    if (flipBtnLabel) flipBtnLabel.textContent = isBack ? (isEnglish ? "Back to graph" : "Zurück zum Graphen")
+                                                        : (front ? (isEnglish ? "Continue scrolling" : "Weiter scrollen")
+                                                                 : (isEnglish ? "To Photo Studio" : "Zum Photo Studio"));
     if (flipBtnArrow) flipBtnArrow.textContent = isBack ? "←" : (front ? "↓" : "→");
     /* Verlaesst man den Graph-Ende-Zustand, wird das Tor wieder geschlossen
        (zurueck im Graphen oder auf der anderen Seite: beim naechsten
@@ -1046,8 +1071,11 @@
       // Weiter runterscrollen ist hier gesperrt, bis der Knopf unten
       // geklickt wurde: sonst dreht die Seite beim Durchscrollen weiter,
       // ohne dass man das Photo Studio bewusst gesehen hat.
-      if (!reduceMotion && down && atEnd && flipP === 0 && !gateOpen) {
+      if (flipBtn && !reduceMotion && down && atEnd && flipP === 0 && !gateOpen) {
         e.preventDefault();
+        /* Sicherheitsnetz: das Tor darf nie ohne sichtbaren Knopf schliessen
+           (sonst kommt man nicht weiter). */
+        forceGateBtn();
         return;
       }
       // Verlaesst man das Ende (hochscrollen), wird das Tor wieder zu.

@@ -176,6 +176,19 @@
               </div>
             </div>
           </div>
+
+          <!-- Path to the Photo Studio as a button: it appears as soon as the
+               graph canvas reaches its end (Save Image node in front of us) and
+               turns the surface onto the back side - the same rotation as
+               scrolling, just without the runway before it. Without this
+               button the scroll gate at the graph end would be a dead end on
+               this page as well (js/script.js, css/style.css). It sits NEXT to
+               .flip so it does not rotate with the surface and stays usable
+               above both sides. Labels are set by js/script.js (lang="en"). -->
+          <button class="flipbtn" id="flipBtn" type="button">
+            <span class="flipbtn__label" id="flipBtnLabel">To Photo Studio</span>
+            <span class="flipbtn__arrow" id="flipBtnArrow" aria-hidden="true">&rarr;</span>
+          </button>
         </div>
       </div>
     </section>
