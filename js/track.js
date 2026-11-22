@@ -43,8 +43,11 @@
   var END_ZONE = 0.85;
 
   /* Freies Scrollen: bleibt man innerhalb dieser Distanz vor einer
-     Ansichtsgrenze stehen, zieht die Seite auf die Kante nach. */
-  var SNAP_PX = 84;
+     Grenze stehen, zieht die Seite auf die Kante nach. Die Distanz haengt
+     an der Fensterhoehe (etwa ein Drittel), damit sich das Nachziehen auch
+     auf grossen Bildschirmen anfuehlt wie ein Screen-Wechsel - ein fester
+     Wert von 84px war praktisch unsichtbar. */
+  var SNAP_RATIO = 0.32;
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
 
@@ -57,6 +60,10 @@
 
     var current = 0;
     var tops = [];
+    /* Alle Grenzen, auf die freies Scrollen einrasten darf: die Oberkanten
+       der vier Ansichten UND die Oberkanten der Sektionen darin (jeder
+       Projekt-Teil, Seam, Collage, ... ist ein "Screen"). */
+    var snapLines = [];
     var rafPending = false;
     var snapTimer = 0;
     var programmatic = false;
@@ -84,6 +91,26 @@
       for (var i = 0; i < panels.length; i++) {
         var r = panels[i].getBoundingClientRect();
         tops[i] = Math.round(r.top + scrollTop());
+      }
+
+      /* Rastpunkte: Sektionen und Ansichts-Oberkanten, sortiert und ohne
+         Dubletten (eine Ansicht beginnt meist mit einer Sektion).
+         Der Seitenanfang (0) ist bewusst KEIN Rastpunkt: der Hero hat eine
+         lange Scroll-Strecke, auf der man auch mal 200px stehen bleiben will -
+         ein Rueckzug nach ganz oben waere dort nur laestig. */
+      var lines = [];
+      Array.prototype.forEach.call(track.querySelectorAll("section"), function (el) {
+        var sr = el.getBoundingClientRect();
+        if (sr.height < 2) return;
+        lines.push(Math.round(sr.top + scrollTop()));
+      });
+      for (var j = 0; j < tops.length; j++) {
+        if (tops[j] > 0) lines.push(tops[j]);
+      }
+      lines.sort(function (a, b) { return a - b; });
+      snapLines = [];
+      for (var k = 0; k < lines.length; k++) {
+        if (k === 0 || lines[k] - snapLines[snapLines.length - 1] > 4) snapLines.push(lines[k]);
       }
     }
 
@@ -158,7 +185,8 @@
       var behavior = reduceMotion ? "auto" : "smooth";
 
       programmatic = true;
-      programmaticUntil = Date.now() + 3000;
+      /* Nach dem Sprung soll das Nachziehen nicht sofort wieder greifen. */
+      programmaticUntil = Date.now() + 1200;
 
       try {
         window.scrollTo({ top: Math.round(target), behavior: behavior });
@@ -198,17 +226,25 @@
     function maybeSnap() {
       if (programmatic || Date.now() < programmaticUntil) return;
       var y = scrollTop();
-      for (var i = 0; i < tops.length; i++) {
-        var d = tops[i] - y;
-        if (d > 0 && d < SNAP_PX) {
-          window.scrollTo({ top: Math.round(tops[i]), behavior: reduceMotion ? "auto" : "smooth" });
-          return;
-        }
-        if (d < 0 && -d < SNAP_PX && i > 0) {
-          window.scrollTo({ top: Math.round(tops[i]), behavior: reduceMotion ? "auto" : "smooth" });
-          return;
+      /* Ganz unten nicht nachziehen: die letzte Sektion ist niedriger als der
+         Bildschirm, ihr Rastpunkt laege oberhalb des tatsaechlichen Endes -
+         das wuerde einen wieder von der Fusszeile wegziehen. */
+      if (y >= document.documentElement.scrollHeight - vh() - 2) return;
+      var reach = Math.max(120, Math.min(320, vh() * SNAP_RATIO));
+      var best = -1;
+      var bestD = reach + 1;
+      for (var i = 0; i < snapLines.length; i++) {
+        var d = Math.abs(snapLines[i] - y);
+        if (d <= reach && d < bestD) {
+          bestD = d;
+          best = i;
         }
       }
+      if (best < 0 || bestD < 1) return;
+      window.scrollTo({
+        top: Math.round(snapLines[best]),
+        behavior: reduceMotion ? "auto" : "smooth"
+      });
     }
 
     function update() {
