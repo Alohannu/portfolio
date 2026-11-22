@@ -500,6 +500,21 @@ body {
   top: clamp(.6rem, 1.2vh, 1rem);
   transform: none;
 }
+
+/* Tor am Graph-Ende: der Knopf sitzt dort unten mittig und heisst
+   "Weiter scrollen" - er ist der einzige Weg weiter ins Photo Studio.
+   Bewusst unten, damit er als naechster Schritt gelesen wird. */
+.flipbtn.is-gate {
+  top: auto;
+  bottom: clamp(1rem, 3vh, 2rem);
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  border-color: rgba(143, 147, 224, .5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .38);
+}
+.flipbtn.is-gate .flipbtn__arrow { font-size: 1.15em; line-height: 1; }
+.flipbtn.is-gate:hover { transform: translateX(-50%) translateY(-1px); }
 @media (max-width: 899px) {
   /* Kleinere Ansicht: der Knopf soll neben dem Graphen nicht die halbe
      Breite einnehmen. 44px Mindesthoehe bleibt. */

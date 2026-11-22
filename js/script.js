@@ -919,6 +919,9 @@
   var flipAnimRAF = 0;
   var flipAnimating = false;
   var flipSyncQueued = false;
+  /* Tor am Graph-Ende: solange es zu ist, scrollt die Seite dort nicht
+     weiter. Erst der Klick auf den Knopf unten oeffnet es. */
+  var gateOpen = false;
 
   /* Sichtbar ist der Knopf in drei Lagen: Vorderseite am Graph-Ende,
      Rueckseite fertig gedreht (aber nicht im Bedienmodus - dort deckt er
@@ -940,8 +943,18 @@
     var isBack = flipP >= .5;
     flipBtn.classList.toggle("is-visible", front || back || flipAnimating);
     flipBtn.classList.toggle("is-back", isBack);
-    if (flipBtnLabel) flipBtnLabel.textContent = isBack ? "Zurück zum Graphen" : "Zum Photo Studio";
-    if (flipBtnArrow) flipBtnArrow.textContent = isBack ? "←" : "→";
+    /* front = Graph steht am Ende, Flaeche noch nicht gedreht: das ist das
+       Tor. Es sitzt unten mittig und heisst "Weiter scrollen" - erst der
+       Klick gibt den Weg zum Photo Studio frei, damit man die Drehung nicht
+       beim Durchscrollen verpasst. */
+    flipBtn.classList.toggle("is-gate", front);
+    if (flipBtnLabel) flipBtnLabel.textContent = isBack ? "Zurück zum Graphen"
+                                                        : (front ? "Weiter scrollen" : "Zum Photo Studio");
+    if (flipBtnArrow) flipBtnArrow.textContent = isBack ? "←" : (front ? "↓" : "→");
+    /* Verlaesst man den Graph-Ende-Zustand, wird das Tor wieder geschlossen
+       (zurueck im Graphen oder auf der anderen Seite: beim naechsten
+       Ankommen muss neu geklickt werden). */
+    if (!front) gateOpen = false;
   }
 
   /* Ein Rad-Event verschiebt den Canvas sofort, der Handler kehrt aber an
@@ -1000,6 +1013,9 @@
       // flipP ist das Mass: ab der halben Drehung steht die Rueckseite vorne,
       // dann heisst der Klick "zurueck". Ein zweiter Klick mitten in der
       // Animation dreht sie damit um.
+      // Vorderseite, Graph-Ende: der Klick oeffnet das Tor und dreht
+      // gleichzeitig ins Photo Studio.
+      if (flipP <= .001) gateOpen = true;
       animateFlipTo(flipP >= .5 ? 0 : 1);
     });
   }
@@ -1022,6 +1038,17 @@
 
       var down = e.deltaY > 0;
       var atEnd = atGraphEnd(c), atStart = atGraphStart(c);
+
+      // --- Tor am Graph-Ende ---------------------------------------------
+      // Weiter runterscrollen ist hier gesperrt, bis der Knopf unten
+      // geklickt wurde: sonst dreht die Seite beim Durchscrollen weiter,
+      // ohne dass man das Photo Studio bewusst gesehen hat.
+      if (!reduceMotion && down && atEnd && flipP === 0 && !gateOpen) {
+        e.preventDefault();
+        return;
+      }
+      // Verlaesst man das Ende (hochscrollen), wird das Tor wieder zu.
+      if (!atEnd && flipP === 0) gateOpen = false;
 
       // --- Leerlauf: am Graph-Ende erst ansehen, dann drehen -------------
       // Liegt das Ergebnisbild vor uns, wird zuerst die Leerlauf-Strecke
@@ -1115,6 +1142,32 @@
       // Anfahren wieder vollstaendig da ist.
       holdArm();
       c.scrollTop += e.deltaY;
+    }, { passive: false });
+
+    /* Tastatur: am Graph-Ende wuerden Leertaste/Bild-runter die Seite
+       weiterscrollen und das Tor umgehen. */
+    window.addEventListener("keydown", function (e) {
+      if (!tryonIsActive() || gateOpen || flipP > .001) return;
+      var c = findCanvas();
+      if (!c || !atGraphEnd(c)) return;
+      if (e.key === " " || e.key === "PageDown" || e.key === "ArrowDown" || e.key === "End") {
+        e.preventDefault();
+      }
+    });
+
+    /* Touch: am Graph-Ende ist der Weg nach unten gesperrt (Finger nach
+       oben = Seite runterscrollen). */
+    var gateTouchY = 0;
+    window.addEventListener("touchstart", function (e) {
+      if (e.touches && e.touches.length) gateTouchY = e.touches[0].clientY;
+    }, { passive: true });
+    window.addEventListener("touchmove", function (e) {
+      if (gateOpen || flipP > .001 || !tryonIsActive()) return;
+      var c = findCanvas();
+      if (!c || !atGraphEnd(c)) return;
+      if (e.touches && e.touches.length && gateTouchY - e.touches[0].clientY > 8) {
+        e.preventDefault();
+      }
     }, { passive: false });
 
     window.addEventListener("scroll", function () {
