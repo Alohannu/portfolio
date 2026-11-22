@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/curtain.css">
   <link rel="stylesheet" href="css/imageviewer.css">
   <link rel="stylesheet" href="css/music.css">
+  <link rel="stylesheet" href="css/topbar.css">
   <link rel="stylesheet" href="css/tools.css">
   <link rel="stylesheet" href="css/viewnav.css">
   <link rel="stylesheet" href="css/endcard.css">
@@ -21,6 +22,20 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- Menu bar: the four project views, fixed above the page. Hides when
+       scrolling down, returns when scrolling up. It sits outside of
+       #track (a transform there would break position: fixed) and outside
+       of <main>, so it cannot affect any view's layout.
+       Same markup and behaviour as index.html, labels are project names. -->
+  <nav class="topbar" id="topbar" aria-label="Projects">
+    <ul class="topbar__list">
+      <li><a class="topbar__link" href="#main" data-view="0">nandemoii</a></li>
+      <li><a class="topbar__link" href="#serum" data-view="1">ai face serum</a></li>
+      <li><a class="topbar__link" href="#curtain-view" data-view="2">eggo</a></li>
+      <li><a class="topbar__link" href="#music-view" data-view="3">ai music</a></li>
+    </ul>
+  </nav>
 
   <main id="main">
    <div class="track" id="track">
@@ -961,6 +976,7 @@ is all we've got</pre>
   <script src="js/showroom.js"></script>
   <script src="js/imageviewer.js"></script>
   <script src="js/track.js"></script>
+  <script src="js/topbar.js"></script>
   <script src="js/curtain.js"></script>
   <script src="js/serum-phases.js"></script>
   <script src="js/serum-campaign.js"></script>
