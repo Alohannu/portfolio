@@ -124,6 +124,21 @@
       var from = scrollTop();
       var dist = target - from;
 
+      /* Mit Lenis uebernimmt die Scroll-Schicht die Animation: sie bringt die
+         Daempfung schon mit, ein zweiter eigener rAF-Scroll wuerde gegen sie
+         arbeiten. programmaticUntil wird vorher gesetzt, damit maybeSnap die
+         eigenen Scroll-Events nicht als Nutzereingabe missdeutet. */
+      if (window.SmoothScroll && window.SmoothScroll.enabled) {
+        programmaticUntil = Date.now() + dur + 250;
+        if (Math.abs(dist) < 2 || reduceMotion) {
+          window.SmoothScroll.to(target, { immediate: true });
+        } else {
+          window.SmoothScroll.to(target, { duration: dur / 1000 });
+        }
+        announceJump(target);
+        return;
+      }
+
       if (Math.abs(dist) < 2 || reduceMotion) {
         window.scrollTo(0, Math.round(target));
         announceJump(target);
@@ -161,6 +176,15 @@
     function landOn(target) {
       cancelScrollAnim();
       var goal = Math.round(target);
+
+      /* Mit Lenis landet scrollTo exakt; das Nachfassen ueber mehrere Frames
+         ist nur fuer die native Animation noetig. */
+      if (window.SmoothScroll && window.SmoothScroll.enabled) {
+        window.SmoothScroll.to(goal, { immediate: true });
+        announceJump(goal);
+        return;
+      }
+
       window.scrollTo(0, goal);
       announceJump(goal);
 
@@ -501,10 +525,14 @@
          damit die Grenze beim Klick nicht wandert und nichts springt. */
       if (lim !== Infinity && y > lim + 0.5) {
         y = lim;
-        try {
-          window.scrollTo({ top: Math.round(lim), behavior: "auto" });
-        } catch (e) {
-          window.scrollTo(0, Math.round(lim));
+        if (window.SmoothScroll && window.SmoothScroll.enabled) {
+          window.SmoothScroll.to(Math.round(lim), { immediate: true });
+        } else {
+          try {
+            window.scrollTo({ top: Math.round(lim), behavior: "auto" });
+          } catch (e) {
+            window.scrollTo(0, Math.round(lim));
+          }
         }
         /* Das Zurueckziehen an die Grenze ist ein Sprung, kein Scrollen
            des Nutzers (siehe announceJump oben). */
@@ -541,7 +569,14 @@
       var lim = limits[k];
       if (lim === Infinity) return;
       if (e.deltaY > 0 && y >= lim - 1) {
-        e.preventDefault();
+        /* Mit Lenis gibt es kein zweites preventDefault: die Scroll-Schicht
+           hat das Rad-Ereignis bereits virtualisiert. Stattdessen wird die
+           Position aktiv an der Track-Grenze festgehalten. */
+        if (window.SmoothScroll && window.SmoothScroll.enabled) {
+          window.SmoothScroll.to(lim, { immediate: true });
+        } else {
+          e.preventDefault();
+        }
         syncArrows(k, y);
       }
     }
@@ -553,7 +588,11 @@
       var target = document.getElementById(hash.slice(1));
       if (!target) return;
       var y = Math.max(0, Math.round(target.getBoundingClientRect().top + scrollTop()));
-      window.scrollTo(0, y);
+      if (window.SmoothScroll && window.SmoothScroll.enabled) {
+        window.SmoothScroll.to(y, { immediate: true });
+      } else {
+        window.scrollTo(0, y);
+      }
       announceJump(y);
     }
 

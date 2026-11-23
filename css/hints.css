@@ -7,7 +7,9 @@
    Zustandsklassen, die js/tools.js setzt:
      .phase-tabs.is-hinting      Pulsieren der Tab-Leiste
      .collage__tools.is-hinting  Pulsieren der Pillen-Zeilen darin
-     .hint-bubble                Sprechblase ueber der Gruppe (per JS erzeugt)
+     .hint-bubble                Sprechblase an der Gruppe (per JS erzeugt):
+                                 bei den Phasen-Tabs darunter
+                                 (.hint-bubble--phases), sonst darueber
 
    Die Sprechblase pulsiert zusaetzlich selbst: sie atmet (scale) und ihr
    violetter Saum weitet sich dabei, damit der Hinweis auffaellt und nicht
@@ -120,6 +122,32 @@
 .hint-bubble--end { right: 0; transform-origin: 100% 100%; }
 .hint-bubble--end::after { left: auto; right: 20px; margin-left: 0; }
 
+/* ---------- Phasen-Tabs: Blase UNTER der Pille ----------
+   Die Tab-Leiste steht unmittelbar unter der Ueberschrift "ai solution"
+   (css/track.css, .p2-phases__title). Eine Blase ueber der Gruppe sass
+   deshalb auf dem Titel: gemessen bei 1024x768 22 px Ueberdeckung, bei
+   1440x900 lag sie auf den Unterlaengen von "ai solution".
+   Sie haengt jetzt unter der Pille, der Pfeil zeigt nach oben auf die
+   klickbaren Knoepfe. Den Platz dafuer haelt die Tab-Leiste ueber ihr
+   margin-bottom frei (css/track.css: .phase-tabs, in flachen Fenstern
+   zusaetzlich +20px) - die Blase bleibt absolut positioniert und schiebt
+   nichts, weder den Titel darueber noch die Ueberschrift "Phase n ..."
+   im Panel darunter. */
+.hint-bubble--phases {
+  top: calc(100% + 10px);
+  bottom: auto;
+}
+
+/* Pfeil nach oben zur Pille. */
+.hint-bubble--phases::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-top-width: 0;
+  border-bottom-color: #111;
+  border-bottom-width: 6px;
+}
+
 @keyframes hint-bubble-in {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: none; }
@@ -151,8 +179,9 @@
    erst nach 15% Scrollstrecke ein, dann ist seine Oberkante schon aus
    dem Bild gescrollt. Eine Blase UEBER der Gruppe waere dort nie zu
    sehen - sie sitzt deshalb unter der Gruppe, der Pfeil zeigt nach oben.
-   (Betrifft nur die Tool-Zeilen; die Phasen-Tabs stehen ohne Einblendung
-   im Bild und behalten die Blase darueber.) */
+   (Betrifft nur die Tool-Zeilen. Die Phasen-Tabs haengen ohnehin unter
+   der Pille, .hint-bubble--phases weiter oben - unabhaengig von dieser
+   Regel.) */
 @media (max-width: 900px) {
   .hint-bubble--tools {
     top: calc(100% + 10px);
